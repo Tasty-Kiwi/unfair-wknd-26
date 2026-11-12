@@ -19,16 +19,40 @@ export const shortDate = (iso: string) =>
     timeZone: "UTC",
   }).format(new Date(`${iso}T00:00:00Z`));
 
-/** Allowed shift in days from the planned date. A receipt cannot land before the inventory date. */
-export function shiftRange(data: Dataset, delivery: Delivery) {
+/**
+ * Shift range in days from the planned date that the date controls offer.
+ * The usual window is MIN_SHIFT_DAYS..MAX_SHIFT_DAYS, never before the
+ * inventory date. A date typed outside that window (the validator only
+ * forbids dates before the inventory date) widens the range to include it, so
+ * sliders never report a value outside their own bounds.
+ */
+export function shiftRange(
+  data: Dataset,
+  delivery: Delivery,
+  currentDate?: string,
+) {
+  const floor = dayDiff(delivery.availableDate, data.asOf);
+  const current =
+    currentDate === undefined
+      ? undefined
+      : dayDiff(delivery.availableDate, currentDate);
+  const min = Math.max(MIN_SHIFT_DAYS, floor);
   return {
-    min: Math.max(MIN_SHIFT_DAYS, dayDiff(delivery.availableDate, data.asOf)),
-    max: MAX_SHIFT_DAYS,
+    min: current === undefined ? min : Math.max(floor, Math.min(min, current)),
+    max:
+      current === undefined
+        ? MAX_SHIFT_DAYS
+        : Math.max(MAX_SHIFT_DAYS, current),
   };
 }
 
-export function clampShift(data: Dataset, delivery: Delivery, shift: number) {
-  const { min, max } = shiftRange(data, delivery);
+export function clampShift(
+  data: Dataset,
+  delivery: Delivery,
+  shift: number,
+  currentDate?: string,
+) {
+  const { min, max } = shiftRange(data, delivery, currentDate);
   return Math.min(max, Math.max(min, shift));
 }
 
@@ -84,36 +108,45 @@ export function receiptExposure(data: Dataset, deliveryId: string): number {
 }
 
 export interface TippingPoints {
-  /** Latest shift (days, >= 0) that adds no missing units compared with landing as planned. */
+  /** Latest shift (days, >= 0) that leaves every order no worse off than landing as planned. */
   latestSafe: number;
-  /** First shift that adds missing units, if any within the allowed range. */
+  /** First shift that leaves any order shorter than planned, if any within the window. */
   firstShort: number | null;
 }
 
 /**
  * Scans later landing dates for one receipt within the current scenario
- * (other overrides and alternatives stay as they are).
+ * (other overrides and alternatives stay as they are). A date counts as
+ * harmful when any order line (order and component) ends up shorter than it
+ * is with the receipt on time. Comparing only the total would miss a delay that moves a shortage
+ * from one customer to another.
  */
 export function tippingPoints(
   data: Dataset,
   scenario: Scenario,
   delivery: Delivery,
 ): TippingPoints {
-  const missingAt = (shift: number) =>
-    simulate(
-      data,
-      withReceiptDate(
+  const shortageAt = (shift: number) =>
+    new Map(
+      simulate(
         data,
-        scenario,
-        delivery.id,
-        addDays(delivery.availableDate, shift),
+        withReceiptDate(
+          data,
+          scenario,
+          delivery.id,
+          addDays(delivery.availableDate, shift),
+        ),
+      ).orders.flatMap((o) =>
+        o.lines.map((l) => [`${o.orderId}|${l.componentId}`, l.shortage]),
       ),
-    ).summary.missingUnits;
+    );
   const { max } = shiftRange(data, delivery);
-  const planned = missingAt(0);
+  const planned = shortageAt(0);
   for (let shift = 1; shift <= max; shift++) {
-    if (missingAt(shift) > planned)
-      return { latestSafe: shift - 1, firstShort: shift };
+    for (const [line, shortage] of shortageAt(shift)) {
+      if (shortage > (planned.get(line) ?? 0))
+        return { latestSafe: shift - 1, firstShort: shift };
+    }
   }
   return { latestSafe: max, firstShort: null };
 }

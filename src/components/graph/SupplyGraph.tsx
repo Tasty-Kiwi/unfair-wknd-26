@@ -215,6 +215,20 @@ function GraphInner({
       const impacted = components.some(
         (c) => c.supplierId === s.id && riskComponents.has(c.id),
       );
+      // Only say "Late" when a receipt from this supplier actually lands after
+      // its planned date. A shortage can also come from quantity or demand.
+      const own = result.deliveries.filter(
+        (d) => d.supplierId === s.id && riskComponents.has(d.componentId),
+      );
+      const planned = (id: string) => data.deliveries.find((d) => d.id === id);
+      const late = own.some(
+        (d) =>
+          d.availableDate > (planned(d.id)?.availableDate ?? d.availableDate),
+      );
+      const reduced = own.some(
+        (d) => d.quantity < (planned(d.id)?.quantity ?? d.quantity),
+      );
+      const flag = late ? "Late" : reduced ? "Reduced" : "Supply gap";
       const alt = data.alternatives.some(
         (a) => a.supplierId === s.id && a.approved,
       );
@@ -238,7 +252,7 @@ function GraphInner({
             : "Primary supplier",
         impacted,
         used,
-        "Late",
+        flag,
       );
     });
     components.forEach((c, i) => {

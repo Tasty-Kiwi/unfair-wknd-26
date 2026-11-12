@@ -67,7 +67,9 @@ export function ScenarioPanel({
     () => data.deliveries[0]?.id ?? "",
   );
   // Stable order (planned date, then id) so options never move while the
-  // user edits; exposure is shown beside each one instead of sorting by it.
+  // user edits. Exposure needs two full simulations, so it is computed only
+  // for the selected receipt: doing it for every option took over a minute
+  // on a 1,000-delivery import.
   const receipts = useMemo(
     () =>
       [...data.deliveries]
@@ -78,7 +80,6 @@ export function ScenarioPanel({
         )
         .map((delivery) => ({
           delivery,
-          exposure: receiptExposure(data, delivery.id),
           component: data.components.find((c) => c.id === delivery.componentId),
           supplier: data.suppliers.find((x) => x.id === delivery.supplierId),
         })),
@@ -87,6 +88,10 @@ export function ScenarioPanel({
   const selected =
     receipts.find((r) => r.delivery.id === deliveryId) ?? receipts[0];
   const selectedDelivery = selected?.delivery;
+  const exposure = useMemo(
+    () => (selectedDelivery ? receiptExposure(data, selectedDelivery.id) : 0),
+    [data, selectedDelivery],
+  );
   const money = (n: number) =>
     new Intl.NumberFormat("en-IE", {
       style: "currency",
@@ -118,12 +123,10 @@ export function ScenarioPanel({
               aria-describedby={`${baseId}-delivery-help`}
               onChange={(event) => setDeliveryId(event.target.value)}
             >
-              {receipts.map(({ delivery, component, exposure }) => (
+              {receipts.map(({ delivery, component }) => (
                 <option key={delivery.id} value={delivery.id}>
                   {delivery.id} · {component?.name ?? delivery.componentId} ·{" "}
-                  {exposure > 0
-                    ? `${money(exposure)} at stake`
-                    : "no orders depend on it"}
+                  {shortDate(delivery.availableDate)}
                 </option>
               ))}
             </select>
@@ -131,9 +134,9 @@ export function ScenarioPanel({
               {selected.supplier?.name ?? selectedDelivery.supplierId} ·{" "}
               {selectedDelivery.quantity} {selected.component?.unit ?? "units"}{" "}
               planned {shortDate(selectedDelivery.availableDate)}.{" "}
-              {selected.exposure > 0
-                ? `${money(selected.exposure)} of orders are at risk if it never arrives.`
-                : "No order is at risk even if it never arrives."}{" "}
+              {exposure > 0
+                ? `On the unchanged plan, ${money(exposure)} more order value becomes at risk if it never arrives.`
+                : "On the unchanged plan, no additional order value becomes at risk if it never arrives. Orders already at risk can still lose units; see Allocation evidence."}{" "}
               Listed by planned date.
             </p>
           </div>
@@ -210,7 +213,11 @@ function DeliveryOverrideForm({
 
   const dateValid = isIsoDate(date);
   const offset = dateValid ? dayDiff(delivery.availableDate, date) : null;
-  const { min: minShift, max: maxShift } = shiftRange(data, delivery);
+  const { min: minShift, max: maxShift } = shiftRange(
+    data,
+    delivery,
+    dateValid ? date : undefined,
+  );
   const sliderValue =
     offset === null ? 0 : Math.min(maxShift, Math.max(minShift, offset));
   const slider = useRef<HTMLInputElement>(null);
@@ -397,8 +404,8 @@ function DeliveryOverrideForm({
         </ToggleGroup>
         <p className="scenario-field__help">
           {tips.firstShort === null
-            ? `No new shortage anywhere up to ${shortDate(addDays(delivery.availableDate, maxShift))}.`
-            : `Landing ${shortDate(addDays(delivery.availableDate, tips.firstShort))} or later leaves an order short.`}
+            ? `No order is shorter than on time for any landing date up to ${shortDate(addDays(delivery.availableDate, tips.latestSafe))}.`
+            : `Landing ${shortDate(addDays(delivery.availableDate, tips.firstShort))} leaves at least one order shorter than on time.`}
         </p>
       </div>
 

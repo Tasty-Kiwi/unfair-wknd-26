@@ -101,10 +101,16 @@ export function ReceiptTimeline({
     });
 
   const movable = data.deliveries.filter((d) => d.componentId === componentId);
+  // Where each receipt lands in this scenario; it widens the range when a
+  // typed date falls outside the usual drag window.
+  const landsOn = (id: string) =>
+    result.deliveries.find((d) => d.id === id)?.availableDate;
+  const rangeFor = (d: (typeof movable)[number]) =>
+    shiftRange(data, d, landsOn(d.id));
   const all = [
     ...marks.map((m) => m.date),
     ...(onMoveReceipt
-      ? movable.map((d) => addDays(d.availableDate, shiftRange(data, d).max))
+      ? movable.map((d) => addDays(d.availableDate, rangeFor(d).max))
       : []),
     ...needs.flatMap((n) => [n.date, n.next ?? n.date]),
   ];
@@ -131,10 +137,14 @@ export function ReceiptTimeline({
     if (!planned || !onMoveReceipt) return;
     const next = addDays(
       planned.availableDate,
-      clampShift(data, planned, days(planned.availableDate, date)),
+      clampShift(
+        data,
+        planned,
+        days(planned.availableDate, date),
+        landsOn(deliveryId),
+      ),
     );
-    const current = result.deliveries.find((d) => d.id === deliveryId);
-    if (next !== current?.availableDate) onMoveReceipt(deliveryId, next);
+    if (next !== landsOn(deliveryId)) onMoveReceipt(deliveryId, next);
   };
   const ticks = Array.from({ length: span + 1 }, (_, i) => addDays(start, i));
 
@@ -196,7 +206,7 @@ export function ReceiptTimeline({
                   </span>
                 );
               const shift = days(planned.availableDate, m.date);
-              const range = shiftRange(data, planned);
+              const range = rangeFor(planned);
               const step = (n: number) => move(planned.id, addDays(m.date, n));
               return (
                 <span

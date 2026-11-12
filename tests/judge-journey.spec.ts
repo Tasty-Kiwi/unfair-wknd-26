@@ -180,8 +180,11 @@ test("receipt date moves by preset, timeline keyboard, and drag, all in sync", a
   await page.goto("/");
   const summary = page.getByRole("region", { name: "Simulation summary" });
   await expect(page.getByLabel("Receipt", { exact: true })).toContainText(
-    "€36,000 at stake",
+    "PO-101 · Servo motor · 17 Nov",
   );
+  await expect(
+    page.getByText("€36,000 more order value becomes at risk"),
+  ).toBeVisible();
 
   await page.getByRole("radio", { name: "First short, 23 Nov" }).click();
   await expect(summary).toContainText("Due to material shortage");
@@ -216,4 +219,45 @@ test("receipt date moves by preset, timeline keyboard, and drag, all in sync", a
   await page.mouse.up();
   expect(Number(await handle.getAttribute("aria-valuenow"))).toBeGreaterThan(0);
   expect(errors).toEqual([]);
+});
+
+test("a typed date beyond the drag window widens every slider's range", async ({
+  page,
+}) => {
+  await page.goto("/");
+  const date = page.getByLabel("Available date").first();
+  await date.fill("2026-12-07"); // PO-101 planned 17 Nov, so 20 days late
+  const handle = page.getByRole("slider", { name: "Move receipt PO-101" });
+  await expect(handle).toHaveAttribute("aria-valuenow", "20");
+  await expect(handle).toHaveAttribute("aria-valuemax", "20");
+  await expect(handle).toHaveAttribute("aria-valuemin", "-5");
+  await expect(page.getByLabel(/Shift from baseline/)).toHaveAttribute(
+    "max",
+    "20",
+  );
+  await expect(page.getByLabel(/Shift from baseline/)).toHaveValue("20");
+
+  await handle.focus();
+  await handle.press("ArrowLeft");
+  await expect(handle).toHaveAttribute("aria-valuenow", "19");
+  await expect(handle).toHaveAttribute("aria-valuetext", /6 Dec, 19 days late/);
+  await expect(date).toHaveValue("2026-12-06");
+});
+
+test("a supplier is only flagged Late when its receipt actually slips", async ({
+  page,
+}) => {
+  await page.goto("/");
+  const aster = page.locator('[data-id="supplier:SUP-01"]');
+  await page.getByRole("radio", { name: /Supplier disruption/ }).click();
+  await expect(aster).toContainText("Late");
+
+  // Same shortage from a quantity cut on time: not "Late".
+  await page.getByRole("radio", { name: /Normal operations/ }).click();
+  await page.getByLabel("Quantity").first().fill("1");
+  await expect(
+    page.getByRole("region", { name: "Simulation summary" }),
+  ).toContainText("Due to material shortage");
+  await expect(aster).toContainText("Reduced");
+  await expect(aster).not.toContainText("Late");
 });
