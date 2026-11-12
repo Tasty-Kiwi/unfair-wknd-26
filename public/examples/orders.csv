@@ -1,0 +1,11 @@
+id,customer,productId,quantity,requiredDate,value
+ORD-101,Meridian Robotics,PRD-01,6,2026-11-20,42000
+ORD-102,Helix Automation,PRD-02,4,2026-11-22,36000
+ORD-103,Lumen Systems,PRD-03,5,2026-11-20,17500
+ORD-104,Kestrel Controls,PRD-04,3,2026-11-21,24000
+ORD-105,Baltic Motion,PRD-05,4,2026-11-22,12800
+ORD-106,Nova Robotics,PRD-03,3,2026-11-23,10500
+ORD-107,Orion Manufacturing,PRD-04,2,2026-11-24,16000
+ORD-108,Meridian Robotics,PRD-05,2,2026-11-25,6400
+ORD-109,Helix Automation,PRD-03,2,2026-11-26,7000
+ORD-110,Kestrel Controls,PRD-04,1,2026-11-27,8000

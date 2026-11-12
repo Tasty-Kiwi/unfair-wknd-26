@@ -104,3 +104,70 @@ test("narrow screen retains disclosure and has no page overflow", async ({
     .click();
   await expect(page.locator(".outcome-banner")).toContainText("Every order");
 });
+
+test("recovery comparison evaluates independent options and applies the selected plan", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await page.getByRole("radio", { name: /Supplier disruption/ }).click();
+  const comparison = page.getByRole("region", { name: "Recovery options" });
+  await expect(comparison.locator("article")).toHaveCount(2);
+  await expect(comparison).toContainText(
+    "costs and factory capacity are not modeled",
+  );
+  const purchase = comparison
+    .locator("article")
+    .filter({ hasText: "Use Vector Components" });
+  await expect(purchase).toContainText("2net units recovered");
+  await purchase.getByRole("button", { name: "Apply what-if" }).click();
+  await expect(page.locator(".outcome-banner")).toContainText("Every order");
+  await expect(
+    page.getByLabel("Available date", { exact: true }).first(),
+  ).toHaveValue("2026-11-23");
+  await page.getByRole("radio", { name: /Supplier disruption/ }).click();
+  await comparison
+    .locator("article")
+    .filter({ hasText: "Restore PO-101 timing" })
+    .getByRole("button", { name: "Apply what-if" })
+    .click();
+  await expect(page.locator(".outcome-banner")).toContainText("Every order");
+  await expect(
+    page.getByLabel("Available date", { exact: true }).first(),
+  ).toHaveValue("2026-11-17");
+});
+
+test("spreadsheet bundle imports atomically and rejects invalid related tables", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await page
+    .getByRole("button", { name: "Import data", exact: true })
+    .last()
+    .click();
+  const inventory = {
+    name: "inventory.csv",
+    mimeType: "text/csv",
+    buffer: Buffer.from("componentId,quantity\nMTR-01,0"),
+  };
+  const invalidOrders = {
+    name: "orders.csv",
+    mimeType: "text/csv",
+    buffer: Buffer.from(
+      "id,customer,productId,quantity,requiredDate,value\nBAD,Acme,MISSING,1,2026-11-22,100",
+    ),
+  };
+  await page.locator("#data-upload").setInputFiles([inventory, invalidOrders]);
+  await expect(page.getByRole("alert")).toContainText("MISSING");
+  await expect(
+    page.getByRole("region", { name: "Simulation summary" }),
+  ).toContainText("All material requirements covered");
+  const files = ["products", "bom", "orders", "inventory"].map(
+    (name) => `public/examples/${name}.csv`,
+  );
+  await page.locator("#data-upload").setInputFiles(files);
+  await expect(page.getByRole("dialog")).not.toBeVisible();
+  await expect(page.locator(".notice")).toContainText("10 orders");
+  await expect(
+    page.getByRole("region", { name: "Simulation summary" }),
+  ).toContainText("All material requirements covered");
+});

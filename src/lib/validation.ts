@@ -520,7 +520,7 @@ function parseCsvRows(text: string): string[][] {
 
   if (inQuotes) {
     throw new Error(
-      "Deliveries CSV has an unclosed quote. Close every quoted cell with a matching double quote.",
+      "CSV has an unclosed quote. Close every quoted cell with a matching double quote.",
     );
   }
   if (cell.length > 0 || row.length > 0) {
@@ -547,6 +547,7 @@ export function parseDeliveryCsv(text: string, current: Dataset): Dataset {
 
   const rows = parseCsvRows(text);
   const headerIndex = rows.findIndex((cells) => !isBlankRow(cells));
+  if (headerIndex < 0) throw new Error("CSV is empty. Include a header row.");
   const header = rows[headerIndex].map((cell) => cell.trim());
 
   const missing = CSV_HEADERS.filter((name) => !header.includes(name));
@@ -671,10 +672,113 @@ export function parseImport(
   }
 
   if (lower.endsWith(".csv")) {
-    return parseDeliveryCsv(text, current);
+    return parseImportFiles([{ name: filename, text }], current);
   }
 
   throw new Error(
     `Cannot import "${filename}". Choose a .json dataset file or a .csv deliveries file.`,
   );
+}
+
+export const TABLE_HEADERS = {
+  deliveries: ["id", "supplierId", "componentId", "quantity", "availableDate"],
+  inventory: ["componentId", "quantity"],
+  products: ["id", "name", "sku"],
+  bom: ["productId", "componentId", "quantity"],
+  orders: ["id", "customer", "productId", "quantity", "requiredDate", "value"],
+} as const;
+
+/** Apply related spreadsheet tables atomically; cross-references validate after all files. */
+export function parseImportFiles(
+  files: { name: string; text: string }[],
+  current: Dataset,
+): Dataset {
+  if (files.length === 0) throw new Error("Choose at least one file.");
+  if (files.length === 1 && files[0].name.toLowerCase().endsWith(".json"))
+    return parseImport(files[0].text, files[0].name, current);
+  const tables = new Map<
+    keyof typeof TABLE_HEADERS,
+    Record<string, string>[]
+  >();
+  for (const file of files) {
+    if (!file.name.toLowerCase().endsWith(".csv"))
+      throw new Error(
+        "Choose one JSON dataset, or CSV tables together. Do not mix JSON and CSV.",
+      );
+    const rows = parseCsvRows(file.text);
+    const start = rows.findIndex((row) => !isBlankRow(row));
+    if (start < 0) throw new Error(`${file.name}: CSV is empty.`);
+    const header = rows[start].map((cell) => cell.trim());
+    const kind = (
+      Object.keys(TABLE_HEADERS) as (keyof typeof TABLE_HEADERS)[]
+    ).find(
+      (key) =>
+        TABLE_HEADERS[key].length === header.length &&
+        TABLE_HEADERS[key].every((col) => header.includes(col)),
+    );
+    if (!kind || new Set(header).size !== header.length)
+      throw new Error(
+        `${file.name}: unsupported CSV header. Use an inventory, products, BOM, orders or deliveries template.`,
+      );
+    if (tables.has(kind))
+      throw new Error(`Choose only one ${kind} CSV per import.`);
+    const records: Record<string, string>[] = [];
+    for (let i = start + 1; i < rows.length; i++) {
+      if (isBlankRow(rows[i])) continue;
+      if (rows[i].length !== header.length)
+        throw new Error(
+          `${file.name}, line ${i + 1}: expected ${header.length} cells, got ${rows[i].length}.`,
+        );
+      records.push(
+        Object.fromEntries(header.map((col, j) => [col, rows[i][j].trim()])),
+      );
+    }
+    tables.set(kind, records);
+  }
+  const next = structuredClone(current);
+  const integer = (s: string) => (/^\d+$/.test(s) ? Number(s) : Number.NaN);
+  if (tables.has("deliveries"))
+    next.deliveries = tables.get("deliveries")!.map((r) => ({
+      id: r.id,
+      supplierId: r.supplierId,
+      componentId: r.componentId,
+      quantity: integer(r.quantity),
+      availableDate: r.availableDate,
+    }));
+  if (tables.has("inventory"))
+    next.inventory = tables.get("inventory")!.map((r) => ({
+      componentId: r.componentId,
+      quantity: integer(r.quantity),
+    }));
+  if (tables.has("products"))
+    next.products = tables.get("products")!.map((r) => ({
+      id: r.id,
+      name: r.name,
+      sku: r.sku,
+      bom: next.products.find((p) => p.id === r.id)?.bom ?? [],
+    }));
+  if (tables.has("bom")) {
+    for (const product of next.products) product.bom = [];
+    for (const row of tables.get("bom")!) {
+      const product = next.products.find((p) => p.id === row.productId);
+      if (!product)
+        throw new Error(
+          `BOM CSV: productId "${row.productId}" is not in the products table.`,
+        );
+      product.bom.push({
+        componentId: row.componentId,
+        quantity: integer(row.quantity),
+      });
+    }
+  }
+  if (tables.has("orders"))
+    next.orders = tables.get("orders")!.map((r) => ({
+      id: r.id,
+      customer: r.customer,
+      productId: r.productId,
+      quantity: integer(r.quantity),
+      requiredDate: r.requiredDate,
+      value: /^\d+(\.\d+)?$/.test(r.value) ? Number(r.value) : Number.NaN,
+    }));
+  return parseDataset(next);
 }

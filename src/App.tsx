@@ -36,9 +36,10 @@ import {
   RECOVERY_SCENARIO,
 } from "@/data/demo";
 import { simulate } from "@/lib/simulation";
-import { parseImport, parseScenario } from "@/lib/validation";
+import { parseImportFiles, parseScenario } from "@/lib/validation";
 import type { Dataset, Scenario, SimulationResult } from "@/lib/types";
 import { SupplyGraph, type Selection } from "@/components/graph/SupplyGraph";
+import { RecoveryComparison } from "@/components/scenarios/RecoveryComparison";
 import { ScenarioPanel } from "@/components/scenarios/ScenarioPanel";
 import { ImpactPanel } from "@/components/scenarios/ImpactPanel";
 import "@/components/scenarios/panels.css";
@@ -311,13 +312,23 @@ export default function App() {
     setNotice("Fictional demo restored. All scenario changes cleared.");
     setControlError("");
   };
-  async function importFile(file: File) {
+  async function importFiles(files: File[]) {
     setImporting(true);
     setImportError("");
     try {
-      if (file.size > 2_000_000)
-        throw new Error("Choose a file smaller than 2 MB.");
-      const next = parseImport(await file.text(), file.name, data);
+      if (files.some((file) => file.size > 2_000_000) || files.length > 5)
+        throw new Error(
+          "Choose up to five CSV files, each smaller than 2 MB, or one JSON dataset.",
+        );
+      const next = parseImportFiles(
+        await Promise.all(
+          files.map(async (file) => ({
+            name: file.name,
+            text: await file.text(),
+          })),
+        ),
+        data,
+      );
       const nextPresets = presetsFor(next);
       simulate(next, nextPresets[0]);
       setData(next);
@@ -325,7 +336,7 @@ export default function App() {
       setSelection(null);
       setImportOpen(false);
       setNotice(
-        `Imported ${file.name}. Baseline loaded with ${next.orders.length} orders.`,
+        `Imported ${files.map((file) => file.name).join(", ")}. Baseline loaded with ${next.orders.length} orders.`,
       );
     } catch (e) {
       setImportError(
@@ -417,7 +428,9 @@ export default function App() {
               <h1>
                 See what breaks<span> before it breaks.</span>
               </h1>
-              <p>Test a disruption. Trace the impact. Find your next move.</p>
+              <p>
+                Turn a spreadsheet material plan into an explainable what-if.
+              </p>
             </div>
             <div className="dataset-label">
               <Badge variant="outline">
@@ -595,6 +608,13 @@ export default function App() {
               </div>
             </aside>
           </div>
+          {s.atRiskOrders > 0 && (
+            <RecoveryComparison
+              data={data}
+              scenario={scenario}
+              onApply={update}
+            />
+          )}
           <section className="comparison-section">
             <div className="section-heading">
               <div>
@@ -784,8 +804,8 @@ export default function App() {
           <DialogHeader>
             <DialogTitle>Bring your material plan</DialogTitle>
             <DialogDescription>
-              Replace the dataset with JSON, or replace incoming deliveries with
-              CSV. Everything stays in your browser.
+              Replace the dataset with JSON, or select spreadsheet CSV tables
+              together. Everything stays in your browser.
             </DialogDescription>
           </DialogHeader>
           <div className="import-zone">
@@ -797,14 +817,18 @@ export default function App() {
               id="data-upload"
               type="file"
               accept=".json,.csv,application/json,text/csv"
+              multiple
               disabled={importing}
               onChange={(e) => {
-                const f = e.target.files?.[0];
-                if (f) void importFile(f);
+                const files = Array.from(e.target.files ?? []);
+                if (files.length) void importFiles(files);
                 e.target.value = "";
               }}
             />
-            <p>Maximum 2 MB. A failed import leaves your plan unchanged.</p>
+            <p>
+              Up to five CSVs, 2 MB each. All files validate together; a failed
+              import leaves your plan unchanged.
+            </p>
           </div>
           {importError && (
             <Alert variant="destructive">
@@ -816,11 +840,24 @@ export default function App() {
             </Alert>
           )}
           <p className="muted-small">
-            CSV columns: id, supplierId, componentId, quantity, availableDate.
-            The CSV replaces the entire incoming-delivery list. JSON includes
-            suppliers, components, products and BOMs, inventory, deliveries,
-            orders and approved alternatives.
+            CSV types: inventory, products, BOM, orders, deliveries. Headers
+            identify each table, which replaces its existing rows. Select new
+            products and their BOM together. A BOM file replaces all product
+            BOMs. Suppliers, components and approved alternatives stay in the
+            current catalog; use JSON to replace them.
           </p>
+          <div className="flex flex-wrap gap-2">
+            {["inventory", "products", "bom", "orders"].map((table) => (
+              <a
+                className="text-sm underline"
+                key={table}
+                href={`/examples/${table}.csv`}
+                download
+              >
+                {table} template
+              </a>
+            ))}
+          </div>
           <div className="flex gap-2">
             <Button
               variant="outline"
