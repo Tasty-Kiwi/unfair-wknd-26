@@ -38,12 +38,12 @@ npm run deploy
 ## Demonstrate
 
 1. Start on **Normal operations**: 10 customer orders, zero shortages.
-2. Click **Supplier disruption**, or move the delivery slider from +5 to +6 days. The motor receipt moves from November 17 to November 23. ORD-102 needs four motors on November 22; two remain after ORD-101 reserves six of the eight in stock. The result is one order at risk, two missing motors, and €36,000 of order value exposed.
-3. Click **Add alternative** in the Scenario Lab. Two preapproved motors available November 18 cover ORD-102. Its graph path returns to covered; the delayed original receipt remains delayed.
-4. **Compare recovery actions** evaluates each candidate independently against the current scenario. Restore the original receipt timing (supplier confirmation required) or use approved alternative supply (additional purchase, unknown costs). Cards show net units recovered, remaining exposed orders and missing units. Applying an option recalculates the same engine; this is not a cost optimizer.
-5. Click any graph node for its relationships, or an order to inspect component allocations. Compare the three fixed scenario snapshots below; **Export report** downloads the current inputs and results. **Reset demo** restores all original data.
+2. Click **Supplier disruption**, or pick **Latest safe** (22 Nov) then **First short** (23 Nov) under *Land on*. You can also drag the PO-101 receipt on the dated timeline under the map. The motor receipt moves from November 17 to November 23. ORD-102 needs four motors on November 22; two remain after ORD-101 reserves six of the eight in stock. The result is one order at risk, two missing motors, and €36,000 of order value exposed.
+3. Click **Add alternative** under **Change the inputs**. Two preapproved motors available November 18 cover ORD-102. Its graph path returns to covered; the delayed original receipt remains delayed.
+4. **Ways to recover** evaluates each candidate independently against the current scenario. Restore the original receipt timing (supplier confirmation required) or use approved alternative supply (additional purchase, unknown costs). Cards show net units recovered, remaining exposed orders and missing units. Applying an option recalculates the same engine; this is not a cost optimizer.
+5. Click any graph node for its relationships, or an order to inspect component allocations. **Scenarios side by side** compares the three fixed scenarios; **Export report** downloads the current inputs and results. **Reset demo** restores all original data.
 
-A second disruption: reset, choose **CircuitWorks / PO-102**, and shift its control-board receipt to November 25. ORD-103 and ORD-106 become at risk, with eight missing boards. Focus **Control board** in the dependency map or use **Full network**.
+A second disruption: reset, choose receipt **PO-102** (control board), and shift its control-board receipt to November 25. ORD-103 and ORD-106 become at risk, with eight missing boards. Focus **Control board** in the map or use **Full network**.
 
 See [DEMO_SCRIPT.md](DEMO_SCRIPT.md) for a 90-second spoken walkthrough.
 

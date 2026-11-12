@@ -1,25 +1,18 @@
 import { useMemo, useRef, useState } from "react";
 import {
-  Activity,
   ArrowDownToLine,
   ArrowRight,
-  Box,
   Check,
   CheckCircle2,
   ChevronRight,
   CircleHelp,
-  Factory,
-  GitBranch,
-  LayoutDashboard,
   RotateCcw,
   ShieldCheck,
   TriangleAlert,
   Upload,
   X,
-  Zap,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import {
   Dialog,
   DialogContent,
@@ -38,6 +31,7 @@ import {
 import { simulate } from "@/lib/simulation";
 import { parseImportFiles, parseScenario } from "@/lib/validation";
 import type { Dataset, Scenario, SimulationResult } from "@/lib/types";
+import { withReceiptDate } from "@/lib/receipts";
 import { SupplyGraph, type Selection } from "@/components/graph/SupplyGraph";
 import { RecoveryComparison } from "@/components/scenarios/RecoveryComparison";
 import { ScenarioPanel } from "@/components/scenarios/ScenarioPanel";
@@ -50,6 +44,9 @@ const money = (n: number) =>
     currency: "EUR",
     maximumFractionDigits: 0,
   }).format(n);
+const reducedMotion = () =>
+  typeof window !== "undefined" &&
+  window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 const day = (s: string) =>
   new Intl.DateTimeFormat("en-GB", {
     day: "numeric",
@@ -144,10 +141,10 @@ function NodeDetail({
     <div className="node-detail">
       <div className="section-heading">
         <div>
-          <span className="eyebrow">
-            {kind.toUpperCase()} / {id}
-          </span>
-          <h3>{title}</h3>
+          <p className="detail-kind">
+            {kind[0].toUpperCase() + kind.slice(1)} · {id}
+          </p>
+          <h2>{title}</h2>
         </div>
         <Button
           size="icon"
@@ -346,459 +343,396 @@ export default function App() {
       setImporting(false);
     }
   }
+  const firstRisk = result.orders.find((o) => o.status === "at-risk");
+  const firstShort = firstRisk?.lines.find((l) => l.shortage > 0);
+  const cause = (() => {
+    if (!firstRisk || !firstShort) return null;
+    const order = data.orders.find((o) => o.id === firstRisk.orderId);
+    const component = data.components.find(
+      (c) => c.id === firstShort.componentId,
+    );
+    const late = firstShort.lateDeliveries[0];
+    return `${firstRisk.orderId} for ${order?.customer ?? "a customer"} needs ${firstShort.required} × ${component?.name.toLowerCase() ?? firstShort.componentId} by ${day(firstRisk.requiredDate)}. ${firstShort.shortage} ${firstShort.shortage === 1 ? "is" : "are"} missing${late ? `: receipt ${late.id} now lands ${day(late.availableDate)}` : ""}.`;
+  })();
+  const scenarioNames = [
+    "Normal operations",
+    "Supplier disruption",
+    "Approved recovery",
+  ];
   return (
     <div className="app-shell">
-      <aside className="nav-rail" aria-label="Workspace navigation">
-        <a className="domino-mark" href="#" aria-label="DominoOS home">
-          <span />
-          <span />
+      <header className="topbar">
+        <a href="#" className="wordmark" aria-label="DominoOS home">
+          <span className="domino-mark" aria-hidden="true">
+            <span />
+            <span />
+          </span>
+          DominoOS
         </a>
-        <Button
-          variant="ghost"
-          size="icon"
-          className="rail-active"
-          onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
-          aria-label="Command center"
-        >
-          <GitBranch />
-        </Button>
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={() =>
-            orderTable.current?.scrollIntoView({ behavior: "smooth" })
-          }
-          aria-label="Customer orders"
-        >
-          <LayoutDashboard />
-        </Button>
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={() => setImportOpen(true)}
-          aria-label="Import data"
-        >
-          <Box />
-        </Button>
-        <div className="rail-bottom">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => setHelpOpen(true)}
-            aria-label="Model assumptions"
-          >
-            <CircleHelp />
+        <p className="dataset-line">
+          <span>{data.name}</span>
+          <span>
+            Inventory as of {day(data.asOf)} {data.asOf.slice(0, 4)}
+          </span>
+          <span className="dataset-kind">
+            {data === demoData ? "Fictional demo data" : "Imported data"}
+          </span>
+        </p>
+        <div className="top-actions">
+          <Button variant="ghost" size="sm" onClick={() => setHelpOpen(true)}>
+            <CircleHelp data-icon="inline-start" />
+            <span className="label-wide">Assumptions</span>
           </Button>
-          <span className="avatar">NP</span>
+          <Button variant="ghost" size="sm" onClick={() => setImportOpen(true)}>
+            <Upload data-icon="inline-start" />
+            Import data
+          </Button>
+          <Button variant="outline" size="sm" onClick={reset}>
+            <RotateCcw data-icon="inline-start" />
+            Reset demo
+          </Button>
         </div>
-      </aside>
-      <div className="workspace">
-        <header className="topbar">
-          <a href="#" className="wordmark">
-            domino<span>OS</span>
-            <Badge variant="outline">PROTOTYPE</Badge>
-          </a>
-          <div className="manufacturer">
-            <Factory size={15} />
-            {data.name}
-            <ChevronRight size={13} />
-            <span>Command center</span>
-          </div>
-          <div className="top-actions">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setImportOpen(true)}
-            >
-              <Upload data-icon="inline-start" />
-              Import data
-            </Button>
-            <Button variant="outline" size="sm" onClick={reset}>
-              <RotateCcw data-icon="inline-start" />
-              Reset demo
-            </Button>
-          </div>
-        </header>
-        <main>
-          <div className="page-heading">
-            <div>
-              <div className="eyebrow">
-                <span className="live-dot" /> MANUFACTURING INTELLIGENCE
-              </div>
-              <h1>
-                See what breaks<span> before it breaks.</span>
-              </h1>
-              <p>
-                Turn a spreadsheet material plan into an explainable what-if.
-              </p>
-            </div>
-            <div className="dataset-label">
-              <Badge variant="outline">
-                {data === demoData ? "FICTIONAL DEMO DATA" : "IMPORTED DATA"}
-              </Badge>
-              <span>
-                Inventory as of {day(data.asOf)} {data.asOf.slice(0, 4)}
-              </span>
-            </div>
-          </div>
-          {notice && (
-            <div className="notice" role="status">
-              <CheckCircle2 size={16} />
-              {notice}
-              <button
-                onClick={() => setNotice("")}
-                aria-label="Dismiss notification"
-              >
-                <X size={14} />
-              </button>
-            </div>
+      </header>
+      <div className="scenario-strip">
+        <span className="strip-label" id="scenario-label">
+          Scenario
+        </span>
+        <ToggleGroup
+          type="single"
+          value={activePreset >= 0 ? String(activePreset) : "custom"}
+          onValueChange={(v) => {
+            if (v && v !== "custom") choose(Number(v));
+          }}
+          aria-labelledby="scenario-label"
+        >
+          {scenarioNames.map((name, i) => (
+            <ToggleGroupItem key={name} value={String(i)}>
+              {name}
+            </ToggleGroupItem>
+          ))}
+          {activePreset < 0 && (
+            <ToggleGroupItem value="custom">Custom</ToggleGroupItem>
           )}
-          <section
-            className="metrics"
-            aria-label="Simulation summary"
-            aria-live="polite"
-          >
-            <div>
-              <span>Customer orders</span>
-              <strong>{s.totalOrders.toString().padStart(2, "0")}</strong>
-              <small>Across {data.products.length} products</small>
-            </div>
-            <div className={s.atRiskOrders ? "metric-risk" : ""}>
-              <span>
-                Orders at risk
-                <TriangleAlert size={13} />
-              </span>
-              <strong>{s.atRiskOrders.toString().padStart(2, "0")}</strong>
-              <small>
+        </ToggleGroup>
+        <p
+          className={`strip-status ${s.atRiskOrders ? "is-short" : ""}`}
+          aria-hidden="true"
+        >
+          {s.atRiskOrders ? (
+            <>
+              <i className="hatch-chip" />
+              {s.atRiskOrders} short · {s.missingUnits} units ·{" "}
+              {money(s.atRiskValue)}
+            </>
+          ) : (
+            <>
+              <Check size={14} /> All {s.totalOrders} covered
+            </>
+          )}
+        </p>
+      </div>
+      <main>
+        {notice && (
+          <div className="notice" role="status">
+            <CheckCircle2 size={16} />
+            {notice}
+            <button
+              onClick={() => setNotice("")}
+              aria-label="Dismiss notification"
+            >
+              <X size={14} />
+            </button>
+          </div>
+        )}
+        <section
+          className={`outcome-banner ${s.atRiskOrders ? "outcome-risk" : ""}`}
+          aria-label="Simulation summary"
+          aria-live="polite"
+        >
+          <div className="outcome-copy">
+            <h1>
+              {s.atRiskOrders
+                ? `${s.atRiskOrders} order${s.atRiskOrders === 1 ? "" : "s"} at risk due to material shortage`
+                : "Every order has its required materials"}
+            </h1>
+            <p>
+              {s.atRiskOrders
+                ? `${money(s.atRiskValue)} in order value at material risk. ${s.missingUnits} component units remain uncovered. ${cause ?? ""}`
+                : `All material requirements covered by the required dates for ${s.totalOrders} orders across ${data.products.length} products.`}
+            </p>
+          </div>
+          <dl className="figures">
+            <div className={s.atRiskOrders ? "is-short" : ""}>
+              <dt>Orders at risk</dt>
+              <dd>{s.atRiskOrders}</dd>
+              <dd className="figure-note">
                 {s.atRiskOrders
                   ? "Due to material shortage"
                   : "All material requirements covered"}
-              </small>
+              </dd>
             </div>
-            <div className={s.missingUnits ? "metric-risk" : ""}>
-              <span>Missing component units</span>
-              <strong>{s.missingUnits.toString().padStart(2, "0")}</strong>
-              <small>Uncovered by required dates</small>
+            <div className={s.missingUnits ? "is-short" : ""}>
+              <dt>Units missing</dt>
+              <dd>{s.missingUnits}</dd>
+              <dd className="figure-note">By required dates</dd>
             </div>
             <div>
-              <span>Affected products</span>
-              <strong>{s.affectedProducts.toString().padStart(2, "0")}</strong>
-              <small>Of {data.products.length} in the network</small>
+              <dt>Products affected</dt>
+              <dd>{s.affectedProducts}</dd>
+              <dd className="figure-note">Of {data.products.length}</dd>
             </div>
-          </section>
-          <div className="scenario-strip">
-            <div>
-              <GitBranch size={16} />
-              <span>SCENARIO</span>
-            </div>
-            <ToggleGroup
-              type="single"
-              value={activePreset >= 0 ? String(activePreset) : "custom"}
-              onValueChange={(v) => {
-                if (v && v !== "custom") choose(Number(v));
-              }}
-              aria-label="Scenario selector"
-            >
-              <ToggleGroupItem value="0">
-                <span>01</span> Normal operations
-              </ToggleGroupItem>
-              <ToggleGroupItem value="1">
-                <span>02</span> Supplier disruption
-              </ToggleGroupItem>
-              <ToggleGroupItem value="2">
-                <span>03</span> Approved recovery
-              </ToggleGroupItem>
-              {activePreset < 0 && (
-                <ToggleGroupItem value="custom">
-                  Custom scenario
-                </ToggleGroupItem>
-              )}
-            </ToggleGroup>
-            <span className="calculation-status">
-              <Activity size={13} />
-              Deterministic · live
-            </span>
-          </div>
-          <div className="workbench">
-            <div className="main-column">
-              <SupplyGraph
+          </dl>
+        </section>
+        <div className="workbench">
+          <div className="main-column">
+            <SupplyGraph
+              data={data}
+              result={result}
+              scenario={scenario}
+              onSelect={setSelection}
+              selected={selection}
+              onMoveReceipt={(id, date) =>
+                update(withReceiptDate(data, scenario, id, date))
+              }
+            />
+            {s.atRiskOrders > 0 && (
+              <RecoveryComparison
                 data={data}
-                result={result}
                 scenario={scenario}
-                onSelect={setSelection}
-                selected={selection}
+                onApply={update}
               />
-              <section
-                className={`outcome-banner ${s.atRiskOrders ? "outcome-risk" : ""}`}
-                aria-live="polite"
-              >
-                <span className="outcome-icon">
-                  {s.atRiskOrders ? <TriangleAlert /> : <ShieldCheck />}
-                </span>
-                <div>
-                  <strong>
-                    {s.atRiskOrders
-                      ? `${s.atRiskOrders} order${s.atRiskOrders === 1 ? "" : "s"} at risk due to material shortage`
-                      : "Every order has its required materials"}
-                  </strong>
-                  <p>
-                    {s.atRiskOrders
-                      ? `${money(s.atRiskValue)} in order value at material risk. ${s.missingUnits} component units remain uncovered.`
-                      : "Material availability is covered by the required dates under this allocation policy."}
-                  </p>
-                </div>
-                <Badge variant="outline">
-                  {s.atRiskOrders ? "ACTION NEEDED" : "MATERIAL COVERED"}
-                </Badge>
-              </section>
-              <div ref={evidence}>
-                {selection ? (
-                  <NodeDetail
-                    selection={selection}
-                    data={data}
-                    result={result}
-                    onClose={() => setSelection(null)}
-                  />
-                ) : (
-                  <div className="evidence-default">
-                    <div className="section-heading">
-                      <div>
-                        <span className="eyebrow">ALLOCATION EVIDENCE</span>
-                        <h3>
-                          {s.atRiskOrders
-                            ? "Understand the weak link"
-                            : "A plan you can inspect"}
-                        </h3>
-                      </div>
-                      <Badge variant="secondary">AUDITABLE</Badge>
-                    </div>
-                    <ImpactPanel data={data} result={result} />
+            )}
+            <div ref={evidence} className="evidence-anchor">
+              {selection ? (
+                <NodeDetail
+                  selection={selection}
+                  data={data}
+                  result={result}
+                  onClose={() => setSelection(null)}
+                />
+              ) : (
+                <div className="evidence-default">
+                  <div className="section-heading">
+                    <h2>Allocation evidence</h2>
+                    <p className="section-note">
+                      Stock is reserved by required date, then order ID.
+                    </p>
                   </div>
-                )}
-              </div>
-            </div>
-            <aside className="scenario-sidebar">
-              <div className="sidebar-heading">
-                <span className="eyebrow">WHAT-IF WORKSPACE</span>
-                <h2>
-                  <Zap size={19} />
-                  Scenario lab
-                </h2>
-                <p>Change the input. Watch the chain react.</p>
-              </div>
-              {controlError && (
-                <Alert variant="destructive">
-                  <AlertTitle>Scenario not applied</AlertTitle>
-                  <AlertDescription>{controlError}</AlertDescription>
-                </Alert>
+                  <ImpactPanel data={data} result={result} />
+                </div>
               )}
-              <ScenarioPanel
-                key={data.name + scenario.id}
-                data={data}
-                scenario={scenario}
-                onChange={update}
-              />
-              <div className="policy-note">
-                <ShieldCheck size={16} />
-                <p>
-                  <strong>Material availability only.</strong> Earliest required
-                  date, then order ID. Partial kits reserve stock. Capacity and
-                  shipment timing are outside this model.
-                </p>
-              </div>
-            </aside>
+            </div>
           </div>
-          {s.atRiskOrders > 0 && (
-            <RecoveryComparison
+          <aside className="scenario-sidebar">
+            <div className="sidebar-heading">
+              <h2>Change the inputs</h2>
+              <p>Every change recalculates the whole order book.</p>
+            </div>
+            {controlError && (
+              <Alert variant="destructive">
+                <AlertTitle>Scenario not applied</AlertTitle>
+                <AlertDescription>{controlError}</AlertDescription>
+              </Alert>
+            )}
+            <ScenarioPanel
+              key={data.name + scenario.id}
               data={data}
               scenario={scenario}
-              onApply={update}
+              onChange={update}
             />
-          )}
-          <section className="comparison-section">
-            <div className="section-heading">
-              <div>
-                <span className="eyebrow">DECISION SNAPSHOT</span>
-                <h2>Three scenarios. One clear decision.</h2>
-              </div>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() =>
-                  download(
-                    "domino-scenario-report.json",
-                    JSON.stringify(
-                      {
-                        dataset: data.name,
-                        dataProvenance:
-                          data === demoData
-                            ? "Fictional demonstration"
-                            : "User-provided, unverified",
-                        inputs: data,
-                        policy:
-                          "Partial component reservations, earliest required date then order ID; material availability only.",
-                        scenario,
-                        result,
-                        comparison: reports,
-                      },
-                      null,
-                      2,
-                    ),
-                  )
-                }
-              >
-                <ArrowDownToLine data-icon="inline-start" />
-                Export report
-              </Button>
+            <div className="policy-note">
+              <ShieldCheck size={16} aria-hidden="true" />
+              <p>
+                <strong>Material availability only.</strong> Earliest required
+                date, then order ID. Partial kits reserve stock. Capacity and
+                shipment timing are outside this model.
+              </p>
             </div>
-            <div className="comparison-grid">
-              {reports.map((r, i) => (
-                <button
-                  key={i}
-                  className={`comparison-item comparison-${i} ${activePreset === i ? "comparison-active" : ""}`}
-                  onClick={() => choose(i)}
-                >
-                  <div className="comparison-top">
-                    <span>
-                      0{i + 1} / {["BASELINE", "DISRUPTION", "RECOVERY"][i]}
-                    </span>
-                    {activePreset === i ? (
-                      <Check size={15} />
-                    ) : (
-                      <ArrowRight size={15} />
-                    )}
-                  </div>
-                  <h3>
+          </aside>
+        </div>
+        <section className="comparison-section" aria-labelledby="compare-title">
+          <div className="section-heading">
+            <h2 id="compare-title">Scenarios side by side</h2>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() =>
+                download(
+                  "domino-scenario-report.json",
+                  JSON.stringify(
                     {
-                      [
-                        "Business as usual",
-                        "A delivery slips",
-                        "A qualified alternative",
-                      ][i]
-                    }
-                  </h3>
-                  <div className="comparison-numbers">
-                    <div>
-                      <strong
-                        className={r.summary.atRiskOrders ? "risk-text" : ""}
-                      >
-                        {r.summary.atRiskOrders}
-                      </strong>
-                      <span>orders at risk</span>
-                    </div>
-                    <div>
-                      <strong>{r.summary.missingUnits}</strong>
-                      <span>units missing</span>
-                    </div>
-                    <div>
-                      <strong>{r.summary.affectedComponents}</strong>
-                      <span>components</span>
-                    </div>
-                  </div>
-                  <p>
-                    {money(r.summary.atRiskValue)} order value at material risk
-                  </p>
-                </button>
-              ))}
-            </div>
-          </section>
-          <section className="orders-section" ref={orderTable}>
-            <div className="section-heading">
-              <div>
-                <span className="eyebrow">CUSTOMER COMMITMENTS</span>
-                <h2>The order book</h2>
-              </div>
-              <span className="muted-small">
-                Allocated by required date, then order ID
-              </span>
-            </div>
-            <div className="table-scroll">
-              <table>
-                <thead>
-                  <tr>
-                    <th>Order / customer</th>
-                    <th>Product</th>
-                    <th>Qty</th>
-                    <th>Required by</th>
-                    <th>Order value</th>
-                    <th>Material status</th>
-                    <th>
-                      <span className="sr-only">Inspect order</span>
+                      dataset: data.name,
+                      dataProvenance:
+                        data === demoData
+                          ? "Fictional demonstration"
+                          : "User-provided, unverified",
+                      inputs: data,
+                      policy:
+                        "Partial component reservations, earliest required date then order ID; material availability only.",
+                      scenario,
+                      result,
+                      comparison: reports,
+                    },
+                    null,
+                    2,
+                  ),
+                )
+              }
+            >
+              <ArrowDownToLine data-icon="inline-start" />
+              Export report
+            </Button>
+          </div>
+          <div className="table-scroll">
+            <table className="comparison-table">
+              <thead>
+                <tr>
+                  <th scope="col">Scenario</th>
+                  <th scope="col" className="num">
+                    Orders at risk
+                  </th>
+                  <th scope="col" className="num">
+                    Units missing
+                  </th>
+                  <th scope="col" className="num">
+                    Value at risk
+                  </th>
+                  <th scope="col">
+                    <span className="sr-only">Load scenario</span>
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {reports.map((r, i) => (
+                  <tr
+                    key={i}
+                    className={activePreset === i ? "is-current" : ""}
+                    aria-current={activePreset === i ? "true" : undefined}
+                  >
+                    <th scope="row">
+                      {scenarioNames[i]}
+                      {activePreset === i && (
+                        <span className="current-tag">Showing</span>
+                      )}
                     </th>
+                    <td
+                      className={`num ${r.summary.atRiskOrders ? "short-text" : ""}`}
+                    >
+                      {r.summary.atRiskOrders}
+                    </td>
+                    <td className="num">{r.summary.missingUnits}</td>
+                    <td className="num">{money(r.summary.atRiskValue)}</td>
+                    <td className="row-action">
+                      {activePreset !== i && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => choose(i)}
+                        >
+                          Show <ArrowRight size={14} />
+                        </Button>
+                      )}
+                    </td>
                   </tr>
-                </thead>
-                <tbody>
-                  {result.orders.map((r) => {
-                    const o = data.orders.find((x) => x.id === r.orderId)!;
-                    return (
-                      <tr
-                        key={o.id}
-                        className={r.status === "at-risk" ? "at-risk-row" : ""}
-                      >
-                        <td>
-                          <strong>{o.id}</strong>
-                          <span>{o.customer}</span>
-                        </td>
-                        <td>
-                          {
-                            data.products.find((p) => p.id === o.productId)
-                              ?.name
-                          }
-                        </td>
-                        <td>{o.quantity}</td>
-                        <td>{day(o.requiredDate)}</td>
-                        <td>{money(o.value)}</td>
-                        <td>
-                          <span
-                            className={`order-status ${r.status === "at-risk" ? "risk-text" : "success-text"}`}
-                          >
-                            {r.status === "at-risk" ? (
-                              <TriangleAlert size={13} />
-                            ) : (
-                              <CheckCircle2 size={13} />
-                            )}{" "}
-                            {r.status === "at-risk"
-                              ? `At risk · ${r.lines.reduce((s, l) => s + l.shortage, 0)} units short`
-                              : "Material covered"}
-                          </span>
-                        </td>
-                        <td>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            aria-label={`Inspect ${o.id}`}
-                            onClick={() => {
-                              setSelection({ kind: "order", id: o.id });
-                              requestAnimationFrame(() =>
-                                evidence.current?.scrollIntoView({
-                                  behavior: "smooth",
-                                  block: "start",
-                                }),
-                              );
-                            }}
-                          >
-                            <ChevronRight />
-                          </Button>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          </section>
-          <footer>
-            <span>
-              <span className="footer-mark">▰</span> DominoOS{" "}
-              <span className="muted-small">/ Unfair Weekend 2026</span>
-            </span>
-            <span>Deterministic inputs. Explainable decisions.</span>
-            <button onClick={() => setHelpOpen(true)}>
-              Model assumptions <ArrowRight size={12} />
-            </button>
-          </footer>
-        </main>
-      </div>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+        <section className="orders-section" ref={orderTable}>
+          <div className="section-heading">
+            <h2>Order book</h2>
+            <p className="section-note">
+              Allocated by required date, then order ID
+            </p>
+          </div>
+          <div className="table-scroll">
+            <table className="orders-table">
+              <thead>
+                <tr>
+                  <th scope="col">Order</th>
+                  <th scope="col">Required by</th>
+                  <th scope="col">Material</th>
+                  <th scope="col">Product</th>
+                  <th scope="col" className="num">
+                    Qty
+                  </th>
+                  <th scope="col" className="num">
+                    Value
+                  </th>
+                  <th scope="col">
+                    <span className="sr-only">Inspect order</span>
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {result.orders.map((r) => {
+                  const o = data.orders.find((x) => x.id === r.orderId)!;
+                  const short = r.lines.reduce((n, l) => n + l.shortage, 0);
+                  return (
+                    <tr
+                      key={o.id}
+                      className={r.status === "at-risk" ? "at-risk-row" : ""}
+                    >
+                      <td>
+                        <strong>{o.id}</strong>
+                        <span>{o.customer}</span>
+                      </td>
+                      <td>{day(o.requiredDate)}</td>
+                      <td>
+                        <span
+                          className={`order-status ${r.status === "at-risk" ? "is-short" : "is-covered"}`}
+                        >
+                          {r.status === "at-risk" ? (
+                            <>
+                              <i className="hatch-chip" aria-hidden="true" />
+                              Short {short}
+                            </>
+                          ) : (
+                            <>
+                              <Check size={14} aria-hidden="true" />
+                              Covered
+                            </>
+                          )}
+                        </span>
+                      </td>
+                      <td>
+                        {data.products.find((p) => p.id === o.productId)?.name}
+                      </td>
+                      <td className="num">{o.quantity}</td>
+                      <td className="num">{money(o.value)}</td>
+                      <td className="row-action">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          aria-label={`Inspect ${o.id}`}
+                          onClick={() => {
+                            setSelection({ kind: "order", id: o.id });
+                            requestAnimationFrame(() =>
+                              evidence.current?.scrollIntoView({
+                                behavior: reducedMotion() ? "auto" : "smooth",
+                                block: "start",
+                              }),
+                            );
+                          }}
+                        >
+                          <ChevronRight />
+                        </Button>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </section>
+        <footer>
+          <span>DominoOS · Unfair Weekend 2026</span>
+          <button onClick={() => setHelpOpen(true)}>
+            Model assumptions <ArrowRight size={14} />
+          </button>
+        </footer>
+      </main>
       <Dialog open={importOpen} onOpenChange={setImportOpen}>
         <DialogContent>
           <DialogHeader>
@@ -896,7 +830,7 @@ export default function App() {
       <Dialog open={helpOpen} onOpenChange={setHelpOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>A clear model. Clear limits.</DialogTitle>
+            <DialogTitle>Model assumptions</DialogTitle>
             <DialogDescription>
               DominoOS simulates material availability, using deterministic
               TypeScript calculations.
