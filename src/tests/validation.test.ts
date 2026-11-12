@@ -4,6 +4,7 @@ import {
   parseDataset,
   parseDeliveryCsv,
   parseImport,
+  parseImportFiles,
   parseScenario,
 } from "@/lib/validation";
 
@@ -285,5 +286,99 @@ describe("parseDeliveryCsv / parseImport", () => {
     expect(() => parseImport("x", "data.xlsx", fixture())).toThrow(
       /\.json|\.csv/,
     );
+  });
+});
+
+describe("spreadsheet table imports", () => {
+  const file = (name: string, text: string) => ({ name: `${name}.csv`, text });
+  it("replaces inventory, preserves the catalog and leaves baseline unchanged", () => {
+    const data = fixture();
+    const before = JSON.stringify(data);
+    const result = parseImportFiles(
+      [file("inventory", "componentId,quantity\nMTR-01,3")],
+      data,
+    );
+    expect(result.inventory).toEqual([{ componentId: "MTR-01", quantity: 3 }]);
+    expect(result.suppliers).toEqual(data.suppliers);
+    expect(JSON.stringify(data)).toBe(before);
+  });
+  it("validates related product, BOM and order files together regardless of file order", () => {
+    const data = fixture();
+    data.alternatives = [];
+    const result = parseImportFiles(
+      [
+        file("bom", "productId,componentId,quantity\nP-NEW,MTR-01,3"),
+        file(
+          "orders",
+          'id,customer,productId,quantity,requiredDate,value\nNEW-01,"Acme, Ltd",P-NEW,2,2026-11-22,1200.50',
+        ),
+        file("products", "id,name,sku\nP-NEW,New fan,NEW-1"),
+      ],
+      data,
+    );
+    expect(result.products[0].bom[0].quantity).toBe(3);
+    expect(result.orders[0].customer).toBe("Acme, Ltd");
+    expect(result.orders[0].value).toBe(1200.5);
+  });
+  it("rejects broken cross-references transactionally", () => {
+    const data = fixture();
+    const before = JSON.stringify(data);
+    expect(() =>
+      parseImportFiles(
+        [
+          file("inventory", "componentId,quantity\nMTR-01,1"),
+          file(
+            "orders",
+            "id,customer,productId,quantity,requiredDate,value\nX,Acme,MISSING,1,2026-11-22,1",
+          ),
+        ],
+        data,
+      ),
+    ).toThrow(/MISSING/);
+    expect(JSON.stringify(data)).toBe(before);
+  });
+  it("rejects duplicate tables, duplicate headers, invalid counts, dates and ragged rows", () => {
+    const valid = file("inventory", "componentId,quantity\nMTR-01,1");
+    expect(() => parseImportFiles([valid, valid], fixture())).toThrow(
+      /only one/,
+    );
+    for (const csv of [
+      "componentId,componentId",
+      "componentId,quantity\nMTR-01,1.5",
+      "componentId,quantity\nMTR-01,1,extra",
+      "componentId,quantity\nMTR-01,-2",
+    ])
+      expect(() => parseImportFiles([file("bad", csv)], fixture())).toThrow();
+    expect(() =>
+      parseImportFiles(
+        [
+          file(
+            "orders",
+            "id,customer,productId,quantity,requiredDate,value\nX,Acme,P-1,1,2026-02-30,2",
+          ),
+        ],
+        fixture(),
+      ),
+    ).toThrow(/requiredDate/);
+  });
+  it("rejects empty files and JSON/CSV mixtures, accepts reordered headers", () => {
+    expect(() => parseImportFiles([file("empty", "\n")], fixture())).toThrow(
+      /empty/,
+    );
+    expect(() =>
+      parseImportFiles(
+        [
+          { name: "data.json", text: "{}" },
+          file("inventory", "componentId,quantity"),
+        ],
+        fixture(),
+      ),
+    ).toThrow(/mix/);
+    expect(
+      parseImportFiles(
+        [file("inventory", "quantity,componentId\n2,MTR-01")],
+        fixture(),
+      ).inventory[0].quantity,
+    ).toBe(2);
   });
 });
