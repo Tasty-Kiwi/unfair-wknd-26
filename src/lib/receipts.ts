@@ -150,3 +150,116 @@ export function tippingPoints(
   }
   return { latestSafe: max, firstShort: null };
 }
+
+export interface AxisTick {
+  date: string;
+  /** Text under the tick, or null for an unlabelled minor tick. */
+  label: string | null;
+}
+
+/** Upper bounds that keep the axis readable at 360px and cheap to render. */
+export const MAX_AXIS_TICKS = 62;
+export const MAX_AXIS_LABELS = 8;
+
+type Unit = "day" | "month" | "year";
+/** Minor step and label step, in units, from finest to coarsest. */
+const AXIS_LADDER: [Unit, number, number][] = [
+  ["day", 1, 1],
+  ["day", 1, 2],
+  ["day", 1, 3],
+  ["day", 1, 7],
+  ["day", 7, 14],
+  ["day", 7, 28],
+  ["month", 1, 1],
+  ["month", 1, 2],
+  ["month", 1, 3],
+  ["month", 3, 6],
+  ["month", 3, 12],
+  ["year", 1, 1],
+  ["year", 1, 2],
+  ["year", 1, 5],
+  ["year", 5, 10],
+  ["year", 10, 20],
+  ["year", 10, 50],
+  ["year", 100, 100],
+  ["year", 100, 500],
+  ["year", 1000, 1000],
+];
+
+const parts = (iso: string) =>
+  iso.split("-").map(Number) as [number, number, number];
+const iso = (y: number, m: number, d: number) =>
+  new Date(Date.UTC(y, m - 1, d)).toISOString().slice(0, 10);
+const monthName = (date: string, withYear: boolean) =>
+  new Intl.DateTimeFormat("en-GB", {
+    month: "short",
+    ...(withYear ? { year: "numeric" } : {}),
+    timeZone: "UTC",
+  }).format(new Date(`${date}T00:00:00Z`));
+
+/** Dates on [start, end] for one rung: day steps count from start, month
+ * and year steps sit on calendar boundaries. Stops early past `limit`. */
+function stepDates(
+  start: string,
+  end: string,
+  unit: Unit,
+  step: number,
+  limit: number,
+) {
+  const out: string[] = [];
+  const [y0, m0] = parts(start);
+  for (let i = 0; out.length <= limit; i++) {
+    const d =
+      unit === "day"
+        ? addDays(start, i * step)
+        : unit === "month"
+          ? iso(y0, m0 + 1 + i * step, 1)
+          : iso((Math.floor(y0 / step) + 1 + i) * step, 1, 1);
+    if (d > end) break;
+    out.push(d);
+  }
+  return out;
+}
+
+/**
+ * Ticks for a dated axis from `start` to `end`. The count is bounded by
+ * MAX_AXIS_TICKS whatever the span, so a plan reaching into 2099 renders
+ * as quickly as a two-week one. Short spans tick daily; longer ones step to
+ * weeks, months and years.
+ */
+export function axisTicks(start: string, end: string): AxisTick[] {
+  const span = Math.max(0, dayDiff(start, end));
+  for (const [unit, minor, major] of AXIS_LADDER) {
+    const minors = stepDates(start, end, unit, minor, MAX_AXIS_TICKS);
+    const labels = new Set(stepDates(start, end, unit, major, MAX_AXIS_LABELS));
+    if (minors.length > MAX_AXIS_TICKS || labels.size > MAX_AXIS_LABELS)
+      continue;
+    // The start always carries the full date so the axis has an anchor.
+    const ticks: AxisTick[] = [{ date: start, label: shortDate(start) }];
+    let year = parts(start)[0];
+    for (const date of minors) {
+      if (date === start) continue;
+      // Keep the first label clear of the anchor.
+      const crowded = dayDiff(start, date) < span / (MAX_AXIS_LABELS * 1.5);
+      let label: string | null = null;
+      if (labels.has(date) && !crowded) {
+        const [y, , d] = parts(date);
+        label =
+          unit === "year"
+            ? String(y)
+            : unit === "month"
+              ? monthName(date, y !== year)
+              : d === 1
+                ? shortDate(date)
+                : String(d);
+        year = y;
+      }
+      ticks.push({ date, label });
+    }
+    return ticks;
+  }
+  return [
+    { date: start, label: shortDate(start) },
+    { date: end, label: String(parts(end)[0]) },
+  ];
+}

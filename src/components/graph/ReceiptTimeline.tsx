@@ -1,7 +1,8 @@
-import { useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { Dataset, Scenario, SimulationResult } from "@/lib/types";
 import {
   addDays,
+  axisTicks,
   clampShift,
   dayDiff as days,
   shiftRange,
@@ -37,8 +38,25 @@ export function ReceiptTimeline({
   onMoveReceipt?: (deliveryId: string, date: string) => void;
 }) {
   const track = useRef<HTMLDivElement>(null);
+  // Track width in px, so label placement can check what actually fits.
+  const [trackWidth, setTrackWidth] = useState(0);
+  useEffect(() => {
+    const el = track.current;
+    if (!el || typeof ResizeObserver === "undefined") return;
+    const ro = new ResizeObserver(([entry]) =>
+      setTrackWidth(entry.contentRect.width),
+    );
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [componentId]);
   const component = data.components.find((c) => c.id === componentId);
   if (!component) return null;
+
+  // Dates carry a year once the axis leaves the inventory date's year.
+  const when = (iso: string) =>
+    iso.slice(0, 4) === data.asOf.slice(0, 4)
+      ? short(iso)
+      : `${short(iso)} ${iso.slice(0, 4)}`;
 
   const stock = data.inventory
     .filter((i) => i.componentId === componentId)
@@ -61,7 +79,7 @@ export function ReceiptTimeline({
       marks.push({
         key: `${d.id}-planned`,
         date: baseline.availableDate,
-        label: `planned ${short(baseline.availableDate)}`,
+        label: `planned ${when(baseline.availableDate)}`,
         kind: "planned",
       });
     marks.push({
@@ -122,8 +140,20 @@ export function ReceiptTimeline({
   const span = Math.max(1, days(start, end));
   const x = (iso: string) =>
     `${(Math.min(span, Math.max(0, days(start, iso))) / span) * 100}%`;
-  const edge = (iso: string) => days(start, iso) / span > 0.62;
-  const every = span > 16 ? 3 : span > 10 ? 2 : 1;
+  const at = (iso: string) => days(start, iso) / span;
+  const edge = (iso: string) => at(iso) > 0.62;
+  // 12px semibold Plex runs about 7px a character, plus the 7px offset.
+  const fits = (px: number, text: string) => px >= text.length * 7 + 14;
+  const place = (from: string, to: string, text: string) => {
+    if (trackWidth === 0)
+      return !edge(to) ? "after" : at(from) >= 0.5 ? "flip" : "inside";
+    if (fits((1 - at(to)) * trackWidth, text)) return "after";
+    if (fits(at(from) * trackWidth, text)) return "flip";
+    if (fits((at(to) - at(from)) * trackWidth, text)) return "inside";
+    return "below";
+  };
+  const shortText = (n: (typeof needs)[number]) =>
+    `Short ${n.shortage} by ${when(n.date)}${n.next ? `, next receipt ${when(n.next)}` : ""}`;
   const dayAt = (clientX: number) => {
     const box = track.current?.getBoundingClientRect();
     if (!box || box.width === 0) return null;
@@ -146,7 +176,7 @@ export function ReceiptTimeline({
     );
     if (next !== landsOn(deliveryId)) onMoveReceipt(deliveryId, next);
   };
-  const ticks = Array.from({ length: span + 1 }, (_, i) => addDays(start, i));
+  const ticks = axisTicks(start, end);
 
   return (
     <div className="timeline" aria-labelledby={`timeline-${componentId}`}>
@@ -166,19 +196,13 @@ export function ReceiptTimeline({
         <li className="timeline-row timeline-axis" aria-hidden="true">
           <span className="timeline-label" />
           <div className="timeline-track">
-            {ticks.map((t, i) => (
+            {ticks.map((t) => (
               <span
-                key={t}
-                className={`tick ${i % every === 0 ? "has-label" : ""}`}
-                style={{ left: x(t) }}
+                key={t.date}
+                className={`tick ${t.label ? "has-label" : ""}`}
+                style={{ left: x(t.date) }}
               >
-                {i % every === 0 && (
-                  <em>
-                    {i === 0 || t.endsWith("-01")
-                      ? short(t)
-                      : t.slice(8).replace(/^0/, "")}
-                  </em>
-                )}
+                {t.label && <em>{t.label}</em>}
               </span>
             ))}
           </div>
@@ -200,7 +224,7 @@ export function ReceiptTimeline({
                     <em>
                       {m.label}
                       {m.kind !== "planned" && m.kind !== "stock"
-                        ? ` · ${short(m.date)}`
+                        ? ` · ${when(m.date)}`
                         : ""}
                     </em>
                   </span>
@@ -217,7 +241,7 @@ export function ReceiptTimeline({
                   aria-valuemin={range.min}
                   aria-valuemax={range.max}
                   aria-valuenow={shift}
-                  aria-valuetext={`${planned.id} lands ${short(m.date)}, ${
+                  aria-valuetext={`${planned.id} lands ${when(m.date)}, ${
                     shift === 0
                       ? "as planned"
                       : `${Math.abs(shift)} day${Math.abs(shift) === 1 ? "" : "s"} ${shift > 0 ? "late" : "early"}`
@@ -260,7 +284,7 @@ export function ReceiptTimeline({
                 >
                   <i className="grip" aria-hidden="true" />
                   <em>
-                    {m.label} · {short(m.date)}
+                    {m.label} · {when(m.date)}
                   </em>
                 </span>
               );
@@ -290,23 +314,34 @@ export function ReceiptTimeline({
                 className={`need ${edge(n.date) ? "flip" : ""}`}
                 style={{ left: x(n.date) }}
               >
-                {!n.shortage && <em>Covered by {short(n.date)}</em>}
+                {!n.shortage && <em>Covered by {when(n.date)}</em>}
               </span>
-              {n.shortage > 0 && (
-                // Anchored past the hatched overrun so it never covers it.
-                <span
-                  className={`need-label ${edge(n.next ?? end) ? "flip" : ""}`}
-                  style={{
-                    left: edge(n.next ?? end) ? x(n.date) : x(n.next ?? end),
-                  }}
-                >
-                  <em>
-                    Short {n.shortage} by {short(n.date)}
-                    {n.next ? `, next receipt ${short(n.next)}` : ""}
-                  </em>
-                </span>
-              )}
+              {n.shortage > 0 &&
+                place(n.date, n.next ?? end, shortText(n)) !== "below" && (
+                  // Never on the hatch itself: after the overrun when there is
+                  // room, before it when it starts past halfway, otherwise on
+                  // a solid chip at its left end.
+                  <span
+                    className={`need-label ${place(n.date, n.next ?? end, shortText(n))}`}
+                    style={{
+                      left:
+                        place(n.date, n.next ?? end, shortText(n)) === "after"
+                          ? x(n.next ?? end)
+                          : x(n.date),
+                      ...(place(n.date, n.next ?? end, shortText(n)) ===
+                        "inside" && {
+                        width: `calc(${x(n.next ?? end)} - ${x(n.date)})`,
+                      }),
+                    }}
+                  >
+                    <em>{shortText(n)}</em>
+                  </span>
+                )}
             </div>
+            {n.shortage > 0 &&
+              place(n.date, n.next ?? end, shortText(n)) === "below" && (
+                <p className="need-note">{shortText(n)}</p>
+              )}
           </li>
         ))}
       </ol>

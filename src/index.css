@@ -779,10 +779,26 @@ main {
   left: auto;
   right: 7px;
 }
+.need-label.inside em {
+  left: 6px;
+  max-width: calc(100% - 12px);
+  padding: 1px 6px;
+  white-space: normal;
+  background: var(--sheet);
+  border: 1px solid var(--short);
+  border-radius: 2px;
+}
 .is-short .need-label em,
 .is-short .need em {
   color: var(--short-ink);
   font-weight: 600;
+}
+.need-note {
+  grid-column: 2;
+  margin: -8px 8px 10px 0;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--short-ink);
 }
 .overrun {
   position: absolute;
@@ -1225,6 +1241,10 @@ footer button {
   }
   .timeline-axis .timeline-label {
     display: none;
+  }
+  .need-note {
+    grid-column: 1;
+    margin: -4px 0 10px;
   }
   .evidence-default,
   .node-detail {

@@ -261,3 +261,38 @@ test("a supplier is only flagged Late when its receipt actually slips", async ({
   await expect(aster).toContainText("Reduced");
   await expect(aster).not.toContainText("Late");
 });
+
+test("a receipt dated 2035 keeps the timeline axis bounded and movable", async ({
+  page,
+}) => {
+  const errors: string[] = [];
+  page.on("pageerror", (e) => errors.push(e.message));
+  await page.goto("/");
+  await page.getByRole("button", { name: "Import data" }).last().click();
+  await page.locator("#data-upload").setInputFiles({
+    name: "deliveries.csv",
+    mimeType: "text/csv",
+    buffer: Buffer.from(
+      "id,supplierId,componentId,quantity,availableDate\nPO-101,SUP-01,MTR-01,5,2035-01-10",
+    ),
+  });
+  await expect(page.locator(".notice")).toContainText(
+    "Imported deliveries.csv",
+  );
+
+  // Daily ticks would be about 3,000 elements here.
+  const ticks = page.locator(".timeline-axis .tick");
+  expect(await ticks.count()).toBeLessThanOrEqual(62);
+  await expect(page.locator(".timeline-axis")).toContainText("2034");
+
+  const handle = page.getByRole("slider", { name: "Move receipt PO-101" });
+  await expect(handle).toHaveAttribute("aria-valuenow", "0");
+  await handle.focus();
+  await page.keyboard.press("ArrowRight");
+  await expect(handle).toHaveAttribute("aria-valuenow", "1");
+  await expect(handle).toHaveAttribute("aria-valuetext", /11 Jan/);
+  await expect(page.getByLabel("Available date").first()).toHaveValue(
+    "2035-01-11",
+  );
+  expect(errors).toEqual([]);
+});

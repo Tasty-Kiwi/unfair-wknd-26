@@ -4,7 +4,10 @@ import { simulate } from "@/lib/simulation";
 import type { Dataset } from "@/lib/types";
 import {
   addDays,
+  axisTicks,
   clampShift,
+  MAX_AXIS_LABELS,
+  MAX_AXIS_TICKS,
   receiptExposure,
   shiftRange,
   tippingPoints,
@@ -146,5 +149,64 @@ describe("tipping points look at each order, not just the total", () => {
       latestSafe: 1,
       firstShort: 2,
     });
+  });
+});
+
+describe("axisTicks", () => {
+  const labels = (start: string, end: string) =>
+    axisTicks(start, end)
+      .filter((t) => t.label)
+      .map((t) => t.label);
+
+  it("keeps daily ticks for the demo's few-week span", () => {
+    const ticks = axisTicks("2026-11-12", "2026-11-30");
+    expect(ticks).toHaveLength(19);
+    expect(labels("2026-11-12", "2026-11-30")).toEqual([
+      "12 Nov",
+      "15",
+      "18",
+      "21",
+      "24",
+      "27",
+      "30",
+    ]);
+  });
+
+  it("stays bounded and in order for spans out to 2099", () => {
+    for (const end of [
+      "2027-02-01",
+      "2027-11-13",
+      "2035-01-10",
+      "2099-12-31",
+    ]) {
+      const ticks = axisTicks("2026-11-12", end);
+      expect(ticks.length).toBeLessThanOrEqual(MAX_AXIS_TICKS);
+      expect(ticks.filter((t) => t.label).length).toBeLessThanOrEqual(
+        MAX_AXIS_LABELS,
+      );
+      expect(ticks[0]).toEqual({ date: "2026-11-12", label: "12 Nov" });
+      const dates = ticks.map((t) => t.date);
+      expect([...dates].sort()).toEqual(dates);
+      expect(new Set(dates).size).toBe(dates.length);
+      expect(dates.at(-1)! <= end).toBe(true);
+    }
+  });
+
+  it("switches to months, then years, for longer spans", () => {
+    expect(labels("2026-11-12", "2027-11-13")).toEqual([
+      "12 Nov",
+      "Feb 2027",
+      "Apr",
+      "Jun",
+      "Aug",
+      "Oct",
+    ]);
+    expect(labels("2026-11-12", "2035-01-10")).toEqual([
+      "12 Nov",
+      "2028",
+      "2030",
+      "2032",
+      "2034",
+    ]);
   });
 });
