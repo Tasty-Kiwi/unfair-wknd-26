@@ -2,7 +2,7 @@
 
 **Public demo: https://domino-os.tasty-kiwi.workers.dev** · [CI runs](https://github.com/Tasty-Kiwi/unfair-wknd-26/actions/workflows/ci.yml)
 
-**See what breaks before it breaks.** A manufacturing material-availability simulator built for Unfair Weekend 2026. Change a supplier receipt, trace the affected customer order, and test an approved alternative in under a minute.
+**See what breaks before it breaks.** A manufacturing material-availability simulator built for the Unfair Weekend 2026 hackathon. Change a supplier receipt, trace the affected customer order, and test an approved alternative in under a minute.
 
 Designed for a small manufacturer testing a spreadsheet material plan without a full planning-system rollout. This buyer segment and willingness to pay are hypotheses; no customer validation or measured savings are claimed. See [commercial narrative](docs/PITCH.md) and [human validation playbook](docs/VALIDATION_PLAYBOOK.md).
 
