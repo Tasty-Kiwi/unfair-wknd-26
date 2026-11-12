@@ -1,4 +1,4 @@
-import { useEffect, useId, useState } from "react";
+import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { Plus, Trash2 } from "lucide-react";
 import type {
   AlternativeSupply,
@@ -7,29 +7,21 @@ import type {
   Scenario,
 } from "@/lib/types";
 import { isIsoDate, parseScenario } from "@/lib/validation";
+import {
+  addDays,
+  dayDiff,
+  receiptExposure,
+  shiftRange,
+  shortDate,
+  tippingPoints,
+} from "@/lib/receipts";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import "./panels.css";
 
 export interface ScenarioPanelProps {
   data: Dataset;
   scenario: Scenario;
   onChange: (scenario: Scenario) => void;
-}
-
-const MAX_SHIFT_DAYS = 12;
-const DAY_MS = 86_400_000;
-
-function toUtcMs(iso: string): number {
-  const [year, month, day] = iso.split("-").map(Number);
-  return Date.UTC(year, month - 1, day);
-}
-
-/** Whole days from `from` to `to` (both ISO dates). */
-function dayDiff(from: string, to: string): number {
-  return Math.round((toUtcMs(to) - toUtcMs(from)) / DAY_MS);
-}
-
-function addDays(iso: string, days: number): string {
-  return new Date(toUtcMs(iso) + days * DAY_MS).toISOString().slice(0, 10);
 }
 
 /** Returns the quantity as a whole number, or null when the draft is not a valid count. */
@@ -71,31 +63,41 @@ export function ScenarioPanel({
   onChange,
 }: ScenarioPanelProps) {
   const baseId = useId();
-  const suppliersWithDeliveries = data.suppliers.filter((supplier) =>
-    data.deliveries.some((delivery) => delivery.supplierId === supplier.id),
-  );
-
-  const [supplierId, setSupplierId] = useState<string>(
-    () =>
-      data.deliveries[0]?.supplierId ?? suppliersWithDeliveries[0]?.id ?? "",
-  );
   const [deliveryId, setDeliveryId] = useState<string>(
     () => data.deliveries[0]?.id ?? "",
   );
-
-  const deliveriesForSupplier = data.deliveries.filter(
-    (d) => d.supplierId === supplierId,
+  // Stable order (planned date, then id) so options never move while the
+  // user edits. Exposure needs two full simulations, so it is computed only
+  // for the selected receipt: doing it for every option took over a minute
+  // on a 1,000-delivery import.
+  const receipts = useMemo(
+    () =>
+      [...data.deliveries]
+        .sort(
+          (a, b) =>
+            a.availableDate.localeCompare(b.availableDate) ||
+            (a.id < b.id ? -1 : a.id > b.id ? 1 : 0),
+        )
+        .map((delivery) => ({
+          delivery,
+          component: data.components.find((c) => c.id === delivery.componentId),
+          supplier: data.suppliers.find((x) => x.id === delivery.supplierId),
+        })),
+    [data],
   );
-  const selectedDelivery =
-    deliveriesForSupplier.find((d) => d.id === deliveryId) ??
-    deliveriesForSupplier[0];
-
-  const handleSupplierChange = (nextSupplierId: string) => {
-    setSupplierId(nextSupplierId);
-    setDeliveryId(
-      data.deliveries.find((d) => d.supplierId === nextSupplierId)?.id ?? "",
-    );
-  };
+  const selected =
+    receipts.find((r) => r.delivery.id === deliveryId) ?? receipts[0];
+  const selectedDelivery = selected?.delivery;
+  const exposure = useMemo(
+    () => (selectedDelivery ? receiptExposure(data, selectedDelivery.id) : 0),
+    [data, selectedDelivery],
+  );
+  const money = (n: number) =>
+    new Intl.NumberFormat("en-IE", {
+      style: "currency",
+      currency: "EUR",
+      maximumFractionDigits: 0,
+    }).format(n);
 
   return (
     <section className="scenario-panel" aria-labelledby={`${baseId}-title`}>
@@ -112,39 +114,31 @@ export function ScenarioPanel({
         <h3 className="scenario-panel__subtitle">Delivery timing</h3>
 
         {selectedDelivery ? (
-          <div className="scenario-panel__grid">
-            <div className="scenario-field">
-              <label htmlFor={`${baseId}-supplier`}>Supplier</label>
-              <select
-                id={`${baseId}-supplier`}
-                className="scenario-control"
-                value={selectedDelivery.supplierId}
-                onChange={(event) => handleSupplierChange(event.target.value)}
-              >
-                {suppliersWithDeliveries.map((supplier) => (
-                  <option key={supplier.id} value={supplier.id}>
-                    {supplier.id} · {supplier.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div className="scenario-field">
-              <label htmlFor={`${baseId}-delivery`}>Delivery</label>
-              <select
-                id={`${baseId}-delivery`}
-                className="scenario-control"
-                value={selectedDelivery.id}
-                onChange={(event) => setDeliveryId(event.target.value)}
-              >
-                {deliveriesForSupplier.map((delivery) => (
-                  <option key={delivery.id} value={delivery.id}>
-                    {delivery.id} · {delivery.availableDate} ·{" "}
-                    {delivery.quantity} units
-                  </option>
-                ))}
-              </select>
-            </div>
+          <div className="scenario-field">
+            <label htmlFor={`${baseId}-delivery`}>Receipt</label>
+            <select
+              id={`${baseId}-delivery`}
+              className="scenario-control"
+              value={selectedDelivery.id}
+              aria-describedby={`${baseId}-delivery-help`}
+              onChange={(event) => setDeliveryId(event.target.value)}
+            >
+              {receipts.map(({ delivery, component }) => (
+                <option key={delivery.id} value={delivery.id}>
+                  {delivery.id} · {component?.name ?? delivery.componentId} ·{" "}
+                  {shortDate(delivery.availableDate)}
+                </option>
+              ))}
+            </select>
+            <p id={`${baseId}-delivery-help`} className="scenario-field__help">
+              {selected.supplier?.name ?? selectedDelivery.supplierId} ·{" "}
+              {selectedDelivery.quantity} {selected.component?.unit ?? "units"}{" "}
+              planned {shortDate(selectedDelivery.availableDate)}.{" "}
+              {exposure > 0
+                ? `On the unchanged plan, ${money(exposure)} more order value becomes at risk if it never arrives.`
+                : "On the unchanged plan, no additional order value becomes at risk if it never arrives. Orders already at risk can still lose units; see Allocation evidence."}{" "}
+              Listed by planned date.
+            </p>
           </div>
         ) : (
           <p className="scenario-panel__empty">
@@ -219,9 +213,64 @@ function DeliveryOverrideForm({
 
   const dateValid = isIsoDate(date);
   const offset = dateValid ? dayDiff(delivery.availableDate, date) : null;
-  const minShift = Math.max(-5, dayDiff(delivery.availableDate, data.asOf));
+  const { min: minShift, max: maxShift } = shiftRange(
+    data,
+    delivery,
+    dateValid ? date : undefined,
+  );
   const sliderValue =
-    offset === null ? 0 : Math.min(MAX_SHIFT_DAYS, Math.max(minShift, offset));
+    offset === null ? 0 : Math.min(maxShift, Math.max(minShift, offset));
+  const slider = useRef<HTMLInputElement>(null);
+
+  // Presets are computed from the data, not hard-coded: landing as planned,
+  // the last day that adds no shortage, and the first day that does.
+  const otherInputs = useMemo(
+    () => ({
+      ...scenario,
+      deliveryOverrides: scenario.deliveryOverrides.filter(
+        (o) => o.deliveryId !== delivery.id,
+      ),
+    }),
+    [scenario, delivery.id],
+  );
+  const quantity = parseCount(quantityDraft);
+  const tips = useMemo(
+    () =>
+      tippingPoints(
+        data,
+        quantity === null || quantity === delivery.quantity
+          ? otherInputs
+          : {
+              ...otherInputs,
+              deliveryOverrides: [
+                ...otherInputs.deliveryOverrides,
+                {
+                  deliveryId: delivery.id,
+                  availableDate: delivery.availableDate,
+                  quantity,
+                },
+              ],
+            },
+        delivery,
+      ),
+    [data, otherInputs, delivery, quantity],
+  );
+  const presets: { shift: number; label: string }[] = [
+    { shift: 0, label: "As planned" },
+  ];
+  if (tips.firstShort === null)
+    presets.push({ shift: tips.latestSafe, label: "Safe through" });
+  else {
+    if (tips.latestSafe > 0)
+      presets.push({ shift: tips.latestSafe, label: "Latest safe" });
+    presets.push({ shift: tips.firstShort, label: "First short" });
+  }
+  const activePreset = presets.find((p) => p.shift === offset);
+  const moveTo = (shift: number) => {
+    const nextDate = addDays(delivery.availableDate, shift);
+    setDate(nextDate);
+    save(nextDate, quantityDraft);
+  };
 
   const save = (nextDate = date, nextQuantity = quantityDraft) => {
     if (!isIsoDate(nextDate)) {
@@ -320,33 +369,73 @@ function DeliveryOverrideForm({
       </div>
 
       <div className="scenario-field">
+        <span id={`${baseId}-presets`} className="scenario-field__label">
+          Land on
+        </span>
+        <ToggleGroup
+          type="single"
+          className="preset-chips"
+          aria-labelledby={`${baseId}-presets`}
+          value={activePreset ? String(activePreset.shift) : "custom"}
+          onValueChange={(v) => {
+            if (!v) return;
+            if (v === "custom") slider.current?.focus();
+            else moveTo(Number(v));
+          }}
+        >
+          {presets.map((p) => (
+            <ToggleGroupItem
+              key={p.label}
+              value={String(p.shift)}
+              aria-label={`${p.label}, ${shortDate(addDays(delivery.availableDate, p.shift))}`}
+            >
+              <span>{p.label}</span>
+              <strong>
+                {shortDate(addDays(delivery.availableDate, p.shift))}
+              </strong>
+            </ToggleGroupItem>
+          ))}
+          <ToggleGroupItem value="custom" aria-label="Custom date">
+            <span>Custom</span>
+            <strong>
+              {activePreset || offset === null ? "Any day" : shortDate(date)}
+            </strong>
+          </ToggleGroupItem>
+        </ToggleGroup>
+        <p className="scenario-field__help">
+          {tips.firstShort === null
+            ? `No order is shorter than on time for any landing date up to ${shortDate(addDays(delivery.availableDate, tips.latestSafe))}.`
+            : `Landing ${shortDate(addDays(delivery.availableDate, tips.firstShort))} leaves at least one order shorter than on time.`}
+        </p>
+      </div>
+
+      <div className="scenario-field">
         <label htmlFor={`${baseId}-shift`}>
           Shift from baseline:{" "}
           <output htmlFor={`${baseId}-shift`} className="scenario-field__value">
             {offset === null
               ? "invalid date"
-              : `${offset > 0 ? "+" : ""}${offset} days`}
+              : `${offset > 0 ? "+" : ""}${offset} days, lands ${shortDate(date)}`}
           </output>
         </label>
         <input
           id={`${baseId}-shift`}
+          ref={slider}
           type="range"
           min={minShift}
-          max={MAX_SHIFT_DAYS}
+          max={maxShift}
           step={1}
           className="scenario-slider"
           value={sliderValue}
-          onChange={(event) => {
-            const nextDate = addDays(
-              delivery.availableDate,
-              Number(event.target.value),
-            );
-            setDate(nextDate);
-            save(nextDate, quantityDraft);
-          }}
+          aria-valuetext={
+            offset === null
+              ? undefined
+              : `${offset} days from plan, lands ${shortDate(date)}`
+          }
+          onChange={(event) => moveTo(Number(event.target.value))}
         />
         <p className="scenario-field__help">
-          Move from {minShift} to +{MAX_SHIFT_DAYS} days relative to baseline.
+          Move from {minShift} to +{maxShift} days relative to baseline.
         </p>
       </div>
 

@@ -6,7 +6,7 @@
 
 “For a small manufacturer planning in spreadsheets, one late supplier means checking many customer promises. DominoOS shows what breaks before it breaks. This fictional factory has ten orders, all currently covered.”
 
-Point to the zero-risk metrics and supplier → motor → product → order map.
+Point to the headline and the supplier → motor → product → order map.
 
 **15–35 seconds — cause the disruption**
 
@@ -24,11 +24,11 @@ Scroll to **Compare recovery actions**. Contrast **Restore PO-101 timing** with 
 
 “We can ask Aster to restore the original timing, or buy two approved motors from Vector for November 18. Both cover the shortage; confirmation and purchase costs still matter. Apply Vector: the original receipt stays delayed, but material coverage is restored.”
 
-Point to the covered order, green recovery supplier and zero-risk metrics. Judges can complete this causal loop in under a minute.
+Point to the covered order, blue dashed recovery supplier and zero-risk metrics. Judges can complete this causal loop in under a minute.
 
 **55–75 seconds — prove it is interactive**
 
-Click **Normal operations**, then move the delivery slider to **+5 days** and **+6 days**.
+Click **Normal operations**, then click **Latest safe · 22 Nov** and **First short · 23 Nov**, or drag the receipt on the timeline.
 
 “On the required date counts as available: five days is covered, six is short. You can change quantities, import validated JSON or separate spreadsheet tables, and inspect every allocation.”
 

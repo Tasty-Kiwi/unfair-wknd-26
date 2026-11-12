@@ -1,4 +1,4 @@
-import { ArrowRight, GitCompareArrows } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 import { compareRecoveries } from "@/lib/recovery";
 import type { Dataset, Scenario } from "@/lib/types";
 import { Button } from "@/components/ui/button";
@@ -16,12 +16,7 @@ export function RecoveryComparison({
   return (
     <section className="recovery-comparison" aria-label="Recovery options">
       <div className="section-heading">
-        <div>
-          <span className="eyebrow">DECISION SUPPORT</span>
-          <h2>
-            <GitCompareArrows size={18} /> Compare recovery actions
-          </h2>
-        </div>
+        <h2>Ways to recover</h2>
       </div>
       <p className="recovery-caption">
         Each option changes your current scenario independently. Sorted by net
@@ -30,7 +25,7 @@ export function RecoveryComparison({
       </p>
       {options.length ? (
         <div className="recovery-grid">
-          {options.map((option) => (
+          {options.map((option, index) => (
             <article key={option.id} className="recovery-option">
               <h3>{option.title}</h3>
               <div className="recovery-numbers">
@@ -49,7 +44,7 @@ export function RecoveryComparison({
               </div>
               <p>{option.assumption}</p>
               <Button
-                variant="outline"
+                variant={index === 0 ? "default" : "outline"}
                 size="sm"
                 onClick={() => onApply(option.scenario)}
               >
