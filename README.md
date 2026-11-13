@@ -26,7 +26,7 @@ npm run preview
 
 ## Deploy on Cloudflare Workers
 
-The public link serves Vite static assets with SPA fallback; there is no backend or upload endpoint. In the original simulator, imported plans and scenario changes live only in memory and are cleared on refresh or when the page closes. Builder workspaces save locally as described below. Export a report before leaving the original simulator and keep source files for reimport. Resetting an imported plan requires confirmation. Product CSV imports without a BOM retain matching products' existing BOMs; the preview and active plan disclose this. To redeploy from this checkout:
+The production public link currently serves the guest app with cloud features disabled. The optional Worker backend is deployed separately to staging; see the cloud section below. In the original simulator, imported plans and scenario changes live only in memory and are cleared on refresh or when the page closes. Builder workspaces save locally as described below. Export a report before leaving the original simulator and keep source files for reimport. Resetting an imported plan requires confirmation. Product CSV imports without a BOM retain matching products' existing BOMs; the preview and active plan disclose this. To redeploy from this checkout:
 
 ```sh
 npx wrangler login

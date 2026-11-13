@@ -1,11 +1,25 @@
-import type { CloudApiEnv } from "./http";
+import { env as globalEnv } from "cloudflare:workers";
+import { createAuth } from "./auth";
+import { isCloudConfigured, type CloudApiEnv } from "./http";
 import { createApiHandler, type SessionUser } from "./projects";
+
+// Initialize SDK configuration during startup, outside the request CPU budget.
+// Better Auth 1.7.22 initialization performs no D1/network I/O. Session lookup
+// stays inside each request; this warms only the configuration/client cache.
+if (isCloudConfigured(globalEnv)) {
+  try {
+    await createAuth(globalEnv).$context;
+  } catch {
+    // An auth initialization failure must not take down the public demo.
+    // Protected routes still use the real verifier and fail closed.
+    console.error("Authentication initialization failed");
+  }
+}
 
 async function verifyBetterAuthSession(
   request: Request,
   env: CloudApiEnv,
 ): Promise<SessionUser | null> {
-  const { createAuth } = await import("./auth");
   const auth = createAuth(env);
   const session = await auth.api.getSession({ headers: request.headers });
 
@@ -27,7 +41,6 @@ async function handleBetterAuthRequest(
   request: Request,
   env: CloudApiEnv,
 ): Promise<Response> {
-  const { createAuth } = await import("./auth");
   const auth = createAuth(env);
   return auth.handler(request);
 }

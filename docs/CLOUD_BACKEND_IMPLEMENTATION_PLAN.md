@@ -8,7 +8,7 @@ The user requested this implementation split: **Gemini 4 Hydrogen — backend ar
 
 Deadline: **14 November 2026, 20:00 Europe/Vilnius (18:00 UTC)**.
 
-Acceptance: a user signs in, saves a supply-chain project to Cloudflare, and opens it in another browser; another user cannot read or overwrite it. This acceptance has **not** yet been demonstrated: no backend was implemented or deployed during planning.
+Acceptance: a user signs in, saves a supply-chain project to Cloudflare, and opens it in another browser; another user cannot read or overwrite it. This acceptance has **not** yet been demonstrated. Implementation and an isolated staging deployment now exist; real-provider and cross-browser acceptance remain open.
 
 ## 1. Decision and approval boundary
 
@@ -25,6 +25,8 @@ Approval of this document authorizes only the work explicitly approved next. Cre
 ## 2. Verified repository assessment
 
 Remote `main`, local `main`, and the initial `origin/main` ref were verified at `0d7f2130251889871217ddddb6b0986f1855ebec`. The planning branch is `plan/cloud-backend`; it was created before any file edits. Implementation is now isolated on `feat/cloud-projects`; the published planning PR remains at its documentation-only commit. The working tree was clean initially. No `AGENTS.md` was found in the repository inventory.
+
+Implementation follow-up: commit `7756bc1` contains the backend/UI/tests. Merge `ce8568a` integrates `origin/main` at `907ba400d0ae6ece4694bb36e02181deef84b1b5` (PR #6). Integrated local checks passed: 91 unit tests, 12 Worker tests, 32 Chromium journeys, Worker typecheck, build and deployment dry run. CI now builds assets before Worker routing tests; schema generation writes an ignored candidate rather than overwriting migration history. A subsequent startup-only auth initialization change passed typecheck/unit/Worker checks and was deployed only to approved staging; see [current staging evidence](STAGING_VERIFICATION.md).
 
 | Contract | Observed implementation | Integration consequence |
 | --- | --- | --- |

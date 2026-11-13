@@ -9,9 +9,9 @@
 - Worker: `domino-os-staging`.
 - D1: `domino-os-staging`, ID `75faa40c-c80c-4fd6-ab27-6dc8f6cc66e4`, EEUR.
 - Migrations applied remotely: `0001_auth.sql`, `0002_projects.sql`.
-- Current Worker version: `57ec63cd-b693-459a-983c-b69f63828b55`.
+- Current Worker version: `f40b12ca-41a9-45c0-94b8-8058ee47d71b`.
 - Config: `wrangler.staging.jsonc`; minification enabled, version preview URLs disabled, query-string redaction and logs/traces enabled.
-- Exact Better Auth version: 1.7.22. This deployment was built from the then-uncommitted implementation on `plan/cloud-backend`. Subsequent work is isolated on `feat/cloud-projects`. Bringing current main into that branch does not update staging or production.
+- Exact Better Auth version: 1.7.22. The initial deployment used the then-uncommitted implementation on `plan/cloud-backend`. The current staging deployment uses `feat/cloud-projects`: implementation commit `7756bc1`, main integration commit `ce8568a` (including PR #6), plus the startup initialization change described below. Production is unchanged.
 - GitHub Client ID/Secret and generated session secret were uploaded from an ignored, mode-0600 JSON file. Values were not printed or committed.
 
 The first full upload returned Cloudflare HTTP 500/code 10013. A retry encountered a transient local DNS/connectivity failure. A minimal SELECT 1 handler deployed successfully under the same staging name; it exposed no user/project data. The minified full app then deployed and replaced it. This sequence does not establish the exact cause of the initial upload failure.
@@ -44,6 +44,18 @@ The initial full-app aggregate showed CPU p50 23.030 ms and p95/p99 56.101 ms ov
 The coordinator then deferred auth-module loading and cached only the SDK client/configuration for stable D1 bindings. Every protected request still calls the real session verifier; no identities or session results are cached. Configuration/secret changes invalidate the cached client. Better Auth 1.7.22 documents shared-D1-client fixes. Typecheck and all 12 local Worker/runtime tests, including revocation and cross-owner/CAS behavior, pass with this change.
 
 The optimized-version smoke window reported **6 requests, 0 errors, CPU p50 1.064 ms and p95/p99 150.289 ms**, with startup CPU p95 191.498 ms. Cloudflare GraphQL CPU fields are microseconds. The median improved, but the upper tail did not establish a fit within Free's 10 ms request allowance. Lazy initialization can move work into the first request. **Do not describe this as a passed CPU gate or approve production from these results.** Cloudflare's overrun flexibility explains why successful HTTP responses alone are insufficient.
+
+### Startup initialization experiment
+
+Hydrogen's source review found Better Auth 1.7.22 initialization constructs its adapter and configuration without D1/network I/O. The coordinator replaced request-time dynamic imports with a static import and, only when cloud is configured, awaits the SDK context at module startup. The SDK client/configuration cache is unchanged; every protected request still performs a real database-backed session lookup. Initialization errors are caught without logging sensitive details so the public demo remains available; protected requests fail closed.
+
+Cloudflare supports [global binding access](https://developers.cloudflare.com/workers/runtime-apis/bindings/) for client initialization and documents a separate [one-second startup allowance](https://developers.cloudflare.com/workers/platform/limits/). The staging upload reported **90 ms startup**, below that allowance. This does not prove that request processing fits Free's 10 ms budget.
+
+Before this upload, Worker typechecking, all **91 unit tests**, all **12 Worker/runtime tests** (cloud enabled and disabled), and the staging deployment dry run passed. After upload, the same nine HTTP checks passed, including OAuth start and rejection of forged callback state; production deployment/version were compared and unchanged.
+
+The first GraphQL reads for exact sub-minute timestamps returned no samples. A minute-aligned window covering the smoke checks then returned **7 API requests, 0 errors, CPU p50 20.378 ms, p95/p99 55.514 ms, startup CPU p95 354.701 ms**. The nine HTTP checks include two asset requests. These are mixed, small-sample aggregates, not endpoint-level timings; window alignment can include other traffic. The upper tail is lower than the prior lazy-init sample, but the median is higher, so this is not a controlled overall performance win. Most importantly, request CPU still exceeds Free's 10 ms allowance. **The startup-only change does not pass the Free CPU gate.** Raw sanitized evidence is retained locally in ignored `.tmp/staging-cpu-eager.json`.
+
+Independent post-main verification by Luna also passed **12 Worker tests**, **32 Chromium journeys** and the production-config dry run before the startup-only change. It found no material owner-check, CAS or stale-response issue. These checks used local runtime/seeded sessions and browser API mocks, not real GitHub authorization.
 
 ## Still required
 
