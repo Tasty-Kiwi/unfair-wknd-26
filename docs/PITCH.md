@@ -2,7 +2,9 @@
 
 ## 30-second pitch
 
-Small manufacturers often need to answer a deceptively hard question across several spreadsheets: if this receipt slips, which customer orders lose material coverage? DominoOS brings stock, bills of material, receipts and customer commitments into one explainable what-if. Delay a delivery, identify the exact orders and components at risk, compare recovery actions, and apply approved alternative supply. Every result comes from deterministic allocation evidence rather than a hardcoded demo or opaque recommendation.
+When a supplier delivery slips, which customer orders run short? DominoOS connects stock, bills of material, receipts and orders in one explainable simulation. Change a delivery, trace the shortage to an order, and compare recovery options with allocation evidence. Our fictional demo shows two missing motors and how approved alternative supply restores coverage. It models material availability; supplier confirmation and factory capacity remain outside the calculation.
+
+About 70 spoken words; rehearse to 30 seconds. The intended user is a manufacturing planner combining spreadsheets; this is a customer hypothesis, not validated demand.
 
 ## What the demonstration proves
 
@@ -42,6 +44,16 @@ Planning systems such as SAP IBP, Kinaxis and o9 already address supply-chain sc
 
 **Which recovery is best?** The comparison ranks by net shortage units recovered and shows remaining exposed orders plus explicit supply assumptions. Costs, freight and confirmation status are unknown; it is not a purchase recommendation or profit optimizer.
 
+**Does Apply recovery place an order or contact a supplier?** No. It changes the local simulation only. Confirm supply and act through the normal purchasing process.
+
+**Can I use my own data, and is it saved?** CSV supports stock, products, BOMs, receipts and orders; full JSON can replace the catalog as well. Related files are validated together before applying. Omitted tables and matching-product BOMs can be retained, with explicit warnings. State stays in browser memory and is lost on refresh/close. Export the report and keep source files. The report is an audit record, not a one-click project backup.
+
+**What have you actually tested?** The current local pass executed 60 unit tests and 11 Chromium browser journeys, a production build and downloaded-report assertions. Desktop and mobile were inspected. These are engineering checks, not evidence that real planners find the product intuitive or valuable.
+
+**What would you validate next?** Observe an unaided user and compare a small anonymized plan with a planner's actual reservation policy. Include data preparation time. Interview a potential budget owner before claiming a viable paid product.
+
 ## Next evidence
 
 Run the unassisted journey and planner interview in [VALIDATION_PLAYBOOK.md](VALIDATION_PLAYBOOK.md). Before expanding scope, test a small anonymized real plan against the planner's current allocation and material-availability reasoning.
+
+Use [SUBMISSION.md](SUBMISSION.md) for the video outline and three-person checklist.

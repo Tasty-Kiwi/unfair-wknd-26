@@ -1,59 +1,66 @@
 # DominoOS hackathon readiness
 
-Last verified: 13 November 2026 (Europe/Vilnius)
+Reviewed locally: **13 November 2026**. Team-supplied deadline: **14 November 2026, 20:00 Europe/Vilnius**.
 
-## Completed improvements
+## Decision and reviewed revision
 
-- Added explicit table-level provenance for fictional demo data, mixed fictional/imported data and fully imported data.
-- Added an atomic import preview that lists replaced and retained tables and requires confirmation before mixing fictional and imported business data.
-- Kept failed imports transactional: validation errors leave the dataset, scenario and provenance unchanged.
-- Made reset restore the original demo dataset, scenario selection, UI state and fictional provenance.
-- Removed a duplicate recovery scenario entry and renamed the recovery action from **Apply what-if** to the more direct **Apply recovery**.
-- Kept the deterministic simulation, paper-and-ink visual system, responsive layout, accessible controls and keyboard-operable receipt timeline.
-- Switched local Playwright configuration from a machine-specific Chrome channel to Playwright Chromium, matching CI and making the end-to-end suite reproducible.
-- Updated the 60-second demonstration and pitch to distinguish order value at risk from actual financial loss.
+PR [#3](https://github.com/Tasty-Kiwi/unfair-wknd-26/pull/3) is open and mergeable at `19c03f7790629fea6623e9a2a1bf1f7f7dde3f53`, branch `fix/hackathon-readiness`, targeting `main`. Recheck the head before release. The local documentation follow-up does not change application behavior and is not yet on the remote PR. No push, merge or deployment was performed in this product-review pass.
 
-## Verification results
+Application verification supports a hackathon demonstration and final review of PR #3. No significant observable UI defect required an application change. This is engineering and rendered-interface evidence, not validation by real manufacturing planners.
 
-Executed locally on 13 November 2026:
+**Production deployment is owned by another teammate and has not been verified as containing PR #3.**
+
+## Current verification
+
+Executed in the repository on Node `24.14.0`, npm `11.9.0`, with existing installed dependencies. This pass is not a fresh dependency-install certification; the preceding release investigation independently installed and checked the PR head.
 
 | Check | Result |
 | --- | --- |
-| `npm ci --cache .npm-cache` | Passed |
-| `npm test` | Passed — 5 files, 59 tests |
-| `npm run build` | Passed |
-| `npm run deploy:check` | Passed — Cloudflare dry run only; nothing published |
-| `npm run test:e2e` | Passed — 10 Playwright Chromium journeys |
-| `git diff --check` | Passed |
+| `TMPDIR="$PWD/.tmp" npm test` | Passed: 5 files, 60 unit tests |
+| `TMPDIR="$PWD/.tmp" npm run build` | Passed: TypeScript and Vite production build |
+| `DOMINO_BASE_URL=http://127.0.0.1:5194 TMPDIR="$PWD/.tmp" PLAYWRIGHT_BROWSERS_PATH="$PWD/.playwright-browsers" npm run test:e2e` | Passed: 11 Chromium journeys against local production preview |
+| Rendered interaction | Desktop 1440 × 900 and mobile 390 × 844 inspected; delay, evidence, recovery, mobile import and reset confirmation exercised |
+| Downloaded reports | Baseline 10 orders covered; six-day delay makes ORD-102 short two motors; Vector supply removes shortage while PO-101 remains dated 23 November; fictional provenance retained |
 
-The automated and rendered checks cover:
+The browser suite covers synchronized date inputs/presets/timeline/keyboard/drag, independent recovery comparison, invalid imports preserving state, mixed and complete-import provenance, retained-BOM preview, imported-plan reset cancellation/confirmation, responsive layout and exports. Downloaded JSON assertions additionally inspect scenario inputs and computed results.
 
-- Original fictional scenario: 10 orders covered with no material shortages.
-- Six-day motor delay: ORD-102 is exposed with two motors missing and €36,000 of order value at material risk.
-- Approved alternative: two Vector motors restore coverage while the delayed Aster receipt remains delayed.
-- Deterministic recovery calculations and stable allocation tie-breaking.
-- No mutation of the original dataset or scenario inputs.
-- Synchronized date field, preset, timeline slider, keyboard and drag controls.
-- Atomic invalid-import rejection, partial-import preview, mixed provenance, complete JSON provenance and reset behavior.
-- Desktop layout at 1440 × 900 and mobile layout at 390 × 844 with no horizontal page overflow.
+The build emits non-failing upstream Zod annotation warnings and a Vite chunk-size advisory. No measured demonstration issue justified optimization.
 
-## Repository and deployment readiness
+Ignored visual evidence: `.tmp/final-desktop.png`, `.tmp/final-recovery.png`, `.tmp/final-mobile.png`, `.tmp/final-mobile-recovery.png`, `.tmp/final-import.png`, `.tmp/final-reset.png`. These are local artifacts, not submission attachments or production evidence.
 
-- Authenticated `origin/main` was fetched before final verification; the upstream baseline is `4b6a371`, with no later commits at the time of review. The improvements are prepared for review on a dedicated pull-request branch.
-- GitHub Actions runs install, unit tests, production build, Cloudflare dry run and Playwright Chromium journeys on pushes and pull requests.
-- The production build and Cloudflare dry run pass. No deployment was performed.
+## Product review
 
-## Known limitations
+- The paper-and-ink design has consistent hierarchy and readable states. The supplier → component → product → customer-order chain connects the input to its consequence. Red shortage treatment distinguishes the affected path; allocation evidence explains the two missing motors.
+- The top scenario controls provide a visible entry into the demonstration. Editable delivery controls and timeline remain available. Mobile uses a stacked chain and requires substantial scrolling; use desktop for the timed presentation.
+- Recovery cards compare alternative supply with restoring receipt timing. Each states its assumptions, remaining shortage and independent effect. Applying recovery changes local simulation state, not purchasing or supplier commitments.
+- Import preview distinguishes replaced and retained tables, warns about mixed fictional/imported data and retained BOMs, and discloses session-only storage. Resetting an imported plan requires confirmation with a clear keep-plan action.
+- A first-time user has not been observed without assistance. Discoverability and desirability for actual planners remain hypotheses.
 
-- The simulation covers material availability, not production capacity, factory completion, shipping dates, transport, purchasing cost or uncertainty.
-- CSV import supports deliveries, inventory, products/BOM and orders. Suppliers, components and approved alternatives require a complete validated JSON dataset; the preview makes retained fictional tables explicit.
-- A mixed dataset can be internally valid while still being unsuitable for a real decision. Users must confirm that retained demo references are intentional.
-- Recovery options show modeled coverage and assumptions, not confirmed supplier commitments or purchasing recommendations.
-- The demonstration uses fictional data. Customer demand, willingness to pay and measured operational benefit remain unvalidated.
+## Demonstration acceptance
 
-## Remaining manual tasks
+The exercised path is: ten covered orders → **Supplier disruption** → PO-101 moves from 17 to 23 November → ORD-102 needs four motors with only two available after ORD-101 reserves six of eight → compare both recovery cards → apply **Use Vector Components** → all ten orders regain material coverage while Aster stays delayed.
 
-1. Run the 60-second script once on the final presentation machine and deployed URL at normal browser zoom.
-2. Confirm the deployed URL is reachable from a separate network and that its build matches the final submitted commit.
-3. Replace any presentation screenshots after the final deployment so they match the submitted UI exactly.
-4. Submit before 14 November 2026 at 20:00 Europe/Vilnius.
+The €36,000 is order value at material risk, not measured loss or savings. Allocation uses required date, then order ID; partial kits retain reservations. The simulation covers material availability, not factory capacity, purchasing costs, production completion or shipping dates.
+
+## Submission materials
+
+- [30-second pitch, differentiation and accurate judge answers](docs/PITCH.md).
+- [60-second demonstration script](DEMO_SCRIPT.md), shortened narration with actual labels and click/scroll directions.
+- [Three-minute video outline and three-person checklist](docs/SUBMISSION.md).
+- [Unaided-user validation playbook](docs/VALIDATION_PLAYBOOK.md), corrected to describe the red shortage state.
+
+Spoken durations are targets. A human must rehearse with the actual clicks, record/watch the video, check official rules and complete submission. No customer validation, operational savings, paid demand or commercial result is claimed.
+
+## Remaining team actions
+
+1. Review the local documentation commit. Obtain explicit authorization before pushing or merging; recheck PR head and repository status first.
+2. Presenter: rehearse the 30-second pitch and 60-second demo on the presentation machine; test normal zoom, scrolling, display and power. Conduct an unaided outsider session if time permits.
+3. Release owner: coordinate the approved presentation URL/revision with the teammate owning production, then check the complete demonstration and latest import/reset safeguards on that URL.
+4. Prepare an offline fallback before presentation: `npm ci`, `npm run build`, then `npm run preview -- --host 127.0.0.1 --port 5194`. Open the local URL and repeat the demo with the network disconnected. Keep a video backup offline.
+5. Submission owner: verify official rules, eligibility and required materials; record the video; test sharing signed out; review claims and URLs with the team; submit before the deadline and save confirmation.
+
+## Known limits and stop rule
+
+CSV bundles retain omitted tables and can retain matching-product BOMs; full JSON is needed to replace suppliers, components and approved alternatives. Mixed data can validate structurally while being unsuitable for a real decision. Browser state disappears on refresh/close. Keep source files; an exported report is an audit record, not a one-click project backup.
+
+No remaining application defect was identified in the exercised paths. Unknowns include unaided usability, real manufacturing-policy fit and browsers/devices beyond the tested Chromium viewports. Fix a demonstrated core-flow failure or misleading claim; otherwise preserve time for rehearsal, recording and submission.

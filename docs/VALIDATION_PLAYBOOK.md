@@ -14,7 +14,7 @@ Success criteria: they cause a disruption, identify ORD-102 and its two-motor sh
 
 Afterward ask:
 
-- What did the amber state mean? Did you interpret it as a definite shipping delay?
+- What did the red shortage state mean? Did you interpret it as a definite shipping delay?
 - What changed when you applied recovery? What still needs supplier confirmation?
 - What would you do next in your own workflow?
 
