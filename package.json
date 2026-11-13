@@ -12,7 +12,12 @@
     "test:e2e": "playwright test",
     "format": "prettier --write src tests *.ts *.json *.md",
     "deploy": "npm run build && wrangler deploy",
-    "deploy:check": "wrangler deploy --dry-run"
+    "deploy:check": "wrangler deploy --dry-run",
+    "dev:api": "wrangler dev --config wrangler.local.jsonc --local --port 8787",
+    "types:worker": "wrangler types --config wrangler.local.jsonc --strict-vars=false --include-main-module=false",
+    "typecheck:worker": "npm run types:worker && tsc -p tsconfig.worker.json",
+    "typecheck:tests": "tsc -p tsconfig.tests.json",
+    "test:worker": "vitest run --config vitest.worker.config.ts"
   },
   "dependencies": {
     "@fontsource/ibm-plex-sans": "^5.3.0",

@@ -288,7 +288,10 @@ function NodeDetail({
   );
 }
 export default function App() {
-  const [builderOpen, setBuilderOpen] = useState(false);
+  // Opens the builder directly after a GitHub return (/?builder=1). Otherwise the guest demo is unchanged.
+  const [builderOpen, setBuilderOpen] = useState(
+    () => new URLSearchParams(window.location.search).get("builder") === "1",
+  );
   const [data, setData] = useState<Dataset>(demoData);
   const [provenance, setProvenance] = useState<DatasetProvenance>(() =>
     fictionalProvenance(),

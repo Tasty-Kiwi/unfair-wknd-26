@@ -2,6 +2,19 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { ArrowLeft, Download, Save, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { AccountControls } from "@/components/account/AccountControls";
+import { CloudStatus } from "@/components/cloud/CloudStatus";
+import { CloudProjectsDialog } from "@/components/cloud/CloudProjectsDialog";
+import { ProjectNameDialog } from "@/components/cloud/ProjectNameDialog";
+import {
+  copyProjectName,
+  defaultProjectName,
+  describeCloudStatus,
+  isUnsavedAgainst,
+  GUEST_DRAFT_KEY,
+  useBuilderCloud,
+  type CloudHost,
+} from "@/lib/cloud/useBuilderCloud";
 import { BuildWorkspace } from "./BuildWorkspace";
 import { NamedScenarios } from "@/components/scenarios/NamedScenarios";
 import {
@@ -63,6 +76,9 @@ function blank(): BuilderWorkspaceV1 {
   };
 }
 
+const REPLACE_MESSAGE =
+  "Replace the current network and its scenarios? Export workspace JSON first if you want to keep it.";
+
 export function BuilderExperience({ onClose }: { onClose: () => void }) {
   const [initial] = useState(() => loadWorkspace());
   const [workspace, setWorkspace] = useState<BuilderWorkspaceV1>(
@@ -82,6 +98,61 @@ export function BuilderExperience({ onClose }: { onClose: () => void }) {
   const [canvasSession, setCanvasSession] = useState(0);
   const [importing, setImporting] = useState(false);
   const [compile] = useState(() => createRevisionCompiler());
+  // Mirrors allowSave for the cloud host, which runs between renders.
+  const allowSaveRef = useRef(allowSave);
+  allowSaveRef.current = allowSave;
+  // The cloud hook reads and moves the editor through this host.
+  const cloudHost: CloudHost = {
+    current: () => latest.current,
+    persist(key) {
+      if (key === GUEST_DRAFT_KEY && !allowSaveRef.current) {
+        setError(
+          "Your saved device draft could not be read, so it was kept untouched. Save workspace to replace it, or export first.",
+        );
+        return false;
+      }
+      const saved = saveWorkspace(latest.current, undefined, key);
+      if (!saved.ok) {
+        setError(saved.error);
+        return false;
+      }
+      lastSaved.current = latest.current;
+      return true;
+    },
+    apply: (next) => adopt(next, true),
+    restoreGuest() {
+      const guest = loadWorkspace(undefined, GUEST_DRAFT_KEY);
+      if (guest.error) {
+        // An unreadable guest draft stays untouched: the editor is blank and autosave is off.
+        adopt(
+          blank(),
+          false,
+          `${guest.error} Your device draft was kept untouched.`,
+        );
+        return true;
+      }
+      adopt(guest.workspace ?? blank(), true);
+      return true;
+    },
+    confirm(prompt) {
+      if (prompt !== undefined) return window.confirm(prompt);
+      return !replaceNeedsConfirm() || window.confirm(REPLACE_MESSAGE);
+    },
+  };
+  const cloud = useBuilderCloud({ host: cloudHost, workspace });
+  const draftKey = cloud.draftKey;
+  const boundProjectId = cloud.binding?.projectId ?? null;
+  const cloudGuard = useRef(cloud.binding);
+  cloudGuard.current = cloud.binding;
+
+  function hasCloudChanges() {
+    const binding = cloudGuard.current;
+    return (
+      !!binding &&
+      (binding.blocked ||
+        isUnsavedAgainst(latest.current, binding.acknowledgedJson))
+    );
+  }
   const compiled = compile(workspace.document, canvasSession);
   const record = workspace.workingScenario;
   const scenario = record?.scenario ?? BASELINE;
@@ -111,24 +182,29 @@ export function BuilderExperience({ onClose }: { onClose: () => void }) {
 
   useEffect(() => {
     if (!allowSave) return;
+    // The slot is captured with the workspace. A context switch re-runs this effect and cancels the timer.
+    const key = draftKey;
     setSaveStatus("Saving…");
     const timer = window.setTimeout(() => {
-      const saved = saveWorkspace(workspace);
       if (latest.current !== workspace) return;
+      const saved = saveWorkspace(workspace, undefined, key);
       if (saved.ok) {
         lastSaved.current = workspace;
-        setSaveStatus("Saved locally");
+        setSaveStatus(
+          key === GUEST_DRAFT_KEY ? "Saved locally" : "Saved on this device",
+        );
       } else {
         setSaveStatus("Changes not saved");
         setError(saved.error);
       }
     }, 500);
     return () => window.clearTimeout(timer);
-  }, [workspace, allowSave]);
+    // draftKey is read from the same render as workspace.
+  }, [workspace, allowSave, draftKey]);
 
   useEffect(() => {
     const guard = (event: BeforeUnloadEvent) => {
-      if (latest.current === lastSaved.current) return;
+      if (latest.current === lastSaved.current && !hasCloudChanges()) return;
       event.preventDefault();
       event.returnValue = "";
     };
@@ -317,6 +393,34 @@ export function BuilderExperience({ onClose }: { onClose: () => void }) {
     }
   }
 
+  function setSaveAllowed(value: boolean) {
+    allowSaveRef.current = value;
+    setAllowSave(value);
+  }
+
+  // Replaces the editor content with no prompt. Callers confirm first.
+  function adopt(next: BuilderWorkspaceV1, allow: boolean, note = "") {
+    change(next);
+    setSaveAllowed(allow);
+    setCanvasSession((session) => session + 1);
+    setView("build");
+    setSelection(null);
+    setCompare(false);
+    setError(note);
+  }
+
+  // Matches the replace rule: prompt only when the editor holds work or an unreadable draft.
+  function replaceNeedsConfirm(): boolean {
+    const previous = latest.current;
+    const containsWork =
+      previous.document.nodes.length > 0 ||
+      !!previous.document.name.trim() ||
+      !!previous.document.asOf.trim() ||
+      previous.scenarios.length > 0 ||
+      !!previous.workingScenario;
+    return containsWork || !allowSaveRef.current;
+  }
+
   function saveLocal() {
     if (
       !allowSave &&
@@ -325,46 +429,38 @@ export function BuilderExperience({ onClose }: { onClose: () => void }) {
       )
     )
       return false;
-    const saved = saveWorkspace(latest.current);
+    const saved = saveWorkspace(latest.current, undefined, draftKey);
     if (!saved.ok) {
       setError(saved.error);
       setSaveStatus("Changes not saved");
       return false;
     }
     lastSaved.current = latest.current;
-    setAllowSave(true);
-    setSaveStatus("Saved locally");
+    setSaveAllowed(true);
+    setSaveStatus(
+      draftKey === GUEST_DRAFT_KEY ? "Saved locally" : "Saved on this device",
+    );
     setError("");
     return true;
   }
 
   function close() {
+    if (
+      hasCloudChanges() &&
+      !window.confirm(
+        "Your cloud changes are saved only on this device. Leave the builder? Export JSON first if you need a backup.",
+      )
+    )
+      return;
     if (latest.current !== lastSaved.current && !saveLocal()) return;
     onClose();
   }
 
+  // New blank, example and import all come through here. They detach any cloud binding.
   function replace(next: BuilderWorkspaceV1) {
-    const previous = latest.current;
-    const containsWork =
-      previous.document.nodes.length > 0 ||
-      previous.document.name.trim() ||
-      previous.document.asOf.trim() ||
-      previous.scenarios.length > 0 ||
-      previous.workingScenario;
-    if (
-      (containsWork || !allowSave) &&
-      !window.confirm(
-        "Replace the current network and its scenarios? Export workspace JSON first if you want to keep it.",
-      )
-    )
-      return false;
-    change(next);
-    setCanvasSession((session) => session + 1);
-    setAllowSave(true);
-    setView("build");
-    setSelection(null);
-    setCompare(false);
-    setError("");
+    if (replaceNeedsConfirm() && !window.confirm(REPLACE_MESSAGE)) return false;
+    if (!cloud.detachForReplace()) return false;
+    adopt(next, true);
     return true;
   }
 
@@ -482,6 +578,60 @@ export function BuilderExperience({ onClose }: { onClose: () => void }) {
           {importing ? "Reading workspace…" : saveStatus}
         </span>
       </nav>
+
+      {cloud.availability === "failed" && (
+        <div className="flex flex-wrap items-center gap-2 pb-3">
+          <span className="text-sm">
+            Cloud is unavailable right now. Your work on this device is
+            unchanged.
+          </span>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={cloud.actions.retryCloudConnection}
+          >
+            Retry cloud connection
+          </Button>
+        </div>
+      )}
+
+      {cloud.cloudAvailable && (
+        <section
+          className="flex flex-wrap items-center gap-2 pb-3"
+          aria-label="Cloud"
+        >
+          <AccountControls
+            session={cloud.session}
+            busy={cloud.busy}
+            onSignIn={cloud.actions.signIn}
+            onSignOut={cloud.actions.signOut}
+            onMyProjects={cloud.actions.openProjects}
+            onSaveToCloud={cloud.actions.saveToCloud}
+          />
+          {(cloud.binding ||
+            cloud.session.kind === "signed-in" ||
+            cloud.message ||
+            cloud.conflict) && (
+            <CloudStatus
+              text={describeCloudStatus({
+                session: cloud.session,
+                binding: cloud.binding,
+                dirty: cloud.dirty,
+                save: cloud.save,
+              })}
+              message={cloud.message}
+              conflict={cloud.conflict}
+              onKeepLocal={cloud.actions.keepLocal}
+              onSaveAsNew={() => cloud.actions.openNameDialog("copy")}
+              onOpenRemote={
+                boundProjectId
+                  ? () => cloud.actions.openProject(boundProjectId)
+                  : undefined
+              }
+            />
+          )}
+        </section>
+      )}
 
       {error && (
         <Alert variant="destructive">
@@ -772,6 +922,35 @@ export function BuilderExperience({ onClose }: { onClose: () => void }) {
           </Button>
         </section>
       )}
+      <CloudProjectsDialog
+        open={cloud.dialog?.kind === "projects"}
+        projects={cloud.projects}
+        userId={
+          cloud.session.kind === "signed-in" ? cloud.session.user.id : null
+        }
+        busy={cloud.busy !== null}
+        canSaveAsNew={cloud.binding !== null}
+        onOpenProject={cloud.actions.openProject}
+        onLoadMore={cloud.actions.loadMoreProjects}
+        onSaveAsNew={() => cloud.actions.openNameDialog("copy")}
+        onSignOut={cloud.actions.signOut}
+        onClose={cloud.actions.closeDialog}
+      />
+      <ProjectNameDialog
+        open={cloud.dialog?.kind === "name"}
+        mode={cloud.dialog?.kind === "name" ? cloud.dialog.mode : "create"}
+        initialName={
+          cloud.dialog?.kind === "name" &&
+          cloud.dialog.mode === "copy" &&
+          cloud.binding
+            ? copyProjectName(cloud.binding.name)
+            : defaultProjectName(workspace)
+        }
+        error={cloud.nameError}
+        busy={cloud.busy !== null}
+        onSubmit={cloud.actions.createCloudProject}
+        onClose={cloud.actions.closeDialog}
+      />
     </main>
   );
 }

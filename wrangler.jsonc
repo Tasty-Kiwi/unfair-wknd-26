@@ -4,14 +4,23 @@
   "account_id": "74f486ac4925bc5b7ccaa9fcf865170e",
   "compatibility_date": "2026-11-12",
   "workers_dev": true,
+  "main": "worker/index.ts",
+  // Cloud remains disabled until approved D1 and GitHub setup is complete.
+  "vars": {
+    "CLOUD_ENABLED": "false",
+    "AUTH_URL": "https://domino-os.tasty-kiwi.workers.dev",
+  },
   // Branch builds run `wrangler preview`; static assets use the top-level settings.
-  "previews": {},
+  "previews": { "vars": { "CLOUD_ENABLED": "false" }, "d1_databases": [] },
   "assets": {
     "directory": "./dist",
+    "binding": "ASSETS",
     "not_found_handling": "single-page-application",
+    "run_worker_first": ["/api", "/api/*"],
   },
   "observability": {
     "enabled": true,
+    "redact_query_string": true,
     "traces": { "enabled": true },
   },
 }

@@ -10,3 +10,5 @@ playwright-report
 .playwright-browsers
 .dev.vars*
 .env*
+worker-configuration.d.ts
+auth-probe-configuration.d.ts

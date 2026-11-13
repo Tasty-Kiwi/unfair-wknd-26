@@ -1,0 +1,42 @@
+// Isolated staging, created/deployed with explicit user approval.
+// Production remains in wrangler.jsonc with a separate future DB binding.
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "domino-os-staging",
+  "account_id": "74f486ac4925bc5b7ccaa9fcf865170e",
+  "main": "worker/index.ts",
+  "compatibility_date": "2026-11-12",
+  "workers_dev": true,
+  "preview_urls": false,
+  "minify": true,
+  "assets": {
+    "directory": "./dist",
+    "binding": "ASSETS",
+    "not_found_handling": "single-page-application",
+    "run_worker_first": ["/api", "/api/*"],
+  },
+  "vars": {
+    "CLOUD_ENABLED": "true",
+    "AUTH_URL": "https://domino-os-staging.tasty-kiwi.workers.dev",
+  },
+  "secrets": {
+    "required": [
+      "GITHUB_CLIENT_ID",
+      "GITHUB_CLIENT_SECRET",
+    ],
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "domino-os-staging",
+      "database_id": "75faa40c-c80c-4fd6-ab27-6dc8f6cc66e4",
+      "migrations_dir": "migrations",
+    },
+  ],
+  "observability": {
+    "enabled": true,
+    "redact_query_string": true,
+    "traces": { "enabled": true },
+    "head_sampling_rate": 1,
+  },
+}

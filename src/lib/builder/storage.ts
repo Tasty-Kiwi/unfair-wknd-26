@@ -59,6 +59,7 @@ export type LoadWorkspaceResult = {
 
 export function loadWorkspace(
   storage?: Pick<Storage, "getItem">,
+  key: string = WORKSPACE_STORAGE_KEY,
 ): LoadWorkspaceResult {
   try {
     const target = storage ?? resolveDefaultStorage();
@@ -68,7 +69,7 @@ export function loadWorkspace(
         error: "Browser localStorage is unavailable.",
       };
     }
-    const raw = target.getItem(WORKSPACE_STORAGE_KEY);
+    const raw = target.getItem(key);
     if (raw === null || raw === "") {
       return { workspace: null, error: null };
     }
@@ -90,6 +91,7 @@ export type SaveWorkspaceResult = { ok: true } | { ok: false; error: string };
 export function saveWorkspace(
   workspace: BuilderWorkspaceV1,
   storage?: Pick<Storage, "setItem">,
+  key: string = WORKSPACE_STORAGE_KEY,
 ): SaveWorkspaceResult {
   try {
     const serialized = serializeWorkspace(workspace);
@@ -100,7 +102,7 @@ export function saveWorkspace(
         error: "Browser localStorage is unavailable.",
       };
     }
-    target.setItem(WORKSPACE_STORAGE_KEY, serialized);
+    target.setItem(key, serialized);
     return { ok: true };
   } catch (err) {
     return {
