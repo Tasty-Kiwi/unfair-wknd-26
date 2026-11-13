@@ -106,3 +106,7 @@ That's 4:30 of tasks plus 0:30 of setup, for 5:00 in total.
 **Go for the guest release and the hackathon demo.** The core promise of a late delivery traced to the exact order, explained and recovered works on production in both themes at laptop and phone widths, with honest disclosures and no errors.
 
 Before presenting, the team should be ready to explain U1 (the raw IDs in the builder's simulation view) if they show the builder, and should bear U5 in mind when narrating the recovery. The other items can wait until after the event. **Don't start a fix sprint during the release freeze:** none of these is a reproducible failure of the core demo.
+
+## Resolution checkpoint — production PR #12
+
+This audit records the pre-fix experience. PR #12 shipped as `8fca52a7e51bfcd52af2abc9344fc990c946fa4b`: customer names lead builder results; untouched empty workspaces start with guidance; builder URLs survive refresh/history with guarded saving; recovery reports actual coverage/remaining shortages and retained lateness; laptop canvas space improved; report export explicitly says JSON. Full verification: 102 unit, 44 Worker and 74 Chromium tests, both typechecks, build and dry run. Main CI/Cloudflare production build passed; 23 live guest journeys passed. A full mobile builder redesign, physical-device tests and unaided-user validation remain deferred. See [final release execution](FINAL_RELEASE_EXECUTION.md).

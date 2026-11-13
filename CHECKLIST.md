@@ -52,7 +52,7 @@ Production runs `cloudEnabled: false`. Do not enable it for this release or pres
 
 Use [docs/DEVPOST_READY.md](docs/DEVPOST_READY.md) as the single source for official requirements, submission copy, links and human-owned fields. The video plan is in [docs/VIDEO_PRODUCTION.md](docs/VIDEO_PRODUCTION.md); [docs/PITCH.md](docs/PITCH.md) and [DEMO_SCRIPT.md](DEMO_SCRIPT.md) are supporting presenter notes. Nothing has been entered in the portal.
 
-- [ ] **Repository access:** repo may remain private if GitHub user `Nedomas` is invited. Current access is unverified; repository edit/invite attempts returned 404 and invitation listing returned 403. Ask a repository administrator to grant Read access and verify.
+- [ ] **Repository access:** repo may remain private if GitHub user `Nedomas` is invited. Current permission is `none`; repository description/invite attempts returned 403 (admin rights required). Ask a repository administrator to grant Read access and verify.
 - [ ] **Video:** record and edit a demo of at most 3:00 that opens on the working product.
 - [ ] **Upload:** post it to YouTube or Vimeo as Public or Unlisted and check playback while signed out.
 - [ ] **Try it out:** enter `https://domino-os.tasty-kiwi.workers.dev/landing` (demo: `/`) and open it in an incognito window.
@@ -97,3 +97,14 @@ Video split: about 20 s problem, 100 s live product, 40 s local builder and evid
 - [ ] Final focused UX PR merge and production source/asset verification (pending CI).
 - [ ] Owner-only repository description update and Nedomas invitation (API denied 403).
 - [ ] Actual team/member and pre-existing-work facts, watched/uploaded video, and Devpost submission.
+
+## Production acceptance — final guest release
+
+- [x] PR #12 merged as `8fca52a7e51bfcd52af2abc9344fc990c946fa4b`; final PR and main Actions plus Cloudflare builds passed. Automated review's partial-recovery finding corrected and resolved before merge.
+- [x] Seven production JS/CSS assets byte-match the verified build. Public `/api/health`: `ok: true`, `cloudEnabled: false`.
+- [x] 23 real production browser journeys passed: demo/recovery, partial recovery, guest builder navigation and failed-save guard, imports/reset/export/local saving.
+- [x] Actual production light/dark 1366×768 and 390×844 screenshots captured in `docs/release/final/production/`.
+- [x] Real production browser video with synthesized narration produced: [production demo MP4](docs/release/final/production/needtrace-demo.mp4) (147 seconds, H.264/AAC), plus captions. This is a reviewable draft.
+- [ ] Presenter: watch and approve the complete video/audio, upload to YouTube/Vimeo, and check signed-out access.
+- [ ] Repository owner: grant Nedomas Read access and update description; neither admin action succeeded (403).
+- [ ] Team/submission owner: supply real team data and truthful pre-existing-work disclosures; complete Devpost, submit and save confirmation.

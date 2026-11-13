@@ -47,9 +47,9 @@ Team name, member names/emails, pre-existing-work/build-period disclosures and a
 
 Executed `npm test` (102), `npm run typecheck:worker`, `npm run typecheck:tests`, `npm run build`, `npm run test:worker` (44), `npm run test:e2e` (74 Chromium journeys), and `npm run deploy:check`. All passed on the integrated UX result. Initial browser failures were stale refresh expectations, a viewport-import timing check and a contrast assertion sampling a color transition; the corrected tests still assert the underlying persisted behavior. The viewport check waits for stored and rendered floating-point transforms to agree within 0.001 before importing.
 
-Independent code review found no scoped defects. Claude inspected actual light/dark laptop/mobile screenshots; selected-scenario contrast and truncated receipt labels were corrected. Final production verification follows the authorized merge; do not infer live status from local captures.
+Independent code review found no scoped defects. Claude inspected actual light/dark laptop/mobile screenshots; selected-scenario contrast and truncated receipt labels were corrected. PR #12 merged as `8fca52a7e51bfcd52af2abc9344fc990c946fa4b`. Both final PR runs, main CI and Cloudflare production build passed. Seven live JS/CSS assets byte-match the built release; public health returns cloud disabled. All 23 production guest smoke journeys passed.
 
-A real browser recording with local synthesized narration is being prepared as a reviewable draft, not human narration or an uploaded video. The submission owner must watch the whole export, confirm personal/build-period facts, upload to YouTube/Vimeo and submit. See the authoritative [Devpost package](DEVPOST_READY.md).
+A real production browser recording with local synthesized narration is complete as a reviewable 147-second H.264/AAC draft, not human narration or an uploaded video. Shared recording: [production demo MP4](release/final/production/needtrace-demo.mp4); captions and source metadata sit alongside it. The submission owner must watch the whole export, confirm personal/build-period facts, upload to YouTube/Vimeo and submit. See the authoritative [Devpost package](DEVPOST_READY.md).
 
 ### Independent PR correction
 

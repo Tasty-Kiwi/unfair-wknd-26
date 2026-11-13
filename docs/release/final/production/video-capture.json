@@ -1,0 +1,8 @@
+{
+  "url": "https://domino-os.tasty-kiwi.workers.dev",
+  "capturedAt": "2026-11-13T23:21:44.509Z",
+  "syntheticNarration": true,
+  "durationTarget": 147,
+  "sourceCommit": "8fca52a7e51bfcd52af2abc9344fc990c946fa4b",
+  "sourceEvidence": "Successful Cloudflare production check plus seven byte-matching JS/CSS assets"
+}
