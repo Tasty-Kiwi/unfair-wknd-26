@@ -11,7 +11,7 @@
 - Migrations applied remotely: `0001_auth.sql`, `0002_projects.sql`.
 - Current Worker version: `f40b12ca-41a9-45c0-94b8-8058ee47d71b`.
 - Config: `wrangler.staging.jsonc`; minification enabled, version preview URLs disabled, query-string redaction and logs/traces enabled.
-- Exact Better Auth version: 1.7.22. The initial deployment used the then-uncommitted implementation on `plan/cloud-backend`. The current staging deployment uses `feat/cloud-projects`: implementation commit `7756bc1`, main integration commit `ce8568a` (including PR #6), plus the startup initialization change described below. Production is unchanged.
+- Exact Better Auth version: 1.7.22. The initial deployment used the then-uncommitted implementation on `plan/cloud-backend`. The current staging deployment was built on `feat/cloud-projects`: implementation commit `7756bc1`, main integration commit `ce8568a` (including PR #6), plus the startup initialization change committed as `7d00402`. These same commits now continue on PR #5's original `plan/cloud-backend` branch at the user's request. Production is unchanged.
 - GitHub Client ID/Secret and generated session secret were uploaded from an ignored, mode-0600 JSON file. Values were not printed or committed.
 
 The first full upload returned Cloudflare HTTP 500/code 10013. A retry encountered a transient local DNS/connectivity failure. A minimal SELECT 1 handler deployed successfully under the same staging name; it exposed no user/project data. The minified full app then deployed and replaced it. This sequence does not establish the exact cause of the initial upload failure.
