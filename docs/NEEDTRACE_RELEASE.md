@@ -40,7 +40,7 @@ Guest-mode code is ready for team review after CI. Production cloud is NOT APPRO
 
 ## Final pre-release review and exact team procedure
 
-Reviewed PR #7 head **a51adb83818e8c6485e24dc6f535d9857df33bf2**, based on remote main **f72c314788e0b79ed95af4af465c5c9a1de9368b**. PR is open and mergeable. Both [push CI](https://github.com/Tasty-Kiwi/unfair-wknd-26/actions/runs/43498074455) and [PR CI](https://github.com/Tasty-Kiwi/unfair-wknd-26/actions/runs/43498151443) passed on that head, including all required commands. The separate Workers branch-preview check also passed; that is not proof of a production deployment.
+Reviewed PR #7 head **174c09e262c3751c506e2a4708f56c05b8e2b6c2**, based on remote main **f72c314788e0b79ed95af4af465c5c9a1de9368b**. PR is open and mergeable. Both [push CI](https://github.com/Tasty-Kiwi/unfair-wknd-26/actions/runs/43508013577) and [PR CI](https://github.com/Tasty-Kiwi/unfair-wknd-26/actions/runs/43508020772) passed on that head, including all required commands. The separate Workers branch-preview check also passed; that is not proof of a production deployment.
 
 The final local production-build acceptance smoke check repeated both themes at 1366×768 and 390×844: landing CTAs, simulator entry, builder entry/device save, refresh persistence and import/reset dialogs. The demo and downloaded report confirm ten orders, ORD-102 short two motors after the six-day delay, and coverage restored by two Vector motors while PO-101 stays at 23 November. Existing workspace format/key/version and cloud session identifiers are unchanged. No runtime/config changes were required in this final review; the complete regression suite was not rerun because its CI already covers the unchanged application head. One initial inspection probe used a button locator for a radio control, and a report probe used `results` instead of `result`; corrected probes passed. These were review-script errors, not product defects.
 
@@ -50,7 +50,7 @@ The final local production-build acceptance smoke check repeated both themes at 
 2. After explicit team authorization, squash-merge the reviewed head. Example command for the release owner, **not executed by this review**:
 
    ```sh
-   gh pr merge 7 --repo Tasty-Kiwi/unfair-wknd-26 --squash --match-head-commit a51adb83818e8c6485e24dc6f535d9857df33bf2
+   gh pr merge 7 --repo Tasty-Kiwi/unfair-wknd-26 --squash --match-head-commit 174c09e262c3751c506e2a4708f56c05b8e2b6c2
    gh pr view 7 --repo Tasty-Kiwi/unfair-wknd-26 --json state,mergeCommit,mergedAt
    gh api repos/Tasty-Kiwi/unfair-wknd-26/commits/main --jq .sha
    ```
@@ -83,7 +83,7 @@ This is a local process, not a deployment. The current acceptance check used tha
 
 **Approve guest-only PR #7 for team-authorized merge; no application release blocker found in the reviewed paths.** Production acceptance remains pending until automatic deployment and clean-browser checks complete. Production cloud remains NOT APPROVED; its outstanding live-account/CPU gates are deferred and must not be presented as completed guest-release work. GitHub still reports `Nedomas: none` on the private repository; grant and verify judge access or approve repository visibility before submission. Name/domain clearance, actual team entries, video, portal validation and submission remain human actions.
 
-Final documentation corrections from this review are local and uncommitted; no commit, push, merge, deployment or infrastructure change was performed. The PR application head and its CI remain unchanged. The team can use these material files directly or explicitly authorize adding the documentation correction to the release branch.
+The prior handoff documentation was committed and pushed as 174c09e. At the start of this status refresh, the local integration branch matched the remote exactly and the working tree was clean. This refresh changes documentation only; these new edits remain local and uncommitted. No merge, branch deletion, deployment or infrastructure change was performed.
 
 ## Compact production smoke-test card
 
@@ -104,4 +104,10 @@ Use after the authorized merge, on the **production** deployment rather than the
 6. Only after all checks pass, use `/landing` as the marketing link and `/` as the direct demo link in the submission. Save the actual production verification evidence; this document does not assert it happened.
 7. If any production gate fails, keep production acceptance unchecked, notify the Cloudflare teammate, and switch the presentation to the tested local guest runtime. Use the local fallback commands above; keep the previous known-good deployment available under the team's recovery process. No new manual deployment or infrastructure changes are authorized.
 
-Refresh of release status: remote main remains f72c314; PR #7 remains a51adb8, open and mergeable. GitHub reports no reviews and no review threads; there are no recorded unresolved findings, but team approval has **not** occurred. Both application CI runs and the branch-preview check passed. No application/config changes since that verified head; no expensive regression rerun needed. The current local fallback health check again returned `ok: true, cloudEnabled: false`. Public deployment/version verification remains outstanding. The submission package now has a role-based ownership table; actual names must be supplied by the team.
+Refresh of release status: remote main remains f72c314; PR #7 remains 174c09e, open and mergeable. GitHub reports no reviews and no review threads; there are no recorded unresolved findings, but team approval has **not** occurred. Both application CI runs and the branch-preview check passed. No application/config changes since that verified head; no expensive regression rerun needed. The current local fallback health check again returned `ok: true, cloudEnabled: false`. Public deployment/version verification remains outstanding. The submission package now has a role-based ownership table; actual names must be supplied by the team.
+
+## Merge and cleanup gate — latest GitHub refresh
+
+PR #7 is still OPEN at `174c09e262c3751c506e2a4708f56c05b8e2b6c2`; remote main is `f72c314788e0b79ed95af4af465c5c9a1de9368b`. Both application checks and Cloudflare branch-preview build succeeded on the latest PR head. There are no GitHub reviews or review threads recorded; approval is still a human task. No merge commit exists yet. Production cloud configuration remains false.
+
+Do not delete local or remote `integration/needtrace-release` while the PR is open. After an authorized merge, fetch main and verify complete content incorporation (including squash merges), clean local state and no leftover commits before normal branch deletion. Confirm the automatic production build and deployed source SHA, then execute the production smoke-test card above. No production version claim is made by this pre-merge refresh.
