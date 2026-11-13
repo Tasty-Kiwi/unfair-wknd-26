@@ -1,5 +1,7 @@
 # DominoOS Builder Design Debate
 
+> **Historical discussion record.** After reviewing documentation commit `d241a50`, the architecture was approved and the MVP priorities were amended. The current [implementation plan](SUPPLY_CHAIN_BUILDER_PLAN.md) makes five core node types and basic saved named scenarios P0; alternative authoring, detailed reconciliation, broad import migration and optimized mobile editing are P1. The original participant outputs and decisions below are preserved verbatim. Their person-hour estimates are not current forecasts. No new model round was requested or conducted for this scope amendment.
+
 Status: COMPLETE. Three substantive rounds were completed by all three requested models before the coordinator selected the architecture below. Application implementation is not authorized yet.
 
 Repository: Tasty-Kiwi/unfair-wknd-26. Inspected HEAD: e4197fc (Improve hackathon readiness and dataset provenance, PR #3). Discussion date: 13 November 2026. Deadline: 14 November 2026, 20:00 Europe/Vilnius (18:00 UTC).
