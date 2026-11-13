@@ -1,101 +1,77 @@
 # **Needtrace — Hackathon Release Checklist**
 
-Deadline: November 14, 20:00
+Deadline: **14 November 2026, 20:00 Europe/Vilnius**.
 
-Vilnius time
+Order: product UX → brand → cloud decision → final QA → Devpost package (last). Mark an item done only with evidence. Release evidence and the local fallback live in [docs/NEEDTRACE_RELEASE.md](docs/NEEDTRACE_RELEASE.md).
 
-The goal is to present the existing prototype as **Needtrace**, deliver a clear guest demo, decide cloud release only after acceptance, then prepare the Devpost submission.
+**Release status (checked 13 November 2026):** PR #7 is merged into `main` as `91bf9b45c55001e690bb39b2cbdd0c02d9a96b23`. Post-merge CI passed, the Cloudflare production build of that commit succeeded, and the public URL serves that build in guest mode with cloud saving disabled. Production cloud saving stays **deferred and disabled**.
 
-I checked GitHub and found two important updates:
+## 1. Frontend and UX
 
-- **PR #5 has been merged into&#x20;**`main`**.** The backend is now in the main codebase, and the latest CI run passed.
-- The repository is **private**, and `Nedomas` currently has **no collaborator access**. This must change before submission unless you make the repository public.
+- [x] First screen names manufacturers, supply changes and customer-order impact; inspected in both themes.
+- [x] Landing offers **Try interactive demo** (`/`) and **Build your network** (`/?builder=1`); both verified at 1440, 1366, 1024 and 390 px.
+- [x] Three presets, allocation evidence and recovery verified: ten covered → two motors short → coverage restored.
+- [x] Typed node/relationship colours and dark tokens integrated; zoom and selection inspected.
+- [x] Validation, Edit item and Connect paths retained and regression-tested; phone guidance added.
+- [x] Device-save wording added; autosave and local cloud-failure/conflict regressions pass.
+- [x] Rendered at 1440×900, 1366×768, 1024×768 and 390×844 in both themes with no page overflow.
+- [ ] **Timed first-time-user test:** someone unfamiliar with Needtrace completes the main flow without instructions. Record time and where they hesitated.
 
-The recommended order is **product UX → brand → cloud release → final testing → Devpost package**. The Devpost package stays last, but reserve enough time to record and upload the video.
+## 2. Rebrand to Needtrace
 
-**Release progress**
-
-## 1. Refine frontend and UX
-
-- [x] First screen names manufacturers, supply changes and customer-order impact; inspected locally in both themes. Unaided user comprehension remains unvalidated.
-- [x] Landing source provides two paths: **Try interactive demo** (`/`) and **Build your network** (`/?builder=1`). Both routes clicked in browser tests at all four requested widths.
-- [x] Existing three presets, allocation evidence and recovery actions verified in browser; ten covered → two motors short → coverage restored.
-- [x] Integrated typed node/relationship colors and dark tokens; inspected zoom and selection. Mobile canvas needs pan/zoom or forms.
-- [x] Existing validation/checks and Edit item/Connect paths retained and regression-tested; added phone guidance.
-- [x] Added explicit device-save wording; autosave settles in both themes. Existing cloud failure/conflict local regressions pass; live cloud gates remain open.
-- [x] Rendered 1440×900,1366×768,1024×768,390×844 in both themes; no page overflow.
-- [ ] Run a timed first-time-user test: someone unfamiliar with Needtrace should understand and complete the main flow without instructions.
-
-## 2. Rebrand legacy product identity to Needtrace
-
-- [x] Source uses Needtrace in the landing page, simulator, builder and app wordmark. Rendered landing/simulator/builder and import/reset dialogs checked.
-- [x] Source includes Needtrace browser title/description, favicon and social preview asset. Verify rendered metadata and social preview on the final deployed build before release.
+- [x] Landing, simulator, builder, app wordmark and dialogs use Needtrace.
+- [x] Deployed build serves the Needtrace title, description, Open Graph tags, favicon and `needtrace-social.png` (HTTP 200). A real social-platform unfurl has not been checked.
 - [x] Needtrace wordmark/icon, shared theme preference, IBM Plex fonts and red/blue semantics applied.
-- [x] User-facing name/downloads/docs searched; only compatibility identifiers and historical evidence retain legacy names.
-- [ ] Update README, repository description, and public product links to the new brand.
-- [x] Existing keys, workspace format/version, cookies, IDs and OAuth routes preserved; export compatibility and saved work checked.
-- [ ] Approve the existing legacy workers.dev hostname or configure a Needtrace domain; no new domain is claimed. If the origin changes, verify OAuth callback settings.
+- [x] README and user-facing names/downloads/docs use Needtrace; only compatibility identifiers and historical evidence keep legacy names.
+- [x] Storage keys, workspace format/version, cookies, IDs and OAuth routes preserved; export compatibility verified on production.
+- [ ] **Repository description:** still "Unfair Weekend 2026 Hackathon Repo". Update it in GitHub settings (human action).
+- [ ] **Hostname decision:** confirm the team accepts `domino-os.tasty-kiwi.workers.dev` for submission. No Needtrace domain is configured. If the origin ever changes, update the OAuth callback settings.
 
-## 3. Cloud capability — deferred, NOT approved for this guest-only release
+## 3. Cloud saving — deferred, disabled, NOT approved
 
-- [x] Existing staging record proves one real GitHub account/profile sign-in/save/open/update/logout/re-sign-in. Fresh-browser and two-account gates below remain open; not repeated by this integration.
-- [ ] Verify a clean browser profile can reopen the same saved project with nodes, scenarios, and results intact.
-- [ ] Test a second real GitHub account: it must not read, list, or update the first account’s projects.
-- [ ] Confirm logout revokes the old session and that account switching preserves separate local drafts.
-- [ ] Measure repeated OAuth and project operations on Workers Free, including larger workspaces, and check for CPU-limit failures.
-- [ ] Set up production D1 separately from staging, apply migrations, and configure the required secrets and exact AUTH_URL.
-- [ ] Enable CLOUD_ENABLED in the intended production deployment and validate GitHub callback URLs.
-- [ ] Deploy, run live health/login/create/list/open/update/logout checks, and confirm no secrets appear in logs.
-- [x] Production-config local runtime tests verify disabled-cloud guest demo/local saves; unavailable-cloud recovery regressions pass.
-- [x] Guest/local builder mode works without cloud; keep production cloud disabled and use tested local fallback.
+Production runs `cloudEnabled: false`. Do not enable it for this release or present cloud saving as a demo feature. Open gates, for after the hackathon:
 
-## 4. Final product QA and release freeze
+- [x] Staging: one real GitHub account completed sign-in/save/open/update/logout/re-sign-in ([staging verification](docs/STAGING_VERIFICATION.md)).
+- [x] Guest/local builder works without cloud; disabled-cloud and unavailable-cloud regressions pass, including on production.
+- [ ] Clean browser profile reopens a saved staging project with nodes, scenarios and results intact.
+- [ ] A second real GitHub account cannot list, read or update the first account's projects.
+- [ ] Logout revokes the old session; account switching keeps separate local drafts.
+- [ ] Workers Free CPU reliability under repeated OAuth/project operations and larger workspaces (current staging samples exceed the nominal allowance).
+- [ ] Production D1, migrations, secrets and exact `AUTH_URL`; then `CLOUD_ENABLED`, callback URLs and live checks. Requires explicit team approval.
 
-- [x] Integrated npm ci,102 unit,44 Worker,63 browser tests,typechecks,build and production dry run passed locally.
-- [ ] Test the complete public Needtrace journey on the production URL.
-- [x] Existing local tests for empty/invalid/large inputs, failed saves and cloud conflicts pass. Live representative reliability remains separate.
-- [x] Theme refresh/cross-route, existing builder refresh,export/import,invalid-import preservation and calculation evidence tests pass.
-- [ ] Confirm the app is stable, the deployed build matches the approved commit, and the public link opens without sign-in.
-- [x] Engineering freeze: no further features/redesign; only reproducible release-blocking fixes.
+## 4. Final QA and release freeze
 
-## 5. Devpost submission package — last step
+- [x] Post-merge CI on `91bf9b4` passed: `npm ci`, unit tests, both typechecks, build, Worker tests, `deploy:check` and Playwright e2e ([run 43510209170](https://github.com/Tasty-Kiwi/unfair-wknd-26/actions/runs/43510209170)).
+- [x] Deployed build matches the merged commit: Cloudflare **Workers Builds: domino-os** production build succeeded on `91bf9b4` (version `77fa3eb8-1898-4d3c-881c-c78052cb94be`). A local build of `91bf9b4` produces the same `index-CHpcuUtn.js` bundle the public site serves, and all built JS/CSS assets return HTTP 200.
+- [x] Public guest journey tested on production: 46/46 guest Playwright tests (landing, judge journey, builder, release/theme, cloud-disabled) passed against `https://domino-os.tasty-kiwi.workers.dev` in fresh, signed-out browser contexts. `/api/health` returns `{"ok":true,"cloudEnabled":false}`.
+- [x] Empty/invalid/large inputs, failed saves, theme persistence, export/import and calculation evidence covered by passing tests.
+- [x] Engineering freeze: no features or redesign; only reproducible release-blocking fixes.
+- [ ] **Manual rehearsal** of the 60-second demo on the presentation machine, plus the [local fallback](docs/NEEDTRACE_RELEASE.md#local-guest-fallback) prepared before going offline.
 
-- [x] Prepared title/tagline, About under 150 words, stack, differentiators, judge answers, screenshot shortlist and <=3-minute script in docs/SUBMISSION.md, docs/PITCH.md and DEMO_SCRIPT.md. Portal entry is not completed.
-- [ ] Fill in Built with: React, TypeScript, Vite, Tailwind CSS, React Flow, Cloudflare Workers, D1, GitHub OAuth, and other tools actually used.
-- [ ] Add the final production URL under Try it out and test it in an incognito browser.
-- [ ] Make the GitHub repository public or grant GitHub user Nedomas access; permission check currently reports `none`.
-- [ ] Record and edit a demo video of no more than three minutes; start with the product working.
-- [ ] Upload the video to YouTube or Vimeo as public or unlisted and verify playback without your account.
-- [ ] Add the team name and every member to Devpost; enter the full names and email addresses required by the form.
-- [ ] Complete the disclosures: confirm the project began at the hackathon and state any pre-existing work truthfully, or None.
-- [ ] Add an optional slides link only if a deck is already useful; do not spend release time creating one.
-- [ ] Review all links, spelling, permissions, video visibility, and required fields; submit before 20:00.
+## 5. Devpost submission — last step (human tasks)
 
-## **Suggested cutoff times for November 14**
+Drafts are ready in [docs/SUBMISSION.md](docs/SUBMISSION.md), [docs/PITCH.md](docs/PITCH.md) and [DEMO_SCRIPT.md](DEMO_SCRIPT.md). Nothing has been entered in the portal.
 
-| Deadline (Vilnius) | Milestone                                                |
-| ------------------ | -------------------------------------------------------- |
-| **12:00**          | UX and Needtrace branding mostly complete                |
-| **15:00**          | Production cloud decision and functional checks complete |
-| **17:00**          | Feature freeze; only critical fixes afterward            |
-| **18:00**          | Record and edit final demo                               |
-| **19:30**          | Aim to submit Devpost with all links verified            |
-| **20:00**          | Official submission deadline                             |
+- [ ] **Repository access:** make the repo public or grant GitHub user `Nedomas` access. The permission check still returns `none` and the repo is private.
+- [ ] **Video:** record and edit a demo of at most 3:00 that opens on the working product.
+- [ ] **Upload:** post it to YouTube or Vimeo (public or unlisted) and check playback while signed out.
+- [ ] **Try it out:** enter `https://domino-os.tasty-kiwi.workers.dev/landing` (demo: `/`) and open it in an incognito window.
+- [ ] **Built with:** React, TypeScript, Vite, Tailwind CSS, React Flow, Cloudflare Workers, D1, GitHub OAuth, plus any other tools actually used.
+- [ ] **Team:** the team name and every member's full name and email.
+- [ ] **Disclosures:** state that the project began at the hackathon, and list any pre-existing work truthfully (or None).
+- [ ] **Optional slides link:** only if a useful deck already exists.
+- [ ] **Final review:** check links, spelling, permissions, video visibility and required fields, then submit before 20:00 and save the confirmation.
 
-For the video, I would allocate roughly **20 seconds to the problem, 100 seconds to the live product, 40 seconds to the local builder and inspectable evidence, and 20 seconds to the vision and team**. The product should be visible from the opening seconds.
+## Suggested cutoffs — 14 November (Vilnius)
 
-The key release rule is simple: **the core demo must remain reliable even if cloud saving cannot meet Workers Free limits**. Production cloud is disabled and not approved. Staging evidence shows some authenticated request CPU samples above the nominal Free allowance; fresh-browser restoration, retained-old-cookie rejection and live second-account isolation also remain open. See [staging verification](docs/STAGING_VERIFICATION.md).
+| Time      | Milestone                                          |
+| --------- | -------------------------------------------------- |
+| **12:00** | First-time-user test done; repo access granted     |
+| **15:00** | Hostname confirmed; repository description updated |
+| **18:00** | Demo recorded, edited and uploaded                 |
+| **19:30** | Devpost submitted with all links verified          |
+| **20:00** | Official deadline                                  |
 
-No repository or deployment settings have been changed by this checklist.
+Video split: about 20 s problem, 100 s live product, 40 s local builder and evidence, 20 s vision and team. Show the product in the opening seconds.
 
-## Integrated release evidence
-
-See docs/NEEDTRACE_RELEASE.md and HACKATHON_READINESS.md. Local review only: no new production deployment or cloud authorization. Current repository permission check: Nedomas none. Production cloud stays disabled. Video/submission/real-user test remain human tasks.
-
-## Final handoff
-
-PR #7 head 174c09e remains open/mergeable with passing push/PR CI and branch-preview check. Final local guest acceptance repeated at 1366px and 390px in both themes; no application blocker found. See docs/NEEDTRACE_RELEASE.md for the exact team-authorized merge, automatic production build, source-SHA verification and local fallback procedure. Marketing link is /landing; demo is /; builder is /?builder=1. Do not enable production cloud or change origins/default routing. Prior handoff edits are committed/pushed in 174c09e; the current SHA/status documentation refresh remains local/uncommitted. No release action performed.
-
-Final status refresh: PR #7 still 174c09e, open/mergeable, all reported checks successful, no GitHub reviews/threads recorded. Approval and production acceptance remain unchecked. docs/SUBMISSION.md now includes the human owner matrix; docs/NEEDTRACE_RELEASE.md includes the compact public smoke-test card and verified local fallback. No application/config change or new release action.
-
-Branch cleanup gate: PR #7 remains open; preserve integration/needtrace-release locally and remotely. At refresh start local HEAD matched remote (0 ahead/0 behind), with clean working tree. Latest push CI, PR CI and Cloudflare preview passed on 174c09e. Production source-SHA verification is pending merge and automatic deployment.
+**Release rule:** the guest demo must stay reliable without cloud. If the public URL fails, present from the tested local fallback.

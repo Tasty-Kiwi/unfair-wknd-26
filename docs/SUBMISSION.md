@@ -32,7 +32,7 @@ React, TypeScript, Vite, Tailwind CSS, React Flow, Cloudflare Workers, Cloudflar
 - Editable builder: **https://domino-os.tasty-kiwi.workers.dev/?builder=1**
 - Source: **https://github.com/Tasty-Kiwi/unfair-wknd-26** (private; Nedomas permission is currently `none`).
 
-Keep this hostname and OAuth origins unchanged. These are the intended release links, not proof that production contains PR #7. Enter the marketing page under Try it out if one URL is allowed, and include the direct demo link in the description. After the approved merge, verify each in a clean browser before submission. Production cloud saving remains disabled and is not a demo promise.
+Keep this hostname and OAuth origins unchanged. Production serves the merged PR #7 build (`91bf9b4`); see [release status](NEEDTRACE_RELEASE.md). Enter the marketing page under Try it out if one URL is allowed, and include the direct demo link in the description. Re-check each link in a clean browser shortly before submission. Production cloud saving remains disabled and is not a demo promise.
 
 ## Differentiation
 
@@ -44,7 +44,7 @@ Use the **2:45 recording script** in [DEMO_SCRIPT.md](../DEMO_SCRIPT.md), with a
 
 ### Selected authentic screenshots
 
-These are actual local captures of PR #7's integrated guest build, not production verification. Use the first three as the main product story; mobile and light views are optional alternatives. Keep fictional-data context in captions and do not use social artwork as a substitute for product evidence.
+These are actual local captures of the PR #7 guest build that is now deployed (`91bf9b4`). Use the first three as the main product story; mobile and light views are optional alternatives. Keep fictional-data context in captions and do not use social artwork as a substitute for product evidence.
 
 1. [Dark landing](release/screenshots/landing-dark-1440.png) — “Needtrace: see which orders are affected when supply changes. Fictional demonstration.”
 2. [Real supplier-to-order path](../public/landing/simulator-detail.png) — “A six-day motor receipt delay leaves ORD-102 two motors short. Fictional material-availability scenario.”
@@ -69,13 +69,13 @@ The existing product crop in item 2 was captured during landing work and has the
 
 No names are inferred. One person may hold multiple roles, but each responsibility must have an actual owner.
 
-| Role                                   | Required action                                                                                             | Completion evidence                                                                            |
-| -------------------------------------- | ----------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
-| Team approver / authorized maintainer  | Review and approve PR #7; merge only after explicit team authorization                                      | GitHub approval and recorded main merge SHA                                                    |
-| Cloudflare teammate / release verifier | Check automatic production build and deployed source SHA; run all public smoke checks; leave cloud disabled | Successful production build tied to main SHA, clean-browser results, health cloudEnabled false |
-| Repository administrator               | Grant Nedomas access and verify permission, or obtain team approval to make the repository public           | Intended judge account can open the repository; latest permission lookup remains none          |
-| Presenter / video owner                | Rehearse, record <=3:00, upload public/unlisted and test signed out; keep offline copy                      | Playable final video URL and actual duration                                                   |
-| Submission owner                       | Enter actual team details, assets, links and disclosures; obtain team review; submit before deadline        | Portal preview reviewed and submission confirmation saved                                      |
+| Role                                   | Required action                                                                                      | Completion evidence                                                                   |
+| -------------------------------------- | ---------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------- |
+| Team approver / authorized maintainer  | Done: PR #7 merged as `91bf9b4`; approve any further release-blocking fix before it reaches main     | Merge SHA recorded in NEEDTRACE_RELEASE.md                                            |
+| Cloudflare teammate / release verifier | Done for `91bf9b4`; re-run the pre-submission re-check and keep cloud disabled                       | Production build tied to main SHA, clean-browser results, health cloudEnabled false   |
+| Repository administrator               | Grant Nedomas access and verify permission, or obtain team approval to make the repository public    | Intended judge account can open the repository; latest permission lookup remains none |
+| Presenter / video owner                | Rehearse, record <=3:00, upload public/unlisted and test signed out; keep offline copy               | Playable final video URL and actual duration                                          |
+| Submission owner                       | Enter actual team details, assets, links and disclosures; obtain team review; submit before deadline | Portal preview reviewed and submission confirmation saved                             |
 
 ## Three-person final checklist
 
