@@ -203,6 +203,8 @@ svg {
 .top-actions {
   margin-left: auto;
   display: flex;
+  flex-wrap: wrap;
+  min-width: 0;
   gap: 6px;
 }
 .top-actions button {

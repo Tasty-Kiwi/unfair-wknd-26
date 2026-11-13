@@ -1,0 +1,410 @@
+/* Build editor. Every selector is scoped under .builder so the legacy
+   workbench styles and global theme stay untouched. */
+
+.builder {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(300px, 340px);
+  grid-template-areas:
+    "toolbar toolbar"
+    "palette palette"
+    "canvas side";
+  grid-template-rows: auto auto 560px;
+  gap: 0;
+  min-height: 0;
+  color: var(--ink);
+  background: var(--sheet);
+  border: 1px solid var(--rule);
+  font-family: var(--font-sans);
+}
+
+.builder__toolbar {
+  grid-area: toolbar;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.85rem 1rem 0.7rem;
+  border-bottom: 1px solid var(--rule);
+}
+
+.builder__title h2 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 1.35rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+
+.builder__title p {
+  margin: 0.2rem 0 0;
+  max-width: 62ch;
+  font-size: 0.86rem;
+  color: var(--ink);
+  opacity: 0.8;
+}
+
+.builder__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  flex-shrink: 0;
+}
+
+.builder__palette {
+  grid-area: palette;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  padding: 0.6rem 1rem;
+  border-bottom: 1px solid var(--rule);
+  background: var(--paper);
+}
+
+.builder-palette__item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-height: 2rem;
+  padding: 0.3rem 0.6rem;
+  border: 1px solid var(--rule);
+  border-radius: 0;
+  background: var(--sheet);
+  color: var(--ink);
+  font: inherit;
+  font-size: 0.82rem;
+  cursor: pointer;
+}
+
+.builder-palette__item:hover {
+  background: var(--hair);
+}
+
+.builder-palette__item:focus-visible {
+  outline: 2px solid var(--alt);
+  outline-offset: 2px;
+}
+
+.builder__canvas-wrap {
+  grid-area: canvas;
+  position: relative;
+  min-width: 0;
+  min-height: 560px;
+  border-right: 1px solid var(--rule);
+  background-color: var(--sheet);
+  background-image: radial-gradient(var(--hair) 1px, transparent 1px);
+  background-size: 18px 18px;
+}
+
+.builder-canvas {
+  position: absolute;
+  inset: 0;
+}
+
+.builder__canvas-wrap .react-flow {
+  background: transparent;
+}
+
+.builder__empty {
+  position: absolute;
+  top: 1rem;
+  left: 1rem;
+  margin: 0;
+  padding: 0.4rem 0.6rem;
+  background: var(--sheet);
+  border: 1px dashed var(--rule);
+  font-size: 0.85rem;
+  pointer-events: none;
+}
+
+.builder__side {
+  grid-area: side;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  min-width: 0;
+  max-height: 100%;
+  overflow-y: auto;
+  background: var(--sheet);
+}
+
+.builder__side > section {
+  padding: 0.85rem 1rem;
+  border-bottom: 1px solid var(--rule);
+}
+
+.builder-section-title {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin: 0 0 0.6rem;
+  font-family: var(--font-display);
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+/* Checks */
+
+.builder-checks__ok {
+  margin: 0;
+  font-size: 0.85rem;
+  opacity: 0.8;
+}
+
+.builder-checks__list {
+  margin: 0;
+}
+
+.builder-checks__jump {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--short);
+  font: inherit;
+  font-size: 0.85rem;
+  text-align: left;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+
+/* Issues */
+
+.builder-issues {
+  margin: 0.3rem 0 0;
+  padding: 0;
+  list-style: none;
+  font-size: 0.82rem;
+  color: var(--short);
+}
+
+.builder-issues li {
+  position: relative;
+  padding: 0.2rem 0 0.2rem 0.9rem;
+}
+
+.builder-issues li::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0.55rem;
+  width: 0.45rem;
+  height: 0.45rem;
+  background: var(--hatch);
+  border: 1px solid var(--short);
+}
+
+/* Inspector and forms */
+
+.builder-inspector__kind,
+.builder-inspector__id {
+  margin: 0;
+  font-size: 0.75rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  opacity: 0.7;
+}
+
+.builder-inspector__title {
+  margin: 0.15rem 0 0.7rem;
+  font-family: var(--font-display);
+  font-size: 1.05rem;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.builder-inspector__hint {
+  margin: 0;
+  font-size: 0.85rem;
+  opacity: 0.8;
+}
+
+.builder-field {
+  display: grid;
+  gap: 0.25rem;
+  margin-bottom: 0.7rem;
+}
+
+.builder-field label {
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.builder-field input,
+.builder-field select {
+  width: 100%;
+  min-height: 2.1rem;
+  padding: 0.35rem 0.5rem;
+  border: 1px solid var(--rule);
+  border-radius: 0;
+  background: var(--sheet);
+  color: var(--ink);
+  font: inherit;
+  font-size: 0.88rem;
+}
+
+.builder-field input[aria-invalid="true"] {
+  border-color: var(--short);
+  box-shadow: inset 3px 0 0 var(--short);
+}
+
+.builder-field input:focus-visible,
+.builder-field select:focus-visible {
+  outline: 2px solid var(--alt);
+  outline-offset: 1px;
+}
+
+.builder-inspector__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.45rem;
+  margin-top: 0.4rem;
+}
+
+.builder-inspector__confirm {
+  flex-basis: 100%;
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--short);
+}
+
+.builder-connect__message {
+  min-height: 1.1em;
+  margin: 0.5rem 0 0;
+  font-size: 0.82rem;
+  color: var(--short);
+}
+
+/* Canvas nodes and edges */
+
+.builder-node {
+  position: relative;
+  width: 210px;
+  padding: 0.55rem 0.7rem 0.6rem;
+  background: var(--sheet);
+  border: 1px solid var(--ink);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  box-shadow: 3px 3px 0 var(--rule);
+}
+
+.builder-node.is-selected {
+  outline: 2px solid var(--alt);
+  outline-offset: 2px;
+}
+
+.builder-node__head {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  flex-wrap: wrap;
+}
+
+.builder-node__kind {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.7rem;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  opacity: 0.75;
+}
+
+.builder-node__title {
+  margin: 0.2rem 0 0.25rem;
+  font-family: var(--font-display);
+  font-size: 0.98rem;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.builder-node__detail {
+  margin: 0;
+  font-size: 0.78rem;
+  opacity: 0.85;
+}
+
+.builder-node__issue {
+  margin-left: auto;
+  padding: 0 0.3rem;
+  background: var(--short);
+  color: var(--sheet);
+  font-size: 0.7rem;
+  font-weight: 600;
+}
+
+.builder-node .react-flow__handle {
+  width: 10px;
+  height: 10px;
+  border: 1px solid var(--ink);
+  border-radius: 0;
+  background: var(--sheet);
+}
+
+.builder-node .react-flow__handle:hover {
+  background: var(--alt);
+}
+
+.builder-edge path {
+  stroke: var(--ink);
+  stroke-width: 1.5;
+}
+
+.builder-edge.is-missing path {
+  stroke: var(--short);
+  stroke-dasharray: 4 3;
+}
+
+.builder-edge.react-flow__edge.selected path {
+  stroke: var(--alt);
+  stroke-width: 2.5;
+}
+
+.builder-edge-label {
+  padding: 0.05rem 0.3rem;
+  background: var(--sheet);
+  border: 1px solid var(--rule);
+  font-size: 0.72rem;
+}
+
+/* Narrow screens: stack the editor and the inspector below the canvas. */
+
+@media (max-width: 1000px) {
+  .builder {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas:
+      "toolbar"
+      "palette"
+      "canvas"
+      "side";
+    grid-template-rows: auto auto 420px auto;
+  }
+
+  .builder__canvas-wrap {
+    min-height: 420px;
+    border-right: 0;
+    border-bottom: 1px solid var(--rule);
+  }
+
+  .builder__side {
+    max-height: none;
+    overflow: visible;
+  }
+}
+
+@media (max-width: 720px) {
+  .builder {
+    grid-template-rows: auto auto 360px auto;
+  }
+
+  .builder__toolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .builder__canvas-wrap {
+    min-height: 360px;
+  }
+}

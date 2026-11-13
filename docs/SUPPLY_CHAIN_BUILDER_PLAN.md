@@ -2,6 +2,8 @@
 
 **Architecture approved. Scope amended following review of commit `d241a50`. This revision changes planning documents only.**
 
+> Implementation update: the reduced P0 is implemented and locally verified on `feat/supply-chain-builder`. See [implementation evidence](BUILDER_IMPLEMENTATION.md) for actual model contributions, acceptance results and remaining scope. The planning history and timeboxes below are preserved; no deployment or merge is implied.
+
 Repository: Tasty-Kiwi/unfair-wknd-26. Application baseline inspected during the original discussion: `e4197fc`; current documentation baseline: `d241a50`. Submission: **14 November 2026, 20:00 Europe/Vilnius (18:00 UTC)**.
 
 **Smallest finished product:** build a supply chain from blank, save a named disruption scenario for that network, delay a receipt, compare with baseline, and inspect the affected customer orders.
