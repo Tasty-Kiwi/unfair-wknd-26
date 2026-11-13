@@ -1,6 +1,8 @@
 # Needtrace hackathon readiness
 
-Local integrated release review, 13 November 2026. Deadline supplied by team: **14 November 2026, 20:00 Europe/Vilnius**.
+Current production evidence and the final release decision are in [FINAL_RELEASE_EXECUTION.md](docs/FINAL_RELEASE_EXECUTION.md); authoritative submission fields/rules are in [DEVPOST_READY.md](docs/DEVPOST_READY.md). The dated review below is historical.
+
+Local integrated release review, 13 November 2026. Official Devpost deadline: **14 November 2026, 20:00 Europe/Vilnius**.
 
 Needtrace is the displayed brand; existing technical hostname, workspace keys/formats, OAuth routes, Worker/D1 identifiers and session names remain compatible. This is a rebrand and frontend integration, not a database migration. `/landing` offers **Try interactive demo** and **Build your network**, the latter entering the existing builder at `/?builder=1`.
 

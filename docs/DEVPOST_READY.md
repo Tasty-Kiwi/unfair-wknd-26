@@ -46,7 +46,7 @@ The public demo is guest-only and production cloud saving is disabled. Worker, D
 | Source            | https://github.com/Tasty-Kiwi/unfair-wknd-26                 |
 | Video             | **⟦HUMAN⟧** Add the final YouTube or Vimeo URL after upload. |
 
-The hostname contains the legacy DominoOS name; the product is Needtrace. Verify the guest link in a clean browser before submission. GitHub administration was attempted but denied: repository update and collaborator invitation returned 403 (“Must have admin rights to Repository”). The repository is private and access for Nedomas is not verified. A repository administrator must invite **Nedomas** with Read access and verify that the intended account can open the source.
+The hostname contains the legacy DominoOS name; the product is Needtrace. Verify the guest link in a clean browser before submission. GitHub administration was attempted but denied: repository update and collaborator invitation returned 403 (“Must have admin rights to Repository”). The repository is private and permission lookup for Nedomas returns `none`; no invitation could be sent. A repository administrator must invite **Nedomas** with Read access and verify that the intended account can open the source.
 
 ## Team and disclosures — ⟦HUMAN⟧
 
