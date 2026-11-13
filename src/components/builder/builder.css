@@ -290,6 +290,46 @@
   box-shadow: 3px 3px 0 var(--rule);
 }
 
+/* Soft fill per node kind; --kind-ink is the matching darker accent used for
+ * the kind label, icon and offset shadow. */
+.builder-node--supplier {
+  --kind-fill: #f4ead6; /* sand */
+  --kind-ink: #7d5e22;
+}
+.builder-node--component {
+  --kind-fill: #dcefe6; /* mint */
+  --kind-ink: #2c6a55;
+}
+.builder-node--receipt {
+  --kind-fill: #e9e3f4; /* lavender */
+  --kind-ink: #5b4884;
+}
+.builder-node--product {
+  --kind-fill: #dfe9f2; /* mist */
+  --kind-ink: #355a78;
+}
+.builder-node--order {
+  --kind-fill: #f6e2e9; /* blush */
+  --kind-ink: #873a5a;
+}
+
+.builder-node[class*="builder-node--"] {
+  background: var(--kind-fill, var(--sheet));
+  border-color: var(--kind-ink, var(--ink));
+  box-shadow: 3px 3px 0
+    color-mix(in srgb, var(--kind-ink, var(--rule)) 35%, transparent);
+}
+
+.builder-node .builder-node__kind,
+.builder-node .builder-node__icon {
+  color: var(--kind-ink, inherit);
+}
+
+.builder-node .builder-node__kind {
+  font-weight: 600;
+  opacity: 1;
+}
+
 .builder-node.is-selected {
   outline: 2px solid var(--alt);
   outline-offset: 2px;
@@ -335,20 +375,24 @@
   font-weight: 600;
 }
 
+/* --rel is set per relationship kind from RELATIONSHIP_COLORS. */
 .builder-node .react-flow__handle {
   width: 10px;
   height: 10px;
   border: 1px solid var(--ink);
   border-radius: 0;
-  background: var(--sheet);
+  background: var(--rel, var(--sheet));
 }
 
-.builder-node .react-flow__handle:hover {
-  background: var(--alt);
+.builder-node .react-flow__handle:hover,
+.builder-node .react-flow__handle.connectingfrom,
+.builder-node .react-flow__handle.valid {
+  outline: 2px solid var(--alt);
+  outline-offset: 1px;
 }
 
 .builder-edge path {
-  stroke: var(--ink);
+  stroke: var(--rel, var(--ink));
   stroke-width: 1.5;
 }
 

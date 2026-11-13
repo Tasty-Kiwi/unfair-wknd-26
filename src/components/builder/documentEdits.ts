@@ -47,6 +47,19 @@ export const RELATIONSHIP_LABELS: Record<RelationshipKind, string> = {
   orderedProduct: "Ordered product",
 };
 
+/**
+ * One colour per relationship kind, shared by the ports and the edges that
+ * carry it, so matching ports read as "these connect". Red and blue stay
+ * reserved for problems and selection.
+ */
+export const RELATIONSHIP_COLORS: Record<RelationshipKind, string> = {
+  primarySupplier: "#1f7a6d", // teal
+  receiptSupplier: "#a8740c", // ochre
+  receiptComponent: "#7a4fa0", // violet
+  bom: "#4d7a1f", // olive
+  orderedProduct: "#a23b72", // magenta
+};
+
 /** Plain-language arrow for each relationship, used in the connection form. */
 export const RELATIONSHIP_ENDS: Record<
   RelationshipKind,

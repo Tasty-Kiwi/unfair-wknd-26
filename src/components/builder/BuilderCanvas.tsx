@@ -1,4 +1,11 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  type CSSProperties,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import {
   Background,
   Controls,
@@ -24,6 +31,7 @@ import type {
 import { BuilderNode, type BuilderFlowNode } from "./BuilderNode";
 import {
   candidateFromHandles,
+  RELATIONSHIP_COLORS,
   type ApplyConnectionResult,
   type BuilderSelection,
   type RelationshipCandidate,
@@ -102,7 +110,13 @@ export function BuilderCanvas({
         className: `builder-edge builder-edge--${edge.kind}${
           edge.kind === "bom" && !edge.quantity.trim() ? " is-missing" : ""
         }`,
-        markerEnd: { type: MarkerType.ArrowClosed, width: 14, height: 14 },
+        style: { "--rel": RELATIONSHIP_COLORS[edge.kind] } as CSSProperties,
+        markerEnd: {
+          type: MarkerType.ArrowClosed,
+          width: 14,
+          height: 14,
+          color: RELATIONSHIP_COLORS[edge.kind],
+        },
       })),
     [document.edges, edgeLabels, selection],
   );
