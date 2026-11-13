@@ -257,7 +257,7 @@ async function minimizeGetSessionResponse(
   const name =
     typeof rawName === "string" && rawName.trim().length > 0
       ? rawName.trim()
-      : "DominoOS user";
+      : "Needtrace user";
 
   const payload = {
     user: {

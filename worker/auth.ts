@@ -366,7 +366,7 @@ export function createAuth(
     const name =
       typeof row.name === "string" && row.name.trim().length > 0
         ? row.name.trim()
-        : "DominoOS user";
+        : "Needtrace user";
 
     return { userId: row.user_id, name };
   }

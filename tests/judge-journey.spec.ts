@@ -78,7 +78,7 @@ test("judge causes a disruption, audits allocation, and resolves it with live in
   const downloadPromise = page.waitForEvent("download");
   await page.getByRole("button", { name: "Export report" }).click();
   expect((await downloadPromise).suggestedFilename()).toBe(
-    "domino-scenario-report.json",
+    "needtrace-scenario-report.json",
   );
   await page.getByRole("button", { name: "Reset demo" }).click();
   await page.getByRole("radio", { name: /Supplier disruption/ }).click();

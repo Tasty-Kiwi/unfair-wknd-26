@@ -178,6 +178,10 @@ export function BuildWorkspace({
             Draw suppliers, components, receipts, products and orders, then run
             the engine on the whole network.
           </p>
+          <p className="builder-mobile-hint">
+            On a phone, pan or zoom the canvas. Use Edit item and Connect below
+            to edit without dragging.
+          </p>
         </div>
         <div className="builder__actions">
           <Button type="button" variant="outline" onClick={onValidate}>

@@ -1,4 +1,4 @@
-# DominoOS — submission preparation
+# Needtrace — submission preparation
 
 Target deadline supplied by the team: **14 November 2026, 20:00 Europe/Vilnius**. An entrant must confirm official eligibility, required fields, video limits and deadline in the event portal. This document does not certify compliance or submission.
 
@@ -9,26 +9,73 @@ Target deadline supplied by the team: **14 November 2026, 20:00 Europe/Vilnius**
 - [Technical readiness and tested limits](../HACKATHON_READINESS.md).
 - [Unaided-user protocol](VALIDATION_PLAYBOOK.md), currently not conducted.
 
+## Project title and tagline
+
+**Needtrace — trace supply changes to customer orders**
+
+**See what breaks before it breaks.**
+
 ## Project description
 
-DominoOS is a material-availability simulator for manufacturing plans. It connects stock, bills of material, dated receipts and customer orders so a planner can change a delivery, trace a shortage and compare recovery options. The fictional demo exposes a two-motor shortage on ORD-102 after a six-day delay; approved alternative supply restores coverage in the simulation. Allocation is deterministic and inspectable. CSV/JSON imports show provenance and retained data before applying. It does not place purchases, confirm supplier promises, schedule factory capacity or predict shipment dates.
+### Devpost About (122 words)
+
+Needtrace helps manufacturing planners see which customer orders are exposed when material deliveries slip. Connect stock, bills of material, dated receipts, products and orders; change a receipt; trace shortages to the affected order; and compare modeled recovery options with inspectable allocation evidence. In the fictional demo, a six-day motor delay leaves ORD-102 short by two motors, while approved alternative supply restores material coverage in the simulation. Needtrace is a browser prototype built with React, TypeScript and Vite, using a deterministic TypeScript simulation and React Flow network view. CSV and JSON imports support testing a plan. The prototype does not confirm supplier commitments, place purchases, model factory capacity or forecast shipment dates. Customer demand, savings and willingness to pay have not been validated.
+
+### Verified “Built with” list
+
+React, TypeScript, Vite, Tailwind CSS, React Flow, Cloudflare Workers, Cloudflare D1, GitHub OAuth, Zod, Vitest and Playwright. The public demo currently runs guest-only; optional cloud capability is disabled in production and is not a release claim.
+
+### Final release links
+
+- Marketing/project page: **https://domino-os.tasty-kiwi.workers.dev/landing**
+- Interactive demo: **https://domino-os.tasty-kiwi.workers.dev/**
+- Editable builder: **https://domino-os.tasty-kiwi.workers.dev/?builder=1**
+- Source: **https://github.com/Tasty-Kiwi/unfair-wknd-26** (private; Nedomas permission is currently `none`).
+
+Keep this hostname and OAuth origins unchanged. These are the intended release links, not proof that production contains PR #7. Enter the marketing page under Try it out if one URL is allowed, and include the direct demo link in the description. After the approved merge, verify each in a clean browser before submission. Production cloud saving remains disabled and is not a demo promise.
 
 ## Differentiation
 
 The demonstrated combination is a supplier-to-order view, inspectable reservations, independent recovery comparisons and explicit import provenance in a focused browser prototype. We are testing whether this helps planners combining spreadsheets. We have not established unique market coverage, easier onboarding than existing products, willingness to pay, time savings or customer adoption. Related CSV tables still require preparation; the allocation policy may differ from a real factory's priorities.
 
-## Three-minute video outline
+## Final video and screenshot package
 
-| Time | Picture / action | Message |
-| --- | --- | --- |
-| 0:00–0:30 | Brief title, then baseline map and ten covered orders | Deliver the 30-second pitch. Identify the intended planner and the question: which order loses coverage if a receipt slips? |
-| 0:30–1:30 | Full-screen desktop app | Perform the complete 60-second script: baseline, six-day delay, ORD-102 allocation, both recovery cards, Vector recovery. |
-| 1:30–1:55 | Reopen disrupted scenario and its allocation/timeline | Explain required-date priority, six reserved motors, two remaining and late receipt. Show editable inputs. This is deterministic simulation, not a shipment forecast. |
-| 1:55–2:20 | Import dialog, then partial products CSV preview | Show session-only storage, retained BOMs and mixed-data warning. Cancel. Use no private customer files. |
-| 2:20–2:40 | Recovery assumptions and exported report | Apply recovery changes a scenario, not a purchase. Reports include evidence/provenance; costs, capacity and supplier confirmation are outside the model. |
-| 2:40–3:00 | Covered result; simple closing frame | State what is demonstrated and what remains unvalidated. Next: an unaided session and planner policy comparison. Close with project name and team-approved link. |
+Use the **2:45 recording script** in [DEMO_SCRIPT.md](../DEMO_SCRIPT.md), with a 3:00 hard limit and an actual timed rehearsal. The 60-second core script remains available for live judging. No recording or upload is claimed. Watch the exported video from start to finish, check audio/text legibility, and test the public/unlisted YouTube or Vimeo link signed out.
 
-Record at readable desktop resolution and normal zoom. Favor clear narration over music. Use pauses and pointer movement to identify evidence. Hide personal tabs and notifications. Trim dead time without disguising behavior. Watch the exported file to check duration, sound, text legibility and public viewing permissions. Recording and timed rehearsal have not been completed by this review.
+### Selected authentic screenshots
+
+These are actual local captures of PR #7's integrated guest build, not production verification. Use the first three as the main product story; mobile and light views are optional alternatives. Keep fictional-data context in captions and do not use social artwork as a substitute for product evidence.
+
+1. [Dark landing](release/screenshots/landing-dark-1440.png) — “Needtrace: see which orders are affected when supply changes. Fictional demonstration.”
+2. [Real supplier-to-order path](../public/landing/simulator-detail.png) — “A six-day motor receipt delay leaves ORD-102 two motors short. Fictional material-availability scenario.”
+3. [Editable builder](release/screenshots/builder-selected-dark.png) — “Author a network locally and inspect typed relationships. Fictional example; production cloud disabled.”
+4. [Light simulator](release/screenshots/simulator-light-1440.png) — “Baseline: all ten fictional customer orders have material coverage.”
+5. [Mobile landing](release/screenshots/landing-dark-390.png) — “Responsive guest demo and direct builder entry.”
+
+The existing product crop in item 2 was captured during landing work and has the same unchanged allocation behavior; use the rebranded screenshot set for views containing a wordmark. Select only readable images; inspect any Devpost thumbnail/crop before publishing.
+
+### Required-field checklist for the submission owner
+
+- [ ] Project title, tagline, About <=150 words, intended user and honest problem/solution description.
+- [ ] Built with list above, checked against actual source; label D1/OAuth as optional staging capability, not enabled production functionality.
+- [ ] Verified marketing/demo links; source link with judge access granted or team-approved public visibility.
+- [ ] <=3-minute video URL with public/unlisted signed-out playback; chosen product screenshots and captions.
+- [ ] Actual team name, every required member name/email, invitations/acceptance and eligibility information from the team.
+- [ ] Truthful pre-existing-work, tools/AI-assistance, asset/license and other disclosures required by the official form; do not assume “None.”
+- [ ] Review the actual event form for additional mandatory questions, acknowledgements and official deadline. This repository checklist does not certify event compliance.
+- [ ] Team reviews the preview, submits before 14 November 20:00 Europe/Vilnius and saves the confirmation.
+
+## Human owners — assign names before handoff
+
+No names are inferred. One person may hold multiple roles, but each responsibility must have an actual owner.
+
+| Role                                   | Required action                                                                                             | Completion evidence                                                                            |
+| -------------------------------------- | ----------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
+| Team approver / authorized maintainer  | Review and approve PR #7; merge only after explicit team authorization                                      | GitHub approval and recorded main merge SHA                                                    |
+| Cloudflare teammate / release verifier | Check automatic production build and deployed source SHA; run all public smoke checks; leave cloud disabled | Successful production build tied to main SHA, clean-browser results, health cloudEnabled false |
+| Repository administrator               | Grant Nedomas access and verify permission, or obtain team approval to make the repository public           | Intended judge account can open the repository; latest permission lookup remains none          |
+| Presenter / video owner                | Rehearse, record <=3:00, upload public/unlisted and test signed out; keep offline copy                      | Playable final video URL and actual duration                                                   |
+| Submission owner                       | Enter actual team details, assets, links and disclosures; obtain team review; submit before deadline        | Portal preview reviewed and submission confirmation saved                                      |
 
 ## Three-person final checklist
 
@@ -52,7 +99,14 @@ Assign actual names before submission. Responsibilities below are not claims of 
 - [ ] Confirm official rules, membership/eligibility, required acknowledgements, license obligations, video length and deadline.
 - [ ] Record/export the video; watch it start to finish and test its shared link signed out.
 - [ ] Enter the description, team, repository, approved demo URL and video. Claim only observed engineering results and fictional-scenario outcomes.
+- [ ] Confirm the repository is public or invite GitHub user `Nedomas` to the private repository, then verify access using the intended account.
+- [ ] Capture requested screenshots from the final approved build; check that they show the actual product and disclose fictional data where relevant.
+- [ ] Enter the real team name, all member names and the email addresses required by Devpost. Do not infer team details from this draft.
 - [ ] All three review the submission preview; submit before the deadline and save confirmation. Nothing has been submitted automatically.
+
+## Submission status
+
+The About copy above is 122 words (under the 150-word limit). It is draft text, not a submitted project page. No recording, upload, team-field entry, public repository change or Devpost submission has been completed. Actual local screenshots are shortlisted above; a fresh GitHub lookup still reports Nedomas permission none. Production release and the Try it out URL still require the checks recorded in [staging verification](STAGING_VERIFICATION.md).
 
 ## Stop rule
 

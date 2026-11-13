@@ -1,8 +1,10 @@
-# DominoOS
+# Needtrace
 
-**Public demo: https://domino-os.tasty-kiwi.workers.dev** · [CI runs](https://github.com/Tasty-Kiwi/unfair-wknd-26/actions/workflows/ci.yml)
+**Needtrace · See what breaks before it breaks.** · [CI runs](https://github.com/Tasty-Kiwi/unfair-wknd-26/actions/workflows/ci.yml)
 
-**See what breaks before it breaks.** A manufacturing material-availability simulator built for the Unfair Weekend 2026 hackathon. Change a supplier receipt, trace the affected customer order, and test an approved alternative in under a minute.
+A manufacturing material-availability simulator built for the Unfair Weekend 2026 hackathon. Change a supplier receipt, trace the affected customer order, and test an approved alternative in under a minute.
+
+The interactive demo and network builder are available from the app at `/` and `/landing`. The existing public Workers URL still uses the legacy `domino-os` hostname; no Needtrace domain is claimed here. The current production deployment is guest-only with cloud features disabled. Production rebrand/URL and cloud release acceptance remain pending. Staging and release limits are documented in [staging verification](docs/STAGING_VERIFICATION.md).
 
 Designed for a small manufacturer building a material network or testing a spreadsheet plan without a full planning-system rollout. This buyer segment and willingness to pay are hypotheses; no customer validation or measured savings are claimed. See [commercial narrative](docs/PITCH.md) and [human validation playbook](docs/VALIDATION_PLAYBOOK.md).
 
@@ -33,7 +35,7 @@ npx wrangler login
 npm run deploy
 ```
 
-`wrangler.jsonc` selects the Tasty Kiwi account and the `domino-os` Worker. Change these for another account. `npm run deploy:check` validates a built asset deployment without publishing. Keep `npm run dev` ready as the local demo fallback. GitHub CI verifies code but does not deploy or store Cloudflare credentials.
+`wrangler.jsonc` selects the Tasty Kiwi account and the legacy `domino-os` Worker. These infrastructure identifiers and the public hostname are not the product's visible brand. Change them only as a deliberate migration, including checking OAuth origins/callbacks. `npm run deploy:check` validates a built asset deployment without publishing. Keep `npm run dev` ready as the local demo fallback. GitHub CI verifies code but does not deploy or store Cloudflare credentials.
 
 ## Demonstrate
 
@@ -103,7 +105,7 @@ In the builder, use Sign in with GitHub, My projects, Save to cloud and Open. Cl
 
 For local development, follow [GitHub setup](docs/GITHUB_AUTH_SETUP.md), apply the local migrations, and run `npm run dev` alongside `npm run dev:api`. Credentials belong in ignored `.dev.vars`, never `VITE_` variables. Guest development works without credentials. Apply the checked-in migrations, including `0003_github_oauth.sql`, without rewriting previously applied files. Only GitHub Client ID/Secret are required; the fixed origin is `AUTH_URL`.
 
-The checked-in production and branch-preview configurations keep cloud disabled. The earlier Better Auth sign-in worked in the user's test; the replacement custom flow needs a fresh live sign-in check. The built-Worker browser test now verifies logout, cross-browser save/reopen with scenarios, matching simulation output and second-owner denial against actual local D1. Its sessions are seeded only in the isolated test harness. Repeating the complete journey on staging with two real GitHub accounts remains open. See [implementation evidence](docs/CLOUD_BACKEND_IMPLEMENTATION.md) and [staging verification](docs/STAGING_VERIFICATION.md). Production rollout is not approved.
+The checked-in production and branch-preview configurations keep cloud disabled. The replacement custom OAuth flow has passed a real GitHub sign-in, save/list/open/update, logout and re-sign-in using one account in its existing browser profile on staging. Fresh-browser restoration, retained-old-cookie rejection and live second-account isolation remain unverified. Local Worker tests cover seeded sessions and owner checks, but do not replace those live checks. Several observed authenticated request CPU samples exceeded the nominal Workers Free allowance; reliability is not established. See [implementation evidence](docs/CLOUD_BACKEND_IMPLEMENTATION.md) and [staging verification](docs/STAGING_VERIFICATION.md). Production rollout is not approved.
 
 The builder checks public `/api/health` before showing cloud controls. If cloud is disabled, unreachable or returns an invalid response, guest editing and local saving continue without sign-in or project requests. A failed connection offers Retry cloud connection; an explicitly disabled backend keeps cloud controls hidden. After a refresh, the device draft opens; reopen a cloud project from My projects.
 
