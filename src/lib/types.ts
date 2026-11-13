@@ -60,6 +60,21 @@ export interface Dataset {
   orders: CustomerOrder[];
   alternatives: AlternativeSupply[];
 }
+export const DATASET_TABLES = [
+  "suppliers",
+  "components",
+  "products",
+  "inventory",
+  "deliveries",
+  "orders",
+  "alternatives",
+] as const;
+export type DatasetTable = (typeof DATASET_TABLES)[number];
+export type DatasetSource = "fictional" | "imported";
+export interface DatasetProvenance {
+  kind: "fictional" | "mixed" | "imported";
+  tables: Record<DatasetTable, DatasetSource>;
+}
 export interface Scenario {
   id: string;
   name: string;

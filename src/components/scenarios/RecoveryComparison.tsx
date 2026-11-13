@@ -48,7 +48,7 @@ export function RecoveryComparison({
                 size="sm"
                 onClick={() => onApply(option.scenario)}
               >
-                Apply what-if <ArrowRight size={14} />
+                Apply recovery <ArrowRight size={14} />
               </Button>
             </article>
           ))}

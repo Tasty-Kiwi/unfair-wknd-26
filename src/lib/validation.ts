@@ -1,5 +1,12 @@
 import { z } from "zod";
-import type { AlternativeSupply, Dataset, Delivery, Scenario } from "./types";
+import {
+  DATASET_TABLES,
+  type AlternativeSupply,
+  type Dataset,
+  type DatasetTable,
+  type Delivery,
+  type Scenario,
+} from "./types";
 
 /* -------------------------------------------------------------------------- */
 /* Primitive helpers                                                           */
@@ -688,14 +695,46 @@ export const TABLE_HEADERS = {
   orders: ["id", "customer", "productId", "quantity", "requiredDate", "value"],
 } as const;
 
+export interface ImportResult {
+  data: Dataset;
+  replacedTables: DatasetTable[];
+  retainedTables: DatasetTable[];
+  retainedProductBoms: boolean;
+}
+
+function importResult(
+  data: Dataset,
+  replacedTables: DatasetTable[],
+  retainedProductBoms = false,
+): ImportResult {
+  const replaced = new Set(replacedTables);
+  return {
+    data,
+    replacedTables,
+    retainedTables: DATASET_TABLES.filter((table) => !replaced.has(table)),
+    retainedProductBoms,
+  };
+}
+
 /** Apply related spreadsheet tables atomically; cross-references validate after all files. */
 export function parseImportFiles(
   files: { name: string; text: string }[],
   current: Dataset,
 ): Dataset {
+  return parseImportBundle(files, current).data;
+}
+
+/** Validates an import atomically and describes exactly which tables it replaces. */
+export function parseImportBundle(
+  files: { name: string; text: string }[],
+  current: Dataset,
+): ImportResult {
   if (files.length === 0) throw new Error("Choose at least one file.");
-  if (files.length === 1 && files[0].name.toLowerCase().endsWith(".json"))
-    return parseImport(files[0].text, files[0].name, current);
+  if (files.length === 1 && files[0].name.toLowerCase().endsWith(".json")) {
+    return importResult(parseImport(files[0].text, files[0].name, current), [
+      ...DATASET_TABLES,
+    ]);
+  }
   const tables = new Map<
     keyof typeof TABLE_HEADERS,
     Record<string, string>[]
@@ -780,5 +819,16 @@ export function parseImportFiles(
       requiredDate: r.requiredDate,
       value: /^\d+(\.\d+)?$/.test(r.value) ? Number(r.value) : Number.NaN,
     }));
-  return parseDataset(next);
+  const csvToDatasetTable: Record<keyof typeof TABLE_HEADERS, DatasetTable> = {
+    deliveries: "deliveries",
+    inventory: "inventory",
+    products: "products",
+    bom: "products",
+    orders: "orders",
+  };
+  return importResult(
+    parseDataset(next),
+    [...new Set([...tables.keys()].map((table) => csvToDatasetTable[table]))],
+    tables.has("products") && !tables.has("bom"),
+  );
 }

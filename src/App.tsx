@@ -29,8 +29,23 @@ import {
   RECOVERY_SCENARIO,
 } from "@/data/demo";
 import { simulate } from "@/lib/simulation";
-import { parseImportFiles, parseScenario } from "@/lib/validation";
-import type { Dataset, Scenario, SimulationResult } from "@/lib/types";
+import {
+  parseImportBundle,
+  parseScenario,
+  type ImportResult,
+} from "@/lib/validation";
+import type {
+  Dataset,
+  DatasetProvenance,
+  DatasetTable,
+  Scenario,
+  SimulationResult,
+} from "@/lib/types";
+import {
+  fictionalProvenance,
+  provenanceAfterImport,
+  provenanceLabel,
+} from "@/lib/provenance";
 import { withReceiptDate } from "@/lib/receipts";
 import { SupplyGraph, type Selection } from "@/components/graph/SupplyGraph";
 import { RecoveryComparison } from "@/components/scenarios/RecoveryComparison";
@@ -115,6 +130,13 @@ function download(name: string, content: string, type = "application/json") {
   a.download = name;
   a.click();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+const tableLabel = (table: DatasetTable) =>
+  table === "alternatives" ? "approved alternatives" : table;
+
+interface PendingImport extends ImportResult {
+  fileNames: string[];
+  provenance: DatasetProvenance;
 }
 
 function NodeDetail({
@@ -266,13 +288,21 @@ function NodeDetail({
 }
 export default function App() {
   const [data, setData] = useState<Dataset>(demoData);
+  const [provenance, setProvenance] = useState<DatasetProvenance>(() =>
+    fictionalProvenance(),
+  );
   const presets = useMemo(() => presetsFor(data), [data]);
   const [scenario, setScenario] = useState<Scenario>(NORMAL_SCENARIO);
   const [selection, setSelection] = useState<Selection | null>(null);
   const [importOpen, setImportOpen] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
+  const [resetOpen, setResetOpen] = useState(false);
+  const [retainedProductBoms, setRetainedProductBoms] = useState(false);
   const [importError, setImportError] = useState("");
   const [importing, setImporting] = useState(false);
+  const [pendingImport, setPendingImport] = useState<PendingImport | null>(
+    null,
+  );
   const [notice, setNotice] = useState("");
   const [controlError, setControlError] = useState("");
   const orderTable = useRef<HTMLElement>(null);
@@ -303,7 +333,10 @@ export default function App() {
     setNotice("");
   };
   const reset = () => {
+    setResetOpen(false);
+    setRetainedProductBoms(false);
     setData(demoData);
+    setProvenance(fictionalProvenance());
     setScenario(NORMAL_SCENARIO);
     setSelection(null);
     setNotice("Fictional demo restored. All scenario changes cleared.");
@@ -312,12 +345,13 @@ export default function App() {
   async function importFiles(files: File[]) {
     setImporting(true);
     setImportError("");
+    setPendingImport(null);
     try {
       if (files.some((file) => file.size > 2_000_000) || files.length > 5)
         throw new Error(
           "Choose up to five CSV files, each smaller than 2 MB, or one JSON dataset.",
         );
-      const next = parseImportFiles(
+      const parsed = parseImportBundle(
         await Promise.all(
           files.map(async (file) => ({
             name: file.name,
@@ -326,15 +360,12 @@ export default function App() {
         ),
         data,
       );
-      const nextPresets = presetsFor(next);
-      simulate(next, nextPresets[0]);
-      setData(next);
-      setScenario(nextPresets[0]);
-      setSelection(null);
-      setImportOpen(false);
-      setNotice(
-        `Imported ${files.map((file) => file.name).join(", ")}. Baseline loaded with ${next.orders.length} orders.`,
-      );
+      simulate(parsed.data, presetsFor(parsed.data)[0]);
+      setPendingImport({
+        ...parsed,
+        fileNames: files.map((file) => file.name),
+        provenance: provenanceAfterImport(provenance, parsed.replacedTables),
+      });
     } catch (e) {
       setImportError(
         e instanceof Error ? e.message : "Unable to read this file.",
@@ -342,6 +373,21 @@ export default function App() {
     } finally {
       setImporting(false);
     }
+  }
+  function confirmImport() {
+    if (!pendingImport) return;
+    const nextPresets = presetsFor(pendingImport.data);
+    setData(pendingImport.data);
+    setProvenance(pendingImport.provenance);
+    if (pendingImport.replacedTables.includes("products"))
+      setRetainedProductBoms(pendingImport.retainedProductBoms);
+    setScenario(nextPresets[0]);
+    setSelection(null);
+    setImportOpen(false);
+    setNotice(
+      `Imported ${pendingImport.fileNames.join(", ")}. ${provenanceLabel(pendingImport.provenance.kind)} is active with ${pendingImport.data.orders.length} orders.`,
+    );
+    setPendingImport(null);
   }
   const firstRisk = result.orders.find((o) => o.status === "at-risk");
   const firstShort = firstRisk?.lines.find((l) => l.shortage > 0);
@@ -375,7 +421,7 @@ export default function App() {
             Inventory as of {day(data.asOf)} {data.asOf.slice(0, 4)}
           </span>
           <span className="dataset-kind">
-            {data === demoData ? "Fictional demo data" : "Imported data"}
+            {provenanceLabel(provenance.kind)}
           </span>
         </p>
         <div className="top-actions">
@@ -387,7 +433,14 @@ export default function App() {
             <Upload data-icon="inline-start" />
             Import data
           </Button>
-          <Button variant="outline" size="sm" onClick={reset}>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              if (provenance.kind !== "fictional") setResetOpen(true);
+              else reset();
+            }}
+          >
             <RotateCcw data-icon="inline-start" />
             Reset demo
           </Button>
@@ -432,6 +485,13 @@ export default function App() {
         </p>
       </div>
       <main>
+        {retainedProductBoms && (
+          <p className="notice" role="status">
+            Product names and SKUs are imported; existing BOMs were retained and
+            may include fictional demo values. Import products and BOM together
+            to replace both.
+          </p>
+        )}
         {notice && (
           <div className="notice" role="status">
             <CheckCircle2 size={16} />
@@ -562,11 +622,9 @@ export default function App() {
                   JSON.stringify(
                     {
                       dataset: data.name,
-                      dataProvenance:
-                        data === demoData
-                          ? "Fictional demonstration"
-                          : "User-provided, unverified",
+                      dataProvenance: provenance,
                       inputs: data,
+                      retainedProductBoms,
                       policy:
                         "Partial component reservations, earliest required date then order ID; material availability only.",
                       scenario,
@@ -733,13 +791,25 @@ export default function App() {
           </button>
         </footer>
       </main>
-      <Dialog open={importOpen} onOpenChange={setImportOpen}>
+      <Dialog
+        open={importOpen}
+        onOpenChange={(open) => {
+          setImportOpen(open);
+          if (!open) {
+            setImportError("");
+            setPendingImport(null);
+          }
+        }}
+      >
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Bring your material plan</DialogTitle>
             <DialogDescription>
               Replace the dataset with JSON, or select spreadsheet CSV tables
-              together. Everything stays in your browser.
+              together. Everything stays in your browser. Data is not saved
+              between sessions: refreshing or closing this page clears your
+              imported plan and scenario changes. Export your report before
+              leaving, and keep your source files to import again.
             </DialogDescription>
           </DialogHeader>
           <div className="import-zone">
@@ -773,6 +843,56 @@ export default function App() {
               </AlertDescription>
             </Alert>
           )}
+          {pendingImport && (
+            <div className="import-preview" role="region" aria-live="polite">
+              <div>
+                <p className="eyebrow">Import preview</p>
+                <h3>{provenanceLabel(pendingImport.provenance.kind)}</h3>
+                <p>
+                  <strong>Replace:</strong>{" "}
+                  {pendingImport.replacedTables.map(tableLabel).join(", ")}.
+                </p>
+                {pendingImport.retainedProductBoms && (
+                  <p>
+                    <strong>Existing BOMs retained:</strong> Product names and
+                    SKUs will be imported, but matching product IDs keep their
+                    current bills of materials. These may include fictional demo
+                    values. Import products and BOM together to replace both.
+                  </p>
+                )}
+                <p>
+                  <strong>Keep existing:</strong>{" "}
+                  {pendingImport.retainedTables.length
+                    ? `${pendingImport.retainedTables.map(tableLabel).join(", ")}.`
+                    : "Nothing — this is a complete dataset replacement."}
+                </p>
+              </div>
+              {pendingImport.provenance.kind === "mixed" && (
+                <Alert>
+                  <TriangleAlert />
+                  <AlertTitle>Fictional and imported data will mix</AlertTitle>
+                  <AlertDescription>
+                    Results will combine your imported tables with retained
+                    values from the fictional demo or an earlier import. Check
+                    IDs and relationships before using the analysis.
+                  </AlertDescription>
+                </Alert>
+              )}
+              <div className="import-preview-actions">
+                <Button
+                  variant="outline"
+                  onClick={() => setPendingImport(null)}
+                >
+                  Choose different files
+                </Button>
+                <Button onClick={confirmImport}>
+                  {pendingImport.provenance.kind === "mixed"
+                    ? "Import and mix data"
+                    : "Apply import"}
+                </Button>
+              </div>
+            </div>
+          )}
           <p className="muted-small">
             CSV types: inventory, products, BOM, orders, deliveries. Headers
             identify each table, which replaces its existing rows. Select new
@@ -792,7 +912,7 @@ export default function App() {
               </a>
             ))}
           </div>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             <Button
               variant="outline"
               onClick={() =>
@@ -824,6 +944,28 @@ export default function App() {
             >
               Example CSV
             </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+      <Dialog open={resetOpen} onOpenChange={setResetOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Replace your imported plan?</DialogTitle>
+            <DialogDescription>
+              Resetting restores fictional demo data and clears your imported
+              plan and scenario changes. Export your report first if you need
+              the results. Keep your source files to import the plan again.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="import-preview-actions">
+            <Button
+              variant="outline"
+              autoFocus
+              onClick={() => setResetOpen(false)}
+            >
+              Keep my plan
+            </Button>
+            <Button onClick={reset}>Reset to fictional demo</Button>
           </div>
         </DialogContent>
       </Dialog>

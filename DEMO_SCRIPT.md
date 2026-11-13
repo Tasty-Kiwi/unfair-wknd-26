@@ -1,41 +1,59 @@
-# DominoOS — 90-second demonstration
+# DominoOS — 60-second demonstration
 
-**Before presenting:** use the public Cloudflare Workers link in README; keep `npm run dev` at http://localhost:5173 as the fallback. Use normal browser zoom. Click Reset demo. Default view focuses the motor chain. All data shown is fictional.
+**Before presenting:** open the team's approved presentation URL or tested local production preview (`npm run build`, then `npm run preview -- --host 127.0.0.1 --port 5194`). Use a desktop browser at normal zoom and click **Reset demo**. If an imported plan is present, export results and keep source files before confirming reset. Start with fictional data and the servo-motor chain in focus.
 
-**0–15 seconds — the promise**
+The spoken text is about 120 words. Rehearse the clicks and scrolling aloud; these timings are targets, not measured presenter results. Keep the pitch separate from this minute.
 
-“For a small manufacturer planning in spreadsheets, one late supplier means checking many customer promises. DominoOS shows what breaks before it breaks. This fictional factory has ten orders, all currently covered.”
+## 0–10 seconds — establish the baseline
 
-Point to the headline and the supplier → motor → product → order map.
+“Ten customer orders have their materials. DominoOS shows what happens when a supplier delivery slips.”
 
-**15–35 seconds — cause the disruption**
+Point to **Every order has its required materials** and the supplier → component → product → order map.
+
+## 10–22 seconds — delay the supplier
 
 Click **Supplier disruption**.
 
-“Aster's motor receipt slips six days, from November 17 to November 23. That puts one order at material risk: two motors short, exposing €36,000 of order value.”
+“Aster's motors arrive six days late. ORD-102 is short two motors. Its €36,000 order value is exposed; that is not a measured loss.”
 
-Click **ORD-102** in the graph.
+This preset is calculated from the same editable receipt inputs as the timeline; it is not a hardcoded result.
 
-“Here's the evidence. We started with eight motors. The earlier order reserved six. Helix needs four on November 22, but only two remain. The receipt arrives after that requirement.”
+## 22–36 seconds — inspect the shortage
 
-**35–55 seconds — resolve it**
+Click **ORD-102** in the graph (or select it under **Allocation evidence**), then scroll to its evidence.
 
-Scroll to **Compare recovery actions**. Contrast **Restore PO-101 timing** with **Use Vector Components**, then click **Apply what-if** on the Vector option.
+“This order needs four motors. The earlier order reserves six of eight on hand, leaving two. The next receipt arrives after the required date.”
 
-“We can ask Aster to restore the original timing, or buy two approved motors from Vector for November 18. Both cover the shortage; confirmation and purchase costs still matter. Apply Vector: the original receipt stays delayed, but material coverage is restored.”
+Point to **Requires 4, with 2 available** and **Arriving after 2026-11-22**.
 
-Point to the covered order, blue dashed recovery supplier and zero-risk metrics. Judges can complete this causal loop in under a minute.
+## 36–50 seconds — compare recovery options
 
-**55–75 seconds — prove it is interactive**
+Scroll back up to **Ways to recover**. Show both cards before choosing one.
 
-Click **Normal operations**, then click **Latest safe · 22 Nov** and **First short · 23 Nov**, or drag the receipt on the timeline.
+“Both options restore coverage: recover Aster's timing or use two approved Vector motors. Each is simulated independently; supply needs confirmation.”
 
-“On the required date counts as available: five days is covered, six is short. You can change quantities, import validated JSON or separate spreadsheet tables, and inspect every allocation.”
+The options use the live deterministic simulation; they are ranked by net shortage units recovered.
 
-Click **Approved recovery** to close with zero risk.
+## 50–60 seconds — apply the approved alternative
 
-**75–90 seconds — credible business value**
+On **Use Vector Components**, click **Apply recovery**. Scroll to the summary.
 
-“Compare baseline, disruption and recovery here, and export an auditable report. This is material availability, not a factory completion forecast. Our buyer hypothesis is small manufacturers without a full planning system. Next we must measure whether this beats their spreadsheet workflow on real plans.”
+“Apply Vector. The shortage disappears while Aster stays delayed. This models material availability, not purchasing or production commitments.”
 
-**If asked about policy:** earliest required date, then order ID; partial kits keep their component reservations. It is a transparent priority rule, not an optimization solver. €36,000 is order value exposed, not proven revenue saved.
+Point to **Every order has its required materials**, the recovered order and the blue dashed alternative-supply path.
+
+## Optional proof after the minute
+
+- Click **Normal operations**, then **Latest safe · 22 Nov** and **First short · 23 Nov**, or move the receipt with the timeline keyboard control, to show that date inputs and timeline stay synchronized.
+- Use **Import data** to preview exactly which tables a CSV bundle replaces and which remain. A partial import explicitly warns that fictional and imported business data will mix.
+- Show the session-only storage and retained-BOM disclosures in the import dialog. Refresh clears state; keep source files and export results. Reset asks before replacing an imported plan.
+- Export the report to show inputs, allocation policy, provenance, scenario and calculated results.
+
+## Honest interpretation
+
+- **€36,000 is order value at material risk**, not an actual loss, revenue saved or measured customer benefit.
+- DominoOS models material availability only. It does not forecast production completion, shipping dates, capacity, freight or purchasing cost.
+- Allocation is earliest required date, then order ID; partial kits retain their component reservations.
+- The factory, customers and data in the demonstration are fictional. No customer validation or business benefit has been claimed.
+
+See [submission preparation](docs/SUBMISSION.md) for the three-minute video outline and team checklist.

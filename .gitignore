@@ -5,5 +5,8 @@ dist
 test-results
 playwright-report
 .wrangler
+.npm-cache
+.tmp
+.playwright-browsers
 .dev.vars*
 .env*
