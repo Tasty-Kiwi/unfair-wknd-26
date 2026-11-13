@@ -3,42 +3,67 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="theme-color" content="#E9ECE8" />
+    <meta name="theme-color" content="#e9ece8" />
+    <title>Needtrace — See what breaks before it breaks</title>
     <meta
       name="description"
-      content="DominoOS — see what breaks before it breaks. An interactive, fictional manufacturing material-availability simulator."
+      content="Needtrace helps manufacturers see which customer orders are affected when supply changes—and test possible responses."
     />
-    <script>
-      const landingPaint = document.createElement("style");
-      landingPaint.textContent =
-        'html[data-landing-theme="dark"] body { background: #0D1422; color: #F1EEE6; } html[data-landing-theme="light"] body { background: #F2F1EC; color: #182227; }';
-      document.head.appendChild(landingPaint);
-      if (location.pathname.replace(/\/$/, "") === "/landing") {
-        let theme = "light";
-        try {
-          if (localStorage.getItem("dominoos.landing.theme.v2") === "dark")
-            theme = "dark";
-        } catch {}
-        document.documentElement.dataset.landingTheme = theme;
-        document.documentElement.style.backgroundColor =
-          theme === "dark" ? "#0D1422" : "#F2F1EC";
-        document.querySelector('meta[name="theme-color"]').content =
-          theme === "dark" ? "#0D1422" : "#F2F1EC";
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta property="og:type" content="website" />
+    <meta
+      property="og:title"
+      content="Needtrace — See what breaks before it breaks"
+    />
+    <meta
+      property="og:description"
+      content="See which customer orders are affected when supply changes—and test possible responses."
+    />
+    <meta
+      property="og:image"
+      content="https://domino-os.tasty-kiwi.workers.dev/needtrace-social.png"
+    />
+    <meta name="twitter:card" content="summary_large_image" />
+    <style>
+      html.dark body {
+        background: #14181b;
+        color: #e4e9e5;
       }
-    </script>
-    <title>DominoOS — material availability what-if</title>
+      html[data-landing-theme="dark"] body {
+        background: #0d1422;
+        color: #f1eee6;
+      }
+      html[data-landing-theme="light"] body {
+        background: #f2f1ec;
+        color: #1b2227;
+      }
+    </style>
     <script>
-      // Set the theme before first paint so dark mode never flashes light.
+      // Prepaint mirror of src/lib/theme.ts; identifiers intentionally remain compatible.
       (function () {
-        // /landing applies the same preference itself.
-        if (location.pathname.replace(/\/$/, "") === "/landing") return;
+        var landing = location.pathname.replace(/\/$/, "") === "/landing";
+        var t = "light";
         try {
-          var t = localStorage.getItem("dominoos.landing.theme.v2");
-          if (t !== "light" && t !== "dark")
-            t = matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
-          if (t === "dark") document.documentElement.classList.add("dark");
-          document.documentElement.style.colorScheme = t;
-        } catch (e) {}
+          t = localStorage.getItem("dominoos.landing.theme.v2");
+        } catch {}
+        if (t !== "dark" && t !== "light")
+          t =
+            !landing && matchMedia("(prefers-color-scheme: dark)").matches
+              ? "dark"
+              : "light";
+        var root = document.documentElement;
+        root.classList.toggle("dark", t === "dark");
+        root.style.colorScheme = t;
+        if (landing) root.dataset.landingTheme = t;
+        var bg = landing
+          ? t === "dark"
+            ? "#0d1422"
+            : "#f2f1ec"
+          : t === "dark"
+            ? "#14181b"
+            : "#e9ece8";
+        root.style.backgroundColor = bg;
+        document.querySelector('meta[name="theme-color"]').content = bg;
       })();
     </script>
   </head>

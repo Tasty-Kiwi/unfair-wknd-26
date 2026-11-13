@@ -1,8 +1,8 @@
-# DominoOS — pitch and commercial hypotheses
+# Needtrace — pitch and commercial hypotheses
 
 ## 30-second pitch
 
-When a supplier delivery slips, which customer orders run short? DominoOS connects stock, bills of material, receipts and orders in one explainable simulation. Change a delivery, trace the shortage to an order, and compare recovery options with allocation evidence. Our fictional demo shows two missing motors and how approved alternative supply restores coverage. It models material availability; supplier confirmation and factory capacity remain outside the calculation.
+When a supplier delivery slips, which customer orders run short? Needtrace connects stock, bills of material, receipts and orders in one explainable simulation. Change a delivery, trace the shortage to an order, and compare recovery options with allocation evidence. Our fictional demo shows two missing motors and how approved alternative supply restores coverage. It models material availability; supplier confirmation and factory capacity remain outside the calculation.
 
 About 70 spoken words; rehearse to 30 seconds. The intended user is a manufacturing planner combining spreadsheets; this is a customer hypothesis, not validated demand.
 
@@ -13,7 +13,7 @@ Using the fictional demo dataset:
 1. The original plan covers all ten orders with no material shortages.
 2. Delaying motor receipt PO-101 from 17 November to 23 November exposes ORD-102.
 3. ORD-102 needs four motors on 22 November but has only two available after the earlier-priority order, leaving two missing.
-4. DominoOS compares restoring the receipt date with using approved Vector Components supply.
+4. Needtrace compares restoring the receipt date with using approved Vector Components supply.
 5. Applying two approved Vector motors dated 18 November restores material coverage while the original Aster receipt remains delayed.
 
 These outcomes are calculated by the same simulation used for editable scenarios and imports. The €36,000 figure is **order value at material risk**. It is not an actual financial loss, revenue saved or measured business benefit.

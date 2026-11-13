@@ -473,7 +473,7 @@ export function BuilderExperience({ onClose }: { onClose: () => void }) {
       );
       const link = document.createElement("a");
       link.href = url;
-      link.download = "dominoos-workspace.json";
+      link.download = "needtrace-workspace.json";
       link.click();
       window.setTimeout(() => URL.revokeObjectURL(url), 1000);
       setError("");
@@ -511,11 +511,15 @@ export function BuilderExperience({ onClose }: { onClose: () => void }) {
       <header className="builder-experience__header">
         <div>
           <p className="builder-experience__source">
-            {source}
+            Needtrace · {source}
             {workspace.source.openedFromFile ? " · Imported workspace" : ""}
           </p>
           <h1>{workspace.document.name || "Build a network"}</h1>
           <p>Build your material plan, then test a named disruption.</p>
+          <p className="builder-save-hint">
+            Save workspace saves on this device. Export JSON for a portable
+            copy; cloud saving is a separate action when available.
+          </p>
         </div>
         <div className="builder-experience__header-actions">
           <ThemeToggle />
@@ -558,7 +562,11 @@ export function BuilderExperience({ onClose }: { onClose: () => void }) {
         >
           Simulate
         </Button>
-        <Button variant="outline" onClick={saveLocal}>
+        <Button
+          variant="outline"
+          onClick={saveLocal}
+          title="Save on this device; does not upload to cloud"
+        >
           <Save data-icon="inline-start" /> Save workspace
         </Button>
         <Button variant="outline" onClick={exportJson}>

@@ -76,7 +76,7 @@ for (const theme of ["light", "dark"]) {
         theme,
       );
       const cta = page
-        .getByRole("link", { name: "Launch interactive demo", exact: true })
+        .getByRole("link", { name: "Try interactive demo", exact: true })
         .first();
       const r = (await cta.boundingBox())!;
       expect(r.y + r.height).toBeLessThan(height);
@@ -114,7 +114,7 @@ for (const theme of ["light", "dark"]) {
       }
       if (width >= 600) {
         await page
-          .getByRole("link", { name: "See how it works", exact: true })
+          .getByRole("link", { name: "The product", exact: true })
           .click();
         await expect(page.locator("#lp-evidence")).toBeInViewport();
       }
@@ -129,21 +129,20 @@ test("default light, simulator and actual builder entry points remain isolated",
   await expect(page.locator(".lp-page")).toHaveAttribute("data-theme", "light");
   await page.getByRole("button", { name: "Dark mode", exact: true }).click();
   await page
-    .getByRole("link", { name: "Launch interactive demo", exact: true })
+    .getByRole("link", { name: "Try interactive demo", exact: true })
     .first()
     .click();
   await expect(page.getByRole("heading", { level: 1 })).toContainText(
     "Every order has its required materials",
   );
-  expect(
-    await page.locator("html").getAttribute("data-landing-theme"),
-  ).toBeNull();
+  await expect(page.locator("html")).toHaveClass(/dark/);
+  await expect(
+    page.getByRole("link", { name: "Needtrace home" }),
+  ).toBeVisible();
   await page.goto("/landing");
   await page
-    .getByRole("link", { name: "Open demo to build a network", exact: true })
-    .click();
-  await page
-    .getByRole("button", { name: "Build a network", exact: true })
+    .getByRole("link", { name: "Build your network", exact: true })
+    .first()
     .click();
   await expect(
     page.getByRole("button", { name: "Core example", exact: true }),

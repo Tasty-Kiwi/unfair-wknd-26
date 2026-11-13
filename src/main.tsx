@@ -14,7 +14,7 @@ const LandingPage = React.lazy(() => import("./landing/LandingPage"));
 const isLanding = window.location.pathname.replace(/\/$/, "") === "/landing";
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
-    <React.Suspense fallback={<p role="status">Loading DominoOS…</p>}>
+    <React.Suspense fallback={<p role="status">Loading Needtrace…</p>}>
       {isLanding ? <LandingPage /> : <App />}
     </React.Suspense>
   </React.StrictMode>,

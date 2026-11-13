@@ -1,4 +1,4 @@
-# DominoOS — 60-second demonstration
+# Needtrace — 60-second demonstration
 
 **Before presenting:** open the team's approved presentation URL or tested local production preview (`npm run build`, then `npm run preview -- --host 127.0.0.1 --port 5194`). Use a desktop browser at normal zoom and click **Reset demo**. If an imported plan is present, export results and keep source files before confirming reset. Start with fictional data and the servo-motor chain in focus.
 
@@ -6,7 +6,7 @@ The spoken text is about 120 words. Rehearse the clicks and scrolling aloud; the
 
 ## 0–10 seconds — establish the baseline
 
-“Ten customer orders have their materials. DominoOS shows what happens when a supplier delivery slips.”
+“Ten customer orders have their materials. Needtrace shows what happens when a supplier delivery slips.”
 
 Point to **Every order has its required materials** and the supplier → component → product → order map.
 
@@ -52,7 +52,7 @@ Point to **Every order has its required materials**, the recovered order and the
 ## Honest interpretation
 
 - **€36,000 is order value at material risk**, not an actual loss, revenue saved or measured customer benefit.
-- DominoOS models material availability only. It does not forecast production completion, shipping dates, capacity, freight or purchasing cost.
+- Needtrace models material availability only. It does not forecast production completion, shipping dates, capacity, freight or purchasing cost.
 - Allocation is earliest required date, then order ID; partial kits retain their component reservations.
 - The factory, customers and data in the demonstration are fictional. No customer validation or business benefit has been claimed.
 

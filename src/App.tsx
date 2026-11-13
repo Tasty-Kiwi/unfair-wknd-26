@@ -411,16 +411,14 @@ export default function App() {
     "Supplier disruption",
     "Approved recovery",
   ];
-  if (builderOpen) return <BuilderExperience onClose={() => setBuilderOpen(false)} />;
+  if (builderOpen)
+    return <BuilderExperience onClose={() => setBuilderOpen(false)} />;
   return (
     <div className="app-shell">
       <header className="topbar">
-        <a href="#" className="wordmark" aria-label="DominoOS home">
-          <span className="domino-mark" aria-hidden="true">
-            <span />
-            <span />
-          </span>
-          DominoOS
+        <a href="#" className="wordmark" aria-label="Needtrace home">
+          <img src="/favicon.svg" width="28" height="28" alt="" />
+          Needtrace
         </a>
         <p className="dataset-line">
           <span>{data.name}</span>
@@ -432,7 +430,13 @@ export default function App() {
           </span>
         </p>
         <div className="top-actions">
-          <Button variant="outline" size="sm" onClick={() => setBuilderOpen(true)}>Build a network</Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setBuilderOpen(true)}
+          >
+            Build a network
+          </Button>
           <Button variant="ghost" size="sm" onClick={() => setHelpOpen(true)}>
             <CircleHelp data-icon="inline-start" />
             <span className="label-wide">Assumptions</span>
@@ -627,7 +631,7 @@ export default function App() {
               size="sm"
               onClick={() =>
                 download(
-                  "domino-scenario-report.json",
+                  "needtrace-scenario-report.json",
                   JSON.stringify(
                     {
                       dataset: data.name,
@@ -637,6 +641,7 @@ export default function App() {
                       policy:
                         "Partial component reservations, earliest required date then order ID; material availability only.",
                       scenario,
+                      application: "Needtrace",
                       result,
                       comparison: reports,
                     },
@@ -794,7 +799,7 @@ export default function App() {
           </div>
         </section>
         <footer>
-          <span>DominoOS · Unfair Weekend 2026</span>
+          <span>Needtrace · Unfair Weekend 2026</span>
           <button onClick={() => setHelpOpen(true)}>
             Model assumptions <ArrowRight size={14} />
           </button>
@@ -925,7 +930,10 @@ export default function App() {
             <Button
               variant="outline"
               onClick={() =>
-                download("domino-demo.json", JSON.stringify(demoData, null, 2))
+                download(
+                  "needtrace-demo.json",
+                  JSON.stringify(demoData, null, 2),
+                )
               }
             >
               Download example JSON
@@ -983,7 +991,7 @@ export default function App() {
           <DialogHeader>
             <DialogTitle>Model assumptions</DialogTitle>
             <DialogDescription>
-              DominoOS simulates material availability, using deterministic
+              Needtrace simulates material availability, using deterministic
               TypeScript calculations.
             </DialogDescription>
           </DialogHeader>

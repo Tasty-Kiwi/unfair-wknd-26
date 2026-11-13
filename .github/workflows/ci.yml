@@ -1,4 +1,4 @@
-name: Verify DominoOS
+name: Verify Needtrace
 on:
   push:
   pull_request:

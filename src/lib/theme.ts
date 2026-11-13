@@ -1,72 +1,70 @@
 import { useSyncExternalStore } from "react";
-
 export type Theme = "light" | "dark";
-
-// Shared with the landing page (design/landing-visual-reset) so one choice
-// carries across /landing and the app. The landing page applies it itself.
+// Compatibility: keep the existing shared preference key across the rebrand.
 export const STORAGE_KEY = "dominoos.landing.theme.v2";
-const THEME_COLORS: Record<Theme, string> = { light: "#e9ece8", dark: "#14181b" };
 const listeners = new Set<() => void>();
-
-function isLandingPath() {
-  return window.location.pathname.replace(/\/$/, "") === "/landing";
-}
-
-function systemTheme(): Theme {
-  return window.matchMedia?.("(prefers-color-scheme: dark)").matches
-    ? "dark"
-    : "light";
-}
-
+const isLanding = () => location.pathname.replace(/\/$/, "") === "/landing";
 function storedTheme(): Theme | null {
   try {
-    const value = localStorage.getItem(STORAGE_KEY);
-    return value === "light" || value === "dark" ? value : null;
+    const t = localStorage.getItem(STORAGE_KEY);
+    return t === "light" || t === "dark" ? t : null;
   } catch {
     return null;
   }
 }
-
-/** Applies the theme to <html>: the `dark` class drives every colour token. */
+function defaultTheme(): Theme {
+  return !isLanding() &&
+    window.matchMedia?.("(prefers-color-scheme: dark)").matches
+    ? "dark"
+    : "light";
+}
 export function applyTheme(theme: Theme) {
   const root = document.documentElement;
   root.classList.toggle("dark", theme === "dark");
   root.style.colorScheme = theme;
+  if (isLanding()) root.dataset.landingTheme = theme;
+  else delete root.dataset.landingTheme;
+  const background = isLanding()
+    ? theme === "dark"
+      ? "#0d1422"
+      : "#f2f1ec"
+    : theme === "dark"
+      ? "#14181b"
+      : "#e9ece8";
+  root.style.backgroundColor = background;
   document
     .querySelector('meta[name="theme-color"]')
-    ?.setAttribute("content", THEME_COLORS[theme]);
-  listeners.forEach((listener) => listener());
+    ?.setAttribute("content", background);
+  listeners.forEach((l) => l());
 }
-
-export function getTheme(): Theme {
-  return document.documentElement.classList.contains("dark") ? "dark" : "light";
-}
-
+export const getTheme = (): Theme =>
+  document.documentElement.classList.contains("dark") ? "dark" : "light";
 export function setTheme(theme: Theme) {
   try {
     localStorage.setItem(STORAGE_KEY, theme);
   } catch {
-    // Storage can be unavailable (private mode); the choice still applies now.
+    /* works without storage */
   }
   applyTheme(theme);
 }
-
-/** Follow the OS setting until the user makes an explicit choice. */
 export function initTheme() {
-  if (isLandingPath()) return;
-  applyTheme(storedTheme() ?? systemTheme());
+  applyTheme(storedTheme() ?? defaultTheme());
   window
     .matchMedia?.("(prefers-color-scheme: dark)")
     .addEventListener?.("change", () => {
-      if (!storedTheme()) applyTheme(systemTheme());
+      if (!storedTheme()) applyTheme(defaultTheme());
     });
+  window.addEventListener("storage", (event) => {
+    if (event.key === STORAGE_KEY || event.key === null)
+      applyTheme(storedTheme() ?? defaultTheme());
+  });
 }
-
 function subscribe(listener: () => void) {
   listeners.add(listener);
-  return () => listeners.delete(listener);
+  return () => {
+    listeners.delete(listener);
+  };
 }
-
 export function useTheme(): Theme {
   return useSyncExternalStore(subscribe, getTheme, () => "light");
 }

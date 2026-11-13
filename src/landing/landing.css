@@ -1111,3 +1111,32 @@
     color: var(--muted);
   }
 }
+.lp-page .lp-builder-cta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+  min-height: 52px;
+  padding: 12px 20px;
+  border: 1px solid var(--muted);
+  border-radius: 7px;
+  font-size: 14px;
+}
+.lp-page .lp-builder-cta:hover {
+  background: var(--surface);
+}
+.lp-page .lp-lead {
+  max-width: 680px;
+  margin-inline: auto;
+}
+.theme-toggle {
+  width: 44px;
+  height: 44px;
+}
+@media (max-width: 600px) {
+  .lp-page .lp-builder-cta {
+    width: 100%;
+    max-width: 350px;
+    justify-content: space-between;
+  }
+}

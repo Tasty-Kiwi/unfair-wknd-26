@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import {
-  ArrowDown,
   ArrowRight,
   ArrowUpRight,
   Sun,
@@ -17,6 +16,7 @@ import {
 } from "../data/demo";
 import { simulate } from "../lib/simulation";
 import "./landing.css";
+import { setTheme, useTheme } from "../lib/theme";
 const states = [
   { name: "On time", label: "On time", scenario: NORMAL_SCENARIO },
   {
@@ -34,16 +34,14 @@ const reports = states.map((s) => simulate(demoData, s.scenario));
 function DemoLink() {
   return (
     <a className="lp-cta" href="/">
-      Launch interactive demo <ArrowUpRight size={18} aria-hidden="true" />
+      Try interactive demo <ArrowUpRight size={18} aria-hidden="true" />
     </a>
   );
 }
 export default function LandingPage() {
   const [active, setActive] = useState(1);
   const [showcase, setShowcase] = useState("allocation");
-  const [theme, setTheme] = useState(() =>
-    document.documentElement.dataset.landingTheme === "dark" ? "dark" : "light",
-  );
+  const theme = useTheme();
   const result = reports[active];
   const motor = result.orders
     .find((o) => o.orderId === "ORD-102")!
@@ -51,36 +49,24 @@ export default function LandingPage() {
   const recovered = active === 2;
   const delayed = active !== 0;
   useEffect(() => {
-    document.title = "DominoOS — See what breaks before it breaks";
-    document.documentElement.dataset.landingTheme = theme;
-    document
-      .querySelector('meta[name="theme-color"]')
-      ?.setAttribute("content", theme === "dark" ? "#0D1422" : "#F2F1EC");
-    try {
-      localStorage.setItem("dominoos.landing.theme.v2", theme);
-    } catch {
-      /* optional storage */
-    }
-  }, [theme]);
+    document.title = "Needtrace — See what breaks before it breaks";
+  }, []);
   return (
     <div className="lp-page" data-theme={theme} id="top">
       <a className="lp-skip" href="#lp-main">
         Skip to content
       </a>
       <header className="lp-header lp-wrap">
-        <a className="lp-logo" href="/landing" aria-label="DominoOS home">
-          <span className="lp-mark" aria-hidden="true">
-            <i />
-            <i />
-          </span>
-          DominoOS
+        <a className="lp-logo" href="/landing" aria-label="Needtrace home">
+          <img src="/favicon.svg" width="28" height="28" alt="" />
+          Needtrace
         </a>
         <nav aria-label="Landing navigation">
           <a className="lp-product-nav" href="#lp-evidence">
             The product
           </a>
           <div className="lp-theme" role="group" aria-label="Color theme">
-            {["light", "dark"].map((t) => (
+            {(["light", "dark"] as const).map((t) => (
               <button
                 key={t}
                 aria-label={`${t === "light" ? "Light" : "Dark"} mode`}
@@ -110,14 +96,13 @@ export default function LandingPage() {
               <em>See the orders at risk.</em>
             </h1>
             <p className="lp-lead">
-              A supplier slips. A customer order runs short.
-              <br className="lp-desktop-break" /> See the connection. Test a way
-              through.
+              Needtrace helps manufacturers see which customer orders are
+              affected when supply changes—and test possible responses.
             </p>
             <div className="lp-actions">
               <DemoLink />
-              <a className="lp-text-link" href="#lp-evidence">
-                See how it works <ArrowDown size={16} aria-hidden="true" />
+              <a className="lp-builder-cta" href="/?builder=1">
+                Build your network <ArrowUpRight size={16} aria-hidden="true" />
               </a>
             </div>
           </div>
@@ -276,7 +261,7 @@ export default function LandingPage() {
               ))}
             </div>
             <div className="lp-demo-caption">
-              <span>Fictional plan. Live DominoOS calculations.</span>
+              <span>Fictional plan. Live Needtrace calculations.</span>
               <details className="lp-summary">
                 <summary>Why this result?</summary>
                 <p>
@@ -352,18 +337,18 @@ export default function LandingPage() {
                     ? "The actual supplier-to-order map. Select a node in the simulator to inspect its relationships."
                     : "Connect suppliers, materials and customer orders on an editable canvas. Workspaces save in this browser."}
               </p>
-              <a className="lp-text-link" href="/">
-                Open demo to build a network <ArrowUpRight size={16} />
+              <a className="lp-text-link" href="/?builder=1">
+                Build your network <ArrowUpRight size={16} />
               </a>
               <small>
-                In the simulator, choose <strong>Build a network</strong>.
+                Opens the editable canvas. No account required for local work.
               </small>
             </div>
             <figure className={`lp-showcase lp-showcase-${showcase}`}>
               <div className="lp-window-label">
                 <span />
                 <span>
-                  DOMINOOS /{" "}
+                  NEEDTRACE /{" "}
                   {showcase === "allocation"
                     ? "ALLOCATION EVIDENCE"
                     : showcase === "network"
@@ -460,7 +445,7 @@ export default function LandingPage() {
       </main>
       <footer className="lp-footer lp-wrap">
         <a className="lp-logo" href="#top">
-          DominoOS
+          Needtrace
         </a>
         <span>Material availability, made visible.</span>
         <a href="#top">Back to top ↑</a>

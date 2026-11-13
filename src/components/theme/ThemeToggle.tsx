@@ -11,6 +11,7 @@ export function ThemeToggle({ className = "" }: { className?: string }) {
       onClick={() => setTheme(next)}
       aria-label={`Switch to ${next} mode`}
       title={`Switch to ${next} mode`}
+      aria-pressed={theme === "dark"}
     >
       {theme === "dark" ? (
         <Sun size={16} aria-hidden="true" />
