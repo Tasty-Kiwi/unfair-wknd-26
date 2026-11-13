@@ -227,7 +227,8 @@ export function BuildWorkspace({
         />
         {document.nodes.length === 0 && (
           <p className="builder__empty">
-            Empty network. Use the palette to add a supplier to start.
+            Start with Core example above, or add a supplier from the palette to
+            build your own network.
           </p>
         )}
       </div>
@@ -278,7 +279,9 @@ export function BuildWorkspace({
           </h3>
           {issues.length === 0 ? (
             <p className="builder-checks__ok">
-              No problems listed. Check the network to refresh.
+              {document.nodes.length === 0
+                ? "Start with Core example, or name your network and add a supplier. Check network when you are ready."
+                : "No problems listed. Check the network to refresh."}
             </p>
           ) : (
             <ul className="builder-issues builder-checks__list">

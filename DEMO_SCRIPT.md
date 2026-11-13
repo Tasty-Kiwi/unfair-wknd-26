@@ -56,7 +56,7 @@ Point to **Every order has its required materials**, the recovered order and the
 - Allocation is earliest required date, then order ID; partial kits retain their component reservations.
 - The factory, customers and data in the demonstration are fictional. No customer validation or business benefit has been claimed.
 
-See [submission preparation](docs/SUBMISSION.md) for the three-minute video outline and team checklist.
+See [Devpost submission](docs/DEVPOST_READY.md) for requirements and final fields, and [video production](docs/VIDEO_PRODUCTION.md) for the recording plan.
 
 ## Final recording script — target 2:45, hard limit 3:00
 

@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   ArrowDownToLine,
   ArrowRight,
@@ -289,10 +289,45 @@ function NodeDetail({
   );
 }
 export default function App() {
-  // Opens the builder directly after a GitHub return (/?builder=1). Otherwise the guest demo is unchanged.
+  // The URL is the durable navigation state, so builder links survive refreshes
+  // and browser history can restore either surface without remounting the app.
   const [builderOpen, setBuilderOpen] = useState(
     () => new URLSearchParams(window.location.search).get("builder") === "1",
   );
+  const builderOpenRef = useRef(builderOpen);
+  const builderCloseGuard = useRef<(() => boolean) | null>(null);
+  builderOpenRef.current = builderOpen;
+  useEffect(() => {
+    const syncBuilderFromUrl = () => {
+      const shouldOpen =
+        new URLSearchParams(window.location.search).get("builder") === "1";
+      if (builderOpenRef.current && !shouldOpen) {
+        if (builderCloseGuard.current?.() === false) {
+          // Either Back or Forward can leave the builder. If saving/confirmation
+          // fails, keep this entry in the builder rather than guessing direction.
+          const retained = new URL(window.location.href);
+          retained.searchParams.set("builder", "1");
+          window.history.replaceState(
+            window.history.state,
+            "",
+            retained.toString(),
+          );
+          return;
+        }
+      }
+      builderOpenRef.current = shouldOpen;
+      setBuilderOpen(shouldOpen);
+    };
+    window.addEventListener("popstate", syncBuilderFromUrl);
+    return () => window.removeEventListener("popstate", syncBuilderFromUrl);
+  }, []);
+  const navigateBuilder = (open: boolean) => {
+    const next = new URL(window.location.href);
+    if (open) next.searchParams.set("builder", "1");
+    else next.searchParams.delete("builder");
+    window.history.pushState(window.history.state, "", next.toString());
+    setBuilderOpen(open);
+  };
   const [data, setData] = useState<Dataset>(demoData);
   const [provenance, setProvenance] = useState<DatasetProvenance>(() =>
     fictionalProvenance(),
@@ -326,6 +361,7 @@ export default function App() {
       JSON.stringify(p.alternatives) === JSON.stringify(scenario.alternatives),
   );
   const update = (next: Scenario) => {
+    setNotice("");
     try {
       setScenario(parseScenario(data, next));
       setControlError("");
@@ -412,7 +448,18 @@ export default function App() {
     "Approved recovery",
   ];
   if (builderOpen)
-    return <BuilderExperience onClose={() => setBuilderOpen(false)} />;
+    return (
+      <BuilderExperience
+        onClose={() => navigateBuilder(false)}
+        registerNavigationGuard={(guard) => {
+          builderCloseGuard.current = guard;
+          return () => {
+            if (builderCloseGuard.current === guard)
+              builderCloseGuard.current = null;
+          };
+        }}
+      />
+    );
   return (
     <div className="app-shell">
       <header className="topbar">
@@ -433,7 +480,7 @@ export default function App() {
           <Button
             variant="outline"
             size="sm"
-            onClick={() => setBuilderOpen(true)}
+            onClick={() => navigateBuilder(true)}
           >
             Build a network
           </Button>
@@ -572,7 +619,29 @@ export default function App() {
               <RecoveryComparison
                 data={data}
                 scenario={scenario}
-                onApply={update}
+                onApply={(next) => {
+                  const recovered = simulate(data, next);
+                  const restored = result.orders.filter(
+                    (order) =>
+                      order.status === "at-risk" &&
+                      recovered.orders.some(
+                        (after) =>
+                          after.orderId === order.orderId &&
+                          after.status === "covered",
+                      ),
+                  );
+                  const late = recovered.deliveries.filter(
+                    (delivery) =>
+                      delivery.availableDate >
+                      (data.deliveries.find(
+                        (original) => original.id === delivery.id,
+                      )?.availableDate ?? delivery.availableDate),
+                  );
+                  update(next);
+                  setNotice(
+                    `${restored.length ? `${restored.map((order) => order.orderId).join(", ")} regained material coverage in this simulation.` : "Recovery applied to this simulation."} ${recovered.summary.missingUnits > 0 ? `${recovered.summary.missingUnits} material unit(s) still missing across ${recovered.summary.atRiskOrders} order(s) at risk.` : "All orders have material coverage."} ${late.map((delivery) => `${delivery.id} remains late (${day(delivery.availableDate)})`).join("; ") || "Receipt dates reflect this scenario"}. No purchase or supplier confirmation was made.`,
+                  );
+                }}
               />
             )}
             <div ref={evidence} className="evidence-anchor">
@@ -652,7 +721,7 @@ export default function App() {
               }
             >
               <ArrowDownToLine data-icon="inline-start" />
-              Export report
+              Export report JSON
             </Button>
           </div>
           <div className="table-scroll">

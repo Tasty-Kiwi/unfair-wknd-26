@@ -74,7 +74,6 @@
   -webkit-font-smoothing: antialiased;
 }
 
-
 /* Dark mode: night-shift board. Same roles, lifted signal colours so the red
  * alarm and blue remedy keep their contrast on a dark ground. */
 :root.dark {
@@ -1380,4 +1379,10 @@ footer button {
     animation: none !important;
     transition: none !important;
   }
+}
+
+/* Selected scenario remains readable across global light/dark utility states. */
+.app-shell .scenario-strip [data-slot="toggle-group-item"][data-state="on"] {
+  color: var(--sheet);
+  background: var(--ink);
 }

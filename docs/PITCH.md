@@ -62,4 +62,4 @@ Planning systems such as SAP IBP, Kinaxis and o9 already address supply-chain sc
 
 Run the unassisted journey and planner interview in [VALIDATION_PLAYBOOK.md](VALIDATION_PLAYBOOK.md). Before expanding scope, test a small anonymized real plan against the planner's current allocation and material-availability reasoning.
 
-Use [SUBMISSION.md](SUBMISSION.md) for the video outline and three-person checklist.
+Use [DEVPOST_READY.md](DEVPOST_READY.md) for official submission requirements and the final copy. Use [VIDEO_PRODUCTION.md](VIDEO_PRODUCTION.md) for the recording plan. These pitch notes are supporting presenter material.

@@ -295,8 +295,8 @@ test("retry after a failed probe on OAuth return still runs the signed-in check"
   await scriptHealth(page, plan);
   await page.goto("/?builder=1");
   await expect(retryButton(page)).toBeVisible();
-  // The return flag leaves the address bar even though the probe failed.
-  expect(new URL(page.url()).searchParams.has("builder")).toBe(false);
+  // Builder navigation remains durable even when the cloud probe fails.
+  expect(new URL(page.url()).searchParams.get("builder")).toBe("1");
 
   const callsBeforeRetry = plan.calls;
   plan.status = "ok";

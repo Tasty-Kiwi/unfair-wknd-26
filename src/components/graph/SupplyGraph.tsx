@@ -119,6 +119,7 @@ function GraphInner({
   onSelect,
   selected,
   onMoveReceipt,
+  preferNames = false,
 }: {
   data: Dataset;
   result: SimulationResult;
@@ -126,6 +127,7 @@ function GraphInner({
   onSelect: (s: Selection) => void;
   selected: Selection | null;
   onMoveReceipt?: (deliveryId: string, date: string) => void;
+  preferNames?: boolean;
 }) {
   const narrow = useNarrow();
   const [full, setFull] = useState(false);
@@ -272,8 +274,8 @@ function GraphInner({
         components.length,
         1,
         c.name,
-        `${stock} on hand · ${demand} required`,
-        c.id,
+        `${stock} on hand · ${demand} required${preferNames ? ` · ${c.id}` : ""}`,
+        preferNames ? "Component" : c.id,
         riskComponents.has(c.id),
         false,
         "Short",
@@ -339,12 +341,14 @@ function GraphInner({
         i,
         orders.length,
         3,
-        o.id,
-        `${o.customer} · needed ${shortDay(o.requiredDate)}`,
+        preferNames ? o.customer : o.id,
+        `${preferNames ? `${o.id} · ` : `${o.customer} · `}needed ${shortDay(o.requiredDate)}`,
         shortage
           ? `Short ${shortage} unit${shortage === 1 ? "" : "s"}`
           : "Covered",
         r.status === "at-risk",
+        false,
+        preferNames ? o.id : "",
       );
       edge(`product:${o.productId}`, `order:${o.id}`, r.status === "at-risk");
     });
@@ -470,6 +474,7 @@ function GraphInner({
           scenario={scenario}
           componentId={focused}
           onMoveReceipt={onMoveReceipt}
+          preferNames={preferNames}
         />
       )}
     </section>
