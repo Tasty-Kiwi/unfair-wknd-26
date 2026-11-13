@@ -66,6 +66,34 @@ describe("builder schema and storage", () => {
     expect(restored.document.viewport).toEqual(viewport);
     expect(compileGraph(restored.document)).toEqual(before);
   });
+  it("preserves relationship snapshots while accepting older workspaces without them", () => {
+    const workspace = makeSampleWorkspace();
+    expect(parseWorkspaceJson(serializeWorkspace(workspace))).toEqual(
+      workspace,
+    );
+    const snapshot = {
+      deliveryId: "receipt-servo-1",
+      supplier: { id: "supplier-aster", name: "Aster Manufacturing" },
+      component: { id: "component-servo-motor", name: "Servo motor" },
+    };
+    workspace.scenarios[0].receiptSnapshots = [snapshot];
+    workspace.workingScenario = structuredClone(workspace.scenarios[0]);
+    expect(parseWorkspaceJson(serializeWorkspace(workspace))).toEqual(
+      workspace,
+    );
+    expect(() =>
+      parseWorkspace({
+        ...workspace,
+        workingScenario: {
+          ...workspace.workingScenario,
+          receiptSnapshots: [
+            { ...snapshot, supplier: { id: "", name: "Broken" } },
+          ],
+        },
+      }),
+    ).toThrowError(/Invalid builder workspace/);
+  });
+
   it("accepts raw incomplete draft workspaces and preserves raw values on round-trip", () => {
     const draftDoc = createBlankDocument();
     const incompleteReceipt = createNode("receipt", { x: 42, y: 84 });

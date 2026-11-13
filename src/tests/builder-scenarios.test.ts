@@ -50,6 +50,13 @@ describe("builder scenarios and revalidation", () => {
     );
     expect(isScenarioCurrent(bound, compiled.networkKey)).toBe(true);
     expect(bound.scenario).toEqual(draft.scenario);
+    expect(bound.receiptSnapshots).toEqual([
+      {
+        deliveryId: "receipt-servo-1",
+        supplier: { id: "supplier-aster", name: "Aster Manufacturing" },
+        component: { id: "component-servo-motor", name: "Servo motor" },
+      },
+    ]);
 
     const res = simulate(compiled.dataset, bound.scenario);
     expect(res.summary.atRiskOrders).toBe(1);
@@ -144,6 +151,8 @@ describe("builder scenarios and revalidation", () => {
     const revalidated = revalidateScenario(c3.dataset, c3.networkKey, bound);
     expect(isScenarioCurrent(revalidated, c3.networkKey)).toBe(true);
     expect(revalidated.scenario).toEqual(bound.scenario);
+    expect(bound.receiptSnapshots?.[0].component.name).toBe("Servo motor");
+    expect(revalidated.receiptSnapshots?.[0].component.name).toBe("Alt Sensor");
   });
 
   it("throws on invalid scenario during revalidation without auto-pruning or clamping original inputs", () => {

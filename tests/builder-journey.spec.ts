@@ -699,6 +699,12 @@ test("same-ID retarget review shows current receipt, supplier and component befo
   });
   await expect(review).toContainText("Receipt receipt-servo-1");
   await expect(review).toContainText(
+    "Previously validated supplier: Aster Manufacturing (supplier-aster)",
+  );
+  await expect(review).toContainText(
+    "Previously validated component: Servo motor (component-servo-motor)",
+  );
+  await expect(review).toContainText(
     `Current supplier: Birch Components (${supplier.slice("supplier:".length)})`,
   );
   await expect(review).toContainText(
@@ -716,8 +722,64 @@ test("same-ID retarget review shows current receipt, supplier and component befo
   await expect(
     builder.getByRole("region", { name: "Simulation summary" }),
   ).toHaveCount(0);
+  await builder
+    .getByRole("button", { name: "Save workspace", exact: true })
+    .click();
+  await page.reload();
+  await page
+    .getByRole("button", { name: "Build a network", exact: true })
+    .click();
+  await expect(review).toContainText(
+    "Previously validated component: Servo motor",
+  );
+  await expect(review).toContainText("Current component: Circuit board");
   await review
     .getByRole("button", { name: "Revalidate scenario", exact: true })
     .click();
   await expect(review).toHaveCount(0);
+  const { workspace } = await exportWorkspace(page, builder);
+  expect(workspace.scenarios[0].receiptSnapshots[0].component.name).toBe(
+    "Circuit board",
+  );
+});
+
+test("same-ID and same-revision import recompiles changed material data and supports legacy scenarios", async ({
+  page,
+}) => {
+  const builder = await openBuilder(page);
+  await builder
+    .getByRole("button", { name: "Core example", exact: true })
+    .click();
+  await motorScenario(builder);
+  const { workspace } = await exportWorkspace(page, builder);
+  const oldRevision = workspace.document.revision;
+  workspace.document.nodes.find(
+    (node: { kind: string }) => node.kind === "component",
+  ).fields.initialStock = "7";
+  // Older v1 files have no historical relationship snapshot.
+  for (const record of [...workspace.scenarios, workspace.workingScenario])
+    delete record.receiptSnapshots;
+  expect(workspace.document.revision).toBe(oldRevision);
+  page.once("dialog", (dialog) => dialog.accept());
+  await builder
+    .getByLabel("Import workspace JSON", { exact: true })
+    .setInputFiles({
+      name: "edited-workspace.json",
+      mimeType: "application/json",
+      buffer: Buffer.from(JSON.stringify(workspace)),
+    });
+  const review = builder.getByRole("region", {
+    name: "Scenario requires review",
+  });
+  await expect(review).toContainText(
+    "Previous relationship was not recorded for this scenario.",
+  );
+  await expect(review).toContainText("Current component: Servo motor");
+  await review
+    .getByRole("button", { name: "Revalidate scenario", exact: true })
+    .click();
+  await builder.getByRole("button", { name: "Simulate", exact: true }).click();
+  await expect(
+    builder.getByRole("region", { name: "Simulation summary" }),
+  ).toContainText("3 component units missing");
 });

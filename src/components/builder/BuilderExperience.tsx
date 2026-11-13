@@ -8,7 +8,7 @@ import {
   createBlankDocument,
   createCoreExample,
 } from "@/lib/builder/factories";
-import { compileGraph } from "@/lib/builder/compiler";
+import { createRevisionCompiler } from "@/lib/builder/compilation";
 import {
   loadWorkspace,
   saveWorkspace,
@@ -81,10 +81,8 @@ export function BuilderExperience({ onClose }: { onClose: () => void }) {
   const [compare, setCompare] = useState(false);
   const [canvasSession, setCanvasSession] = useState(0);
   const [importing, setImporting] = useState(false);
-  const compiled = useMemo(
-    () => compileGraph(workspace.document),
-    [workspace.document],
-  );
+  const [compile] = useState(() => createRevisionCompiler());
+  const compiled = compile(workspace.document, canvasSession);
   const record = workspace.workingScenario;
   const scenario = record?.scenario ?? BASELINE;
   const current =
@@ -200,13 +198,14 @@ export function BuilderExperience({ onClose }: { onClose: () => void }) {
   function updateScenario(next: Scenario) {
     if (!compiled.ok || !record || !current) return;
     try {
-      const validated = parseScenario(compiled.dataset, next);
+      const validated = revalidateScenario(
+        compiled.dataset,
+        compiled.networkKey,
+        { ...record, scenario: next },
+      );
       change((previous) => ({
         ...previous,
-        workingScenario: {
-          scenario: validated,
-          validatedNetworkKey: record.validatedNetworkKey,
-        },
+        workingScenario: validated,
       }));
       setError("");
     } catch (caught) {
@@ -226,11 +225,12 @@ export function BuilderExperience({ onClose }: { onClose: () => void }) {
       return;
     }
     try {
-      const validated = parseScenario(compiled.dataset, record.scenario);
-      const next: ScenarioRecord = {
-        scenario: validated,
-        validatedNetworkKey: compiled.networkKey,
-      };
+      const next = revalidateScenario(
+        compiled.dataset,
+        compiled.networkKey,
+        record,
+      );
+      const validated = next.scenario;
       change((previous) => ({
         ...previous,
         scenarios: [
@@ -306,7 +306,7 @@ export function BuilderExperience({ onClose }: { onClose: () => void }) {
         scenarios: previous.scenarios.map((item) =>
           item.scenario.id === next.scenario.id &&
           JSON.stringify(item.scenario) === JSON.stringify(next.scenario)
-            ? { ...item, validatedNetworkKey: next.validatedNetworkKey }
+            ? clone(next)
             : item,
         ),
       }));
@@ -536,11 +536,32 @@ export function BuilderExperience({ onClose }: { onClose: () => void }) {
               const context = compiled.ok
                 ? receiptReviewContext(compiled.dataset, override.deliveryId)
                 : null;
+              const previous = record.receiptSnapshots?.find(
+                (item) => item.deliveryId === override.deliveryId,
+              );
               return (
                 <li key={override.deliveryId}>
                   <p>
                     <strong>Receipt {override.deliveryId}</strong>
                   </p>
+                  {previous ? (
+                    <div
+                      aria-label={`Previously validated relationship for ${override.deliveryId}`}
+                    >
+                      <p>
+                        Previously validated supplier: {previous.supplier.name}{" "}
+                        ({previous.supplier.id})
+                      </p>
+                      <p>
+                        Previously validated component:{" "}
+                        {previous.component.name} ({previous.component.id})
+                      </p>
+                    </div>
+                  ) : (
+                    <p>
+                      Previous relationship was not recorded for this scenario.
+                    </p>
+                  )}
                   {context ? (
                     <>
                       <p>

@@ -143,6 +143,21 @@ const scenarioSchema = z.object({
 const scenarioRecordSchema = z.object({
   scenario: scenarioSchema,
   validatedNetworkKey: z.string().nullable(),
+  receiptSnapshots: z
+    .array(
+      z.object({
+        deliveryId: nonBlankString("Snapshot receipt id"),
+        supplier: z.object({
+          id: nonBlankString("Snapshot supplier id"),
+          name: z.string(),
+        }),
+        component: z.object({
+          id: nonBlankString("Snapshot component id"),
+          name: z.string(),
+        }),
+      }),
+    )
+    .optional(),
 });
 
 const builderWorkspaceV1Schema = z.object({

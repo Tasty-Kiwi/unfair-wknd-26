@@ -109,9 +109,17 @@ export type BuilderIssue = {
   message: string;
 };
 
+export type ReceiptRelationshipSnapshot = {
+  deliveryId: string;
+  supplier: { id: string; name: string };
+  component: { id: string; name: string };
+};
+
 export type ScenarioRecord = {
   scenario: Scenario;
   validatedNetworkKey: string | null;
+  /** Relationships acknowledged at the last validation. Absent in older v1 files. */
+  receiptSnapshots?: ReceiptRelationshipSnapshot[];
 };
 
 export type BuilderWorkspaceOrigin = "authored" | "fictional";

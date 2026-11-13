@@ -21,6 +21,14 @@ export function revalidateScenario(
   return {
     scenario: validated,
     validatedNetworkKey: networkKey,
+    receiptSnapshots: validated.deliveryOverrides.map(({ deliveryId }) => {
+      const context = receiptReviewContext(data, deliveryId)!;
+      return {
+        deliveryId,
+        supplier: { id: context.supplier.id, name: context.supplier.name },
+        component: { id: context.component.id, name: context.component.name },
+      };
+    }),
   };
 }
 

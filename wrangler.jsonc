@@ -4,6 +4,8 @@
   "account_id": "74f486ac4925bc5b7ccaa9fcf865170e",
   "compatibility_date": "2026-11-12",
   "workers_dev": true,
+  // Branch builds run `wrangler preview`; static assets use the top-level settings.
+  "previews": {},
   "assets": {
     "directory": "./dist",
     "not_found_handling": "single-page-application",
