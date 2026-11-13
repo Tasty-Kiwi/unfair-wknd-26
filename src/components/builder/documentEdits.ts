@@ -3,6 +3,7 @@ import { createNode, nodeKey } from "@/lib/builder/factories";
 import {
   RELATIONSHIP_KINDS,
   type BuilderDocument,
+  type BuilderViewport,
   type BuilderEdge,
   type BuilderNode,
   type NodeKey,
@@ -261,4 +262,18 @@ export function liveSelection(
       ? findNode(doc, selection.key) !== undefined
       : findEdge(doc, selection.id) !== undefined;
   return present ? selection : null;
+}
+
+/** Canvas framing is saved with the draft, without invalidating scenarios. */
+export function updateViewport(
+  doc: BuilderDocument,
+  viewport: BuilderViewport,
+): BuilderDocument {
+  if (
+    doc.viewport?.x === viewport.x &&
+    doc.viewport.y === viewport.y &&
+    doc.viewport.zoom === viewport.zoom
+  )
+    return doc;
+  return { ...doc, viewport: { ...viewport } };
 }

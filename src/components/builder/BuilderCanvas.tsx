@@ -1,9 +1,12 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Background,
   Controls,
   MarkerType,
   ReactFlow,
+  useInternalNode,
+  useStore,
+  useReactFlow,
   type Connection,
   type Edge,
   type NodeChange,
@@ -13,7 +16,11 @@ import {
 import "@xyflow/react/dist/style.css";
 import { canConnect } from "@/lib/builder/connections";
 import { nodeKey } from "@/lib/builder/factories";
-import type { BuilderDocument, NodeKey } from "@/lib/builder/types";
+import type {
+  BuilderDocument,
+  BuilderViewport,
+  NodeKey,
+} from "@/lib/builder/types";
 import { BuilderNode, type BuilderFlowNode } from "./BuilderNode";
 import {
   candidateFromHandles,
@@ -27,6 +34,8 @@ const NODE_TYPES = { builder: BuilderNode };
 export type BuilderCanvasProps = {
   document: BuilderDocument;
   selection: BuilderSelection;
+  revealNodeKey: NodeKey | null;
+  onViewportChange: (viewport: BuilderViewport) => void;
   summaries: Map<NodeKey, { title: string; details: string[] }>;
   issueCounts: Map<NodeKey, number>;
   edgeLabels: Map<string, string>;
@@ -40,6 +49,8 @@ export type BuilderCanvasProps = {
 export function BuilderCanvas({
   document,
   selection,
+  revealNodeKey,
+  onViewportChange,
   summaries,
   issueCounts,
   edgeLabels,
@@ -186,16 +197,66 @@ export function BuilderCanvas({
         onEdgeClick={handleEdgeClick}
         onPaneClick={() => onSelect(null)}
         deleteKeyCode={null}
-        fitView
+        defaultViewport={document.viewport}
+        fitView={!document.viewport}
+        onMoveEnd={(_event, viewport) => onViewportChange(viewport)}
         fitViewOptions={{ padding: 0.2 }}
         minZoom={0.4}
         maxZoom={1.6}
         proOptions={{ hideAttribution: true }}
         aria-label="Supply network canvas"
       >
+        <RevealAddedNode nodeKey={revealNodeKey} />
         <Background gap={24} size={1} />
         <Controls showInteractive={false} position="bottom-right" />
       </ReactFlow>
     </div>
   );
+}
+
+/** Only an explicit palette addition changes the view. Field edits, selection
+ * and manual node moves must leave the user's framing alone. */
+function RevealAddedNode({ nodeKey }: { nodeKey: NodeKey | null }) {
+  const node = useInternalNode(nodeKey ?? "");
+  const width = useStore((state) => state.width);
+  const height = useStore((state) => state.height);
+  const { setCenter, getViewport, viewportInitialized } = useReactFlow();
+  const revealed = useRef<NodeKey | null>(null);
+  useEffect(() => {
+    const measured = node?.measured;
+    if (
+      !node ||
+      !viewportInitialized ||
+      !nodeKey ||
+      revealed.current === nodeKey ||
+      !measured?.width ||
+      !measured.height ||
+      !width ||
+      !height
+    )
+      return;
+    revealed.current = nodeKey;
+    const zoom = Math.max(
+      0.4,
+      Math.min(
+        getViewport().zoom,
+        width / (measured.width + 64),
+        height / (measured.height + 64),
+      ),
+    );
+    void setCenter(
+      node.internals.positionAbsolute.x + measured.width / 2,
+      node.internals.positionAbsolute.y + measured.height / 2,
+      { zoom },
+    );
+  }, [
+    node,
+    nodeKey,
+    width,
+    height,
+    viewportInitialized,
+    setCenter,
+    getViewport,
+  ]);
+  return null;
 }

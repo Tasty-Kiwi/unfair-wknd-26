@@ -497,3 +497,227 @@ test("malformed saved workspace is not overwritten on open; bad JSON import keep
     "Keep this draft",
   );
 });
+
+async function canvasViewport(builder: Locator) {
+  return builder
+    .getByTestId("builder-canvas")
+    .locator(".react-flow__viewport")
+    .evaluate((element) => {
+      const matrix = new DOMMatrixReadOnly(getComputedStyle(element).transform);
+      return { x: matrix.e, y: matrix.f, zoom: matrix.a };
+    });
+}
+
+async function expectViewport(
+  builder: Locator,
+  expected: { x: number; y: number; zoom: number },
+) {
+  // CSS matrix serialization rounds the stored floating-point transform.
+  await expect
+    .poll(async () => {
+      const actual = await canvasViewport(builder);
+      return Math.max(
+        Math.abs(actual.x - expected.x),
+        Math.abs(actual.y - expected.y),
+        Math.abs(actual.zoom - expected.zoom),
+      );
+    })
+    .toBeLessThan(0.001);
+}
+
+async function exportWorkspace(page: Page, builder: Locator) {
+  const downloading = page.waitForEvent("download");
+  await builder
+    .getByRole("button", { name: "Export workspace JSON", exact: true })
+    .click();
+  const path = (await (await downloading).path())!;
+  return { path, workspace: JSON.parse(await readFile(path, "utf8")) };
+}
+
+test("each added node is revealed without Fit View and field edits keep the framing", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1280, height: 800 });
+  const builder = await openBuilder(page);
+  const canvas = builder.getByTestId("builder-canvas");
+  for (const kind of [
+    "supplier",
+    "component",
+    "receipt",
+    "product",
+    "customer order",
+  ]) {
+    const key = await add(builder, kind, {});
+    const node = canvas.locator(`.builder-node[data-node-key="${key}"]`);
+    await expect(node).toBeVisible();
+    await expect
+      .poll(async () => {
+        const bounds = (await canvas.boundingBox())!;
+        const card = (await node.boundingBox())!;
+        return (
+          card.x >= bounds.x &&
+          card.y >= bounds.y &&
+          card.x + card.width <= bounds.x + bounds.width &&
+          card.y + card.height <= bounds.y + bounds.height
+        );
+      })
+      .toBe(true);
+  }
+  const before = await canvasViewport(builder);
+  await builder
+    .locator('.builder-inspector input[name="customer"]')
+    .fill("New customer");
+  expect(await canvasViewport(builder)).toEqual(before);
+  const order = canvas.locator('.builder-node[data-kind="order"]');
+  const bounds = (await order.boundingBox())!;
+  await page.mouse.move(
+    bounds.x + bounds.width / 2,
+    bounds.y + bounds.height / 2,
+  );
+  await page.mouse.down();
+  await page.mouse.move(
+    bounds.x + bounds.width / 2 - 20,
+    bounds.y + bounds.height / 2,
+    { steps: 8 },
+  );
+  await page.mouse.up();
+  expect(await canvasViewport(builder)).toEqual(before);
+});
+
+test("pan and zoom restore after reload and same-ID import without invalidating scenarios", async ({
+  page,
+}) => {
+  const builder = await openBuilder(page);
+  await builder
+    .getByRole("button", { name: "Core example", exact: true })
+    .click();
+  await motorScenario(builder);
+  await builder.getByRole("button", { name: "Build", exact: true }).click();
+  const before = (await exportWorkspace(page, builder)).workspace;
+  const canvas = builder.getByTestId("builder-canvas");
+  await canvas.getByRole("button", { name: /zoom in/i }).click();
+  await expect
+    .poll(async () => (await canvasViewport(builder)).zoom)
+    .toBeCloseTo(Math.min(1.6, before.document.viewport.zoom * 1.2), 5);
+  // Pan through a clear corner of the actual canvas.
+  await canvas.scrollIntoViewIfNeeded();
+  const box = (await canvas.boundingBox())!;
+  await page.mouse.move(box.x + 15, box.y + 15);
+  await page.mouse.down();
+  await page.mouse.move(box.x + 65, box.y + 45, { steps: 8 });
+  await page.mouse.up();
+  const saved = await exportWorkspace(page, builder);
+  expect(saved.workspace.document.revision).toBe(before.document.revision);
+  expect(saved.workspace.scenarios).toEqual(before.scenarios);
+  expect(saved.workspace.document.viewport).not.toEqual(
+    before.document.viewport,
+  );
+  await expectViewport(builder, saved.workspace.document.viewport);
+  await builder
+    .getByRole("button", { name: "Save workspace", exact: true })
+    .click();
+  await page.reload();
+  await page
+    .getByRole("button", { name: "Build a network", exact: true })
+    .click();
+  await expectViewport(builder, saved.workspace.document.viewport);
+  await canvas.scrollIntoViewIfNeeded();
+  const restoredViewport = await canvasViewport(builder);
+  const reopenedBox = (await canvas.boundingBox())!;
+  await page.mouse.move(reopenedBox.x + 15, reopenedBox.y + 15);
+  await page.mouse.down();
+  await page.mouse.move(reopenedBox.x + 65, reopenedBox.y + 45, { steps: 8 });
+  await page.mouse.up();
+  await expect
+    .poll(() => canvasViewport(builder))
+    .not.toEqual(restoredViewport);
+  await expect(
+    builder.getByText("Saved locally", { exact: true }),
+  ).toBeVisible();
+  page.once("dialog", (dialog) => dialog.accept());
+  await builder
+    .getByLabel("Import workspace JSON", { exact: true })
+    .setInputFiles(saved.path);
+  await expect(builder.getByText(/Imported workspace/)).toBeVisible();
+  await expectViewport(builder, saved.workspace.document.viewport);
+  await expect(
+    builder.getByRole("region", { name: "Scenario requires review" }),
+  ).toHaveCount(0);
+  await builder.getByRole("button", { name: "Simulate", exact: true }).click();
+  await expect(
+    builder.getByRole("region", { name: "Simulation summary" }),
+  ).toContainText("2 component units missing");
+});
+
+test("same-ID retarget review shows current receipt, supplier and component before revalidation", async ({
+  page,
+}) => {
+  const builder = await openBuilder(page);
+  await builder
+    .getByRole("button", { name: "Core example", exact: true })
+    .click();
+  await motorScenario(builder);
+  await builder.getByRole("button", { name: "Build", exact: true }).click();
+  const supplier = await add(builder, "supplier", {
+    name: "Birch Components",
+    leadTimeDays: "0",
+  });
+  const component = await add(builder, "component", {
+    name: "Circuit board",
+    unit: "boards",
+    initialStock: "0",
+  });
+  await connect(builder, "primarySupplier", supplier, component);
+  for (const id of [
+    "edge-receipt-supplier-aster",
+    "edge-receipt-component-servo",
+  ]) {
+    await builder
+      .getByLabel("Edit item", { exact: true })
+      .selectOption(`edge:${id}`);
+    await builder
+      .getByRole("button", { name: "Remove connection", exact: true })
+      .click();
+    await builder
+      .getByRole("button", { name: "Confirm remove", exact: true })
+      .click();
+  }
+  await connect(
+    builder,
+    "receiptSupplier",
+    supplier,
+    "receipt:receipt-servo-1",
+  );
+  await connect(
+    builder,
+    "receiptComponent",
+    "receipt:receipt-servo-1",
+    component,
+  );
+  const review = builder.getByRole("region", {
+    name: "Scenario requires review",
+  });
+  await expect(review).toContainText("Receipt receipt-servo-1");
+  await expect(review).toContainText(
+    `Current supplier: Birch Components (${supplier.slice("supplier:".length)})`,
+  );
+  await expect(review).toContainText(
+    `Current component: Circuit board (${component.slice("component:".length)})`,
+  );
+  await expect(review).toContainText("Current plan: 5 boards on 2026-11-17");
+  await expect(review).toContainText(
+    "Scenario override: 5 units on 2026-11-23",
+  );
+  await page.screenshot({
+    path: ".tmp/builder-scenario-review.png",
+    fullPage: true,
+  });
+  await builder.getByRole("button", { name: "Simulate", exact: true }).click();
+  await expect(
+    builder.getByRole("region", { name: "Simulation summary" }),
+  ).toHaveCount(0);
+  await review
+    .getByRole("button", { name: "Revalidate scenario", exact: true })
+    .click();
+  await expect(review).toHaveCount(0);
+});

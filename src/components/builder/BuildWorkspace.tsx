@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import { nodeKey } from "@/lib/builder/factories";
 import type {
   BuilderDocument,
+  BuilderViewport,
   BuilderIssue,
   NodeKey,
   NodeKind,
@@ -29,6 +30,7 @@ import {
   buildLabels,
   liveSelection,
   moveNodes,
+  updateViewport,
   nodeDisplayName,
   RELATIONSHIP_LABELS,
   type ApplyConnectionResult,
@@ -90,6 +92,7 @@ export function BuildWorkspace({
   onValidate,
   onRun,
 }: BuildWorkspaceProps) {
+  const [revealNodeKey, setRevealNodeKey] = useState<NodeKey | null>(null);
   const [rawSelection, setSelection] = useState<BuilderSelection>(null);
   // A deleted or replaced item must not stay selected.
   const selection = liveSelection(document, rawSelection);
@@ -143,12 +146,18 @@ export function BuildWorkspace({
     const result = addNode(document, kind);
     onChange(result.document);
     setSelection({ type: "node", key: result.key });
+    setRevealNodeKey(result.key);
   }
 
   function handleMove(
     moves: { key: NodeKey; position: { x: number; y: number } }[],
   ) {
     const next = moveNodes(document, moves);
+    if (next !== document) onChange(next);
+  }
+
+  function handleViewport(viewport: BuilderViewport) {
+    const next = updateViewport(document, viewport);
     if (next !== document) onChange(next);
   }
 
@@ -203,6 +212,8 @@ export function BuildWorkspace({
         <BuilderCanvas
           document={document}
           selection={selection}
+          revealNodeKey={revealNodeKey}
+          onViewportChange={handleViewport}
           summaries={summaries}
           issueCounts={issueCounts}
           edgeLabels={edgeLabels}

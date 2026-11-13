@@ -23,3 +23,15 @@ export function revalidateScenario(
     validatedNetworkKey: networkKey,
   };
 }
+
+/** Resolve the current business meaning, including same-ID receipt retargets.
+ * Missing receipts remain explicit; review never invents a replacement. */
+export function receiptReviewContext(data: Dataset, deliveryId: string) {
+  const receipt = data.deliveries.find((item) => item.id === deliveryId);
+  if (!receipt) return null;
+  return {
+    receipt,
+    supplier: data.suppliers.find((item) => item.id === receipt.supplierId)!,
+    component: data.components.find((item) => item.id === receipt.componentId)!,
+  };
+}

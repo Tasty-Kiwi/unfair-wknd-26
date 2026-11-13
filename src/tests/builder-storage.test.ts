@@ -1,3 +1,5 @@
+import { updateViewport } from "@/components/builder/documentEdits";
+import { compileGraph } from "@/lib/builder/compiler";
 import { describe, expect, it } from "vitest";
 import {
   createBlankDocument,
@@ -51,6 +53,19 @@ function makeSampleWorkspace(
 }
 
 describe("builder schema and storage", () => {
+  it("round-trips framing without changing the business revision or scenario binding", () => {
+    const workspace = makeSampleWorkspace();
+    const before = compileGraph(workspace.document);
+    const viewport = { x: -140.5, y: 200, zoom: 0.65 };
+    const document = updateViewport(workspace.document, viewport);
+    expect(document.revision).toBe(workspace.document.revision);
+    expect(updateViewport(document, viewport)).toBe(document);
+    const restored = parseWorkspaceJson(
+      serializeWorkspace({ ...workspace, document }),
+    );
+    expect(restored.document.viewport).toEqual(viewport);
+    expect(compileGraph(restored.document)).toEqual(before);
+  });
   it("accepts raw incomplete draft workspaces and preserves raw values on round-trip", () => {
     const draftDoc = createBlankDocument();
     const incompleteReceipt = createNode("receipt", { x: 42, y: 84 });

@@ -16,7 +16,11 @@ import {
   parseWorkspaceJson,
   MAX_WORKSPACE_BYTES,
 } from "@/lib/builder/storage";
-import { isScenarioCurrent, revalidateScenario } from "@/lib/builder/scenarios";
+import {
+  isScenarioCurrent,
+  receiptReviewContext,
+  revalidateScenario,
+} from "@/lib/builder/scenarios";
 import type {
   BuilderDocument,
   BuilderWorkspaceV1,
@@ -75,6 +79,7 @@ export function BuilderExperience({ onClose }: { onClose: () => void }) {
   const [view, setView] = useState<"build" | "simulate">("build");
   const [selection, setSelection] = useState<Selection | null>(null);
   const [compare, setCompare] = useState(false);
+  const [canvasSession, setCanvasSession] = useState(0);
   const [importing, setImporting] = useState(false);
   const compiled = useMemo(
     () => compileGraph(workspace.document),
@@ -354,6 +359,7 @@ export function BuilderExperience({ onClose }: { onClose: () => void }) {
     )
       return false;
     change(next);
+    setCanvasSession((session) => session + 1);
     setAllowSave(true);
     setView("build");
     setSelection(null);
@@ -526,33 +532,67 @@ export function BuilderExperience({ onClose }: { onClose: () => void }) {
             inputs before using them with this network.
           </p>
           <ul>
-            {record.scenario.deliveryOverrides.map((override) => (
-              <li key={override.deliveryId}>
-                {override.deliveryId}: {override.quantity} units on{" "}
-                {override.availableDate}
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() =>
-                    change((previous) => ({
-                      ...previous,
-                      workingScenario: {
-                        ...record,
-                        scenario: {
-                          ...record.scenario,
-                          deliveryOverrides:
-                            record.scenario.deliveryOverrides.filter(
-                              (item) => item.deliveryId !== override.deliveryId,
-                            ),
+            {record.scenario.deliveryOverrides.map((override) => {
+              const context = compiled.ok
+                ? receiptReviewContext(compiled.dataset, override.deliveryId)
+                : null;
+              return (
+                <li key={override.deliveryId}>
+                  <p>
+                    <strong>Receipt {override.deliveryId}</strong>
+                  </p>
+                  {context ? (
+                    <>
+                      <p>
+                        Current supplier: {context.supplier.name} (
+                        {context.supplier.id})
+                      </p>
+                      <p>
+                        Current component: {context.component.name} (
+                        {context.component.id})
+                      </p>
+                      <p>
+                        Current plan: {context.receipt.quantity}{" "}
+                        {context.component.unit} on{" "}
+                        {context.receipt.availableDate}
+                      </p>
+                    </>
+                  ) : (
+                    <p>
+                      {compiled.ok
+                        ? "This receipt no longer exists in the network. Remove its override before revalidating."
+                        : "Repair the network to review the receipt’s current supplier and component."}
+                    </p>
+                  )}
+                  <p>
+                    Scenario override: {override.quantity} units on{" "}
+                    {override.availableDate}
+                  </p>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() =>
+                      change((previous) => ({
+                        ...previous,
+                        workingScenario: {
+                          ...record,
+                          scenario: {
+                            ...record.scenario,
+                            deliveryOverrides:
+                              record.scenario.deliveryOverrides.filter(
+                                (item) =>
+                                  item.deliveryId !== override.deliveryId,
+                              ),
+                          },
                         },
-                      },
-                    }))
-                  }
-                >
-                  Remove override {override.deliveryId}
-                </Button>
-              </li>
-            ))}
+                      }))
+                    }
+                  >
+                    Remove override {override.deliveryId}
+                  </Button>
+                </li>
+              );
+            })}
           </ul>
           <Button
             variant="outline"
@@ -566,7 +606,7 @@ export function BuilderExperience({ onClose }: { onClose: () => void }) {
 
       {view === "build" ? (
         <BuildWorkspace
-          key={workspace.document.id}
+          key={`${workspace.document.id}:${canvasSession}`}
           document={workspace.document}
           onChange={updateDocument}
           issues={issues}

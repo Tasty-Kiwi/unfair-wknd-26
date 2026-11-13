@@ -59,3 +59,11 @@ Additional browser cases cover explicit review after stock changes, Save not byp
 Run `npm run dev`, choose **Build a network**, and start blank or open the fictional Core example. Use **Edit item** for keyboard selection, the inspector for values, and handles or Connect for relationships. Run the network before creating a named disruption. Save workspace/export for a portable copy. After refresh, choose Build a network again to reopen the locally stored draft.
 
 The current [implementation plan](SUPPLY_CHAIN_BUILDER_PLAN.md) defines the reduced scope. The [design debate](BUILDER_DESIGN_DEBATE.md) remains a historical record; its larger original P0 and person-hour estimates are not acceptance requirements for this implementation.
+
+## PR #4 UX review follow-up — 13 November 2026
+
+- Palette additions reveal the new card after React Flow measures it. Property edits, selection changes and manual node moves keep the user's framing.
+- Canvas pan/zoom completion saves `document.viewport` as a layout-only update. Refresh, Build/Simulate navigation and explicit workspace replacement restore it; a same-ID JSON import starts a fresh canvas session. Fresh documents omit a placeholder viewport so examples can still fit initially.
+- Stale-scenario review resolves each receipt against the current compiled network and displays supplier/component names and IDs, planned quantity/date and the unchanged scenario override. Deleted receipts and invalid networks have explicit messages. Historical supplier/component snapshots are not stored in workspace v1.
+- Regression coverage adds three real browser journeys: all five node kinds visible without Fit View, viewport persistence across refresh and same-ID import with unchanged scenario bindings, and same-ID retarget review before explicit revalidation. Unit coverage checks layout-only revision/key invariance and resolves retargeted/deleted receipt context.
+- Final local checks: **81 unit tests and 20 browser journeys passed**, production build passed, static-assets deployment dry run passed, and `git diff --check` passed. The existing Zod annotation and bundle-size warnings remain. The retarget-review screenshot was inspected locally; an independent cold usability test remains outstanding.

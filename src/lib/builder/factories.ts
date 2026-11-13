@@ -104,7 +104,6 @@ export function createBlankDocument(): BuilderDocument {
     revision: 0,
     nodes: [],
     edges: [],
-    viewport: { x: 0, y: 0, zoom: 1 },
   };
 }
 
@@ -217,6 +216,5 @@ export function createCoreExample(): BuilderDocument {
     revision: 0,
     nodes: [supplier, component, receipt, product, orderA, orderB],
     edges,
-    viewport: { x: 0, y: 0, zoom: 1 },
   };
 }

@@ -10,7 +10,11 @@ import {
   createNode,
   nodeKey,
 } from "@/lib/builder/factories";
-import { isScenarioCurrent, revalidateScenario } from "@/lib/builder/scenarios";
+import {
+  isScenarioCurrent,
+  receiptReviewContext,
+  revalidateScenario,
+} from "@/lib/builder/scenarios";
 import type { BuilderDocument, ScenarioRecord } from "@/lib/builder/types";
 import { simulate } from "@/lib/simulation";
 
@@ -127,6 +131,15 @@ describe("builder scenarios and revalidation", () => {
     // Even though receipt-servo-1 still exists, networkKey changed -> requires review!
     expect(isScenarioCurrent(bound, c3.networkKey)).toBe(false);
 
+    const context = receiptReviewContext(c3.dataset, "receipt-servo-1");
+    expect(context?.component.name).toBe("Alt Sensor");
+    expect(context?.component.id).toBe(comp2.id);
+    expect(context?.supplier.name).toBe("Aster Manufacturing");
+    expect(context?.receipt.availableDate).toBe("2026-11-17");
+    expect(bound.scenario.deliveryOverrides[0].availableDate).toBe(
+      "2026-11-23",
+    );
+
     // Explicit revalidation succeeds and binds to c3.networkKey without altering inputs
     const revalidated = revalidateScenario(c3.dataset, c3.networkKey, bound);
     expect(isScenarioCurrent(revalidated, c3.networkKey)).toBe(true);
@@ -159,6 +172,9 @@ describe("builder scenarios and revalidation", () => {
     };
 
     expect(isScenarioCurrent(staleRecord, compiled.networkKey)).toBe(false);
+    expect(
+      receiptReviewContext(compiled.dataset, "receipt-servo-1"),
+    ).toBeNull();
     expect(() =>
       revalidateScenario(compiled.dataset, compiled.networkKey, staleRecord),
     ).toThrowError(/not a delivery in this dataset/);
