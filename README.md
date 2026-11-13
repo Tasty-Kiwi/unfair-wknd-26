@@ -100,7 +100,7 @@ In the builder, use Sign in with GitHub, My projects, Save to cloud and Open. Cl
 
 For local development, follow [GitHub setup](docs/GITHUB_AUTH_SETUP.md), apply the local migrations, and run `npm run dev` alongside `npm run dev:api`. Credentials belong in ignored `.dev.vars`, never `VITE_` variables. Guest development works without credentials. `npm run auth:generate` writes a candidate schema to ignored `.tmp/auth-schema.sql`; review it and create a new migration rather than overwriting applied migration history.
 
-The checked-in production and branch-preview configurations keep cloud disabled. The separately approved staging deployment is described in [staging verification](docs/STAGING_VERIFICATION.md). Real GitHub login, authenticated cross-browser saving and Free-plan CPU reliability are still release gates; this implementation is not production-approved.
+The checked-in production and branch-preview configurations keep cloud disabled. The separately approved staging deployment is described in [staging verification](docs/STAGING_VERIFICATION.md). Real GitHub sign-in worked in the user's test. Browser logout, authenticated cross-browser saving, second-account privacy and Free-plan CPU reliability remain release checks; this implementation is not production-approved.
 
 ## Model and limits
 

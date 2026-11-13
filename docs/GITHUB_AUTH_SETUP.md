@@ -68,7 +68,7 @@ Production keeps the existing `domino-os` Worker name. Its checked-in config has
 
 ## Live acceptance gates
 
-1. Real GitHub sign-in, declined login, logout and old-cookie rejection. Confirm Secure/HttpOnly/SameSite=Lax host-only production cookies. No OAuth codes, secrets or tokens in application logs/API responses.
+1. Real GitHub sign-in is user-verified: the user reported it worked during testing on 13 November 2026. Declined login, browser logout and old-cookie rejection remain live checks. Confirm Secure/HttpOnly/SameSite=Lax host-only production cookies. No OAuth codes, secrets or tokens in application logs/API responses.
 2. User A saves a workspace with nodes, positions, raw incomplete fields and named scenarios. Sign out, then reopen the project in a fresh browser with no shared localStorage.
 3. User B sees only B's projects. Direct GET/PUT of A's known ID returns 404, and A's project remains unchanged.
 4. Two saves from one version yield one success and one 409. Network failure, timeout, rejected size and sign-out during a request preserve local work and cannot apply stale results.

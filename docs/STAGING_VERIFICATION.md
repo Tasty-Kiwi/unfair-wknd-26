@@ -57,9 +57,13 @@ The first GraphQL reads for exact sub-minute timestamps returned no samples. A m
 
 Independent post-main verification by Luna also passed **12 Worker tests**, **32 Chromium journeys** and the production-config dry run before the startup-only change. It found no material owner-check, CAS or stale-response issue. These checks used local runtime/seeded sessions and browser API mocks, not real GitHub authorization.
 
+## User-reported browser verification
+
+On 13 November 2026, the user reported: “When I was testing, GitHub sign-in did work.” Record real GitHub sign-in as **user-verified**, separately from the automated OAuth-start and seeded-session tests above. The report did not specify the tested build/version; it does not by itself verify logout, cross-browser workspace restoration, second-account isolation or request CPU reliability.
+
 ## Still required
 
-- Real GitHub authorization, callback/code exchange, user/session creation and logout in a browser.
+- Browser logout and old-session rejection; real GitHub sign-in is user-verified as recorded above.
 - Authenticated project create/list/open/update with scenarios, then reopen in a fresh browser.
 - Live two-account owner isolation if two real accounts are available.
 - CPU measurements for the real callback and authenticated project paths, including cold requests and a representative size boundary.
