@@ -97,15 +97,15 @@ Use **Import data**. Downloadable example JSON and CSV are available in the impo
 
 ## Optional cloud projects
 
-Cloud projects use Better Auth **GitHub sign-in**, a same-origin Worker API and D1. Email/password sign-in is disabled. The public demo and guest builder remain available without authentication; local autosave and JSON import/export continue to work.
+Cloud projects use a small custom **GitHub OAuth** flow, a same-origin Worker API and D1-backed sessions. Email/password sign-in is disabled. The public demo and guest builder remain available without authentication; local autosave and JSON import/export continue to work.
 
 In the builder, use Sign in with GitHub, My projects, Save to cloud and Open. Cloud saves are explicit and version-checked. A conflict offers Keep working locally, Save as new project, or Open cloud version after confirmation. Each account can keep 20 projects and create at most 5 per minute; a cloud workspace is limited to 1,000,000 UTF-8 bytes.
 
-For local development, follow [GitHub setup](docs/GITHUB_AUTH_SETUP.md), apply the local migrations, and run `npm run dev` alongside `npm run dev:api`. Credentials belong in ignored `.dev.vars`, never `VITE_` variables. Guest development works without credentials. `npm run auth:generate` writes a candidate schema to ignored `.tmp/auth-schema.sql`; review it and create a new migration rather than overwriting applied migration history.
+For local development, follow [GitHub setup](docs/GITHUB_AUTH_SETUP.md), apply the local migrations, and run `npm run dev` alongside `npm run dev:api`. Credentials belong in ignored `.dev.vars`, never `VITE_` variables. Guest development works without credentials. Apply the checked-in migrations, including `0003_github_oauth.sql`, without rewriting previously applied files. Only GitHub Client ID/Secret are required; the fixed origin is `AUTH_URL`.
 
-The checked-in production and branch-preview configurations keep cloud disabled. Real GitHub sign-in worked in the user's test. The built-Worker browser test now verifies logout, cross-browser save/reopen with scenarios, matching simulation output and second-owner denial against actual local D1. Its sessions are seeded only in the isolated test harness. Repeating the complete journey on staging with two real GitHub accounts remains open. See [implementation evidence](docs/CLOUD_BACKEND_IMPLEMENTATION.md) and [staging verification](docs/STAGING_VERIFICATION.md). Production rollout is not approved.
+The checked-in production and branch-preview configurations keep cloud disabled. The earlier Better Auth sign-in worked in the user's test; the replacement custom flow needs a fresh live sign-in check. The built-Worker browser test now verifies logout, cross-browser save/reopen with scenarios, matching simulation output and second-owner denial against actual local D1. Its sessions are seeded only in the isolated test harness. Repeating the complete journey on staging with two real GitHub accounts remains open. See [implementation evidence](docs/CLOUD_BACKEND_IMPLEMENTATION.md) and [staging verification](docs/STAGING_VERIFICATION.md). Production rollout is not approved.
 
-The builder checks public `/api/health` before showing cloud controls. If cloud is disabled, unreachable or returns an invalid response, guest editing and local saving continue without sign-in or project requests. After a refresh, the device draft opens; reopen a cloud project from My projects.
+The builder checks public `/api/health` before showing cloud controls. If cloud is disabled, unreachable or returns an invalid response, guest editing and local saving continue without sign-in or project requests. A failed connection offers Retry cloud connection; an explicitly disabled backend keeps cloud controls hidden. After a refresh, the device draft opens; reopen a cloud project from My projects.
 
 ## Model and limits
 

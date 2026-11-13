@@ -39,17 +39,7 @@ export function isCloudConfigured(env: CloudApiEnv): boolean {
     return false;
   }
 
-  if (
-    typeof env.BETTER_AUTH_SECRET !== "string" ||
-    env.BETTER_AUTH_SECRET.length < 32
-  ) {
-    return false;
-  }
-
-  if (
-    typeof env.BETTER_AUTH_URL !== "string" ||
-    env.BETTER_AUTH_URL.trim().length === 0
-  ) {
+  if (typeof env.AUTH_URL !== "string" || env.AUTH_URL.trim().length === 0) {
     return false;
   }
 
@@ -68,7 +58,7 @@ export function isCloudConfigured(env: CloudApiEnv): boolean {
   }
 
   try {
-    validateAuthBaseURL(env.BETTER_AUTH_URL);
+    validateAuthBaseURL(env.AUTH_URL);
     return true;
   } catch {
     return false;
@@ -166,7 +156,7 @@ export function assertSameOrigin(request: Request, env: CloudApiEnv): void {
   let expectedOrigin: URL;
   try {
     parsedOrigin = new URL(originHeader);
-    expectedOrigin = new URL(env.BETTER_AUTH_URL ?? "");
+    expectedOrigin = new URL(env.AUTH_URL ?? "");
   } catch {
     throw new HttpError(403, "origin_rejected", "Invalid request origin.");
   }
@@ -183,7 +173,9 @@ export function assertSameOrigin(request: Request, env: CloudApiEnv): void {
   }
 }
 
-export function assertSupportedContentEncoding(request: Request): void {
+export function assertSupportedContentEncoding(
+  request: Pick<Request, "headers">,
+): void {
   const encoding = request.headers.get("Content-Encoding");
   if (!encoding) return;
   const normalized = encoding.trim().toLowerCase();
@@ -216,7 +208,7 @@ export function assertJsonContentType(request: Request): void {
 }
 
 export async function readBoundedBody(
-  request: Request,
+  request: Pick<Request, "headers" | "body">,
   maxBytes: number,
 ): Promise<Uint8Array<ArrayBuffer>> {
   assertSupportedContentEncoding(request);
@@ -283,7 +275,7 @@ export async function readBoundedBody(
 const utf8Decoder = new TextDecoder("utf-8", { fatal: true, ignoreBOM: false });
 
 export async function readBoundedJson(
-  request: Request,
+  request: Pick<Request, "headers" | "body">,
   maxBytes: number,
 ): Promise<unknown> {
   const bytes = await readBoundedBody(request, maxBytes);

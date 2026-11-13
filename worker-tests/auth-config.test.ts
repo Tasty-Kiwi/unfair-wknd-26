@@ -1,22 +1,25 @@
 import { describe, expect, it } from "vitest";
-import { authOptions } from "../worker/auth-options";
 import { validateAuthBaseURL } from "../worker/auth-url";
+import { createAuth } from "../worker/auth";
+import { createCloudTestHarness } from "./helpers";
 
 describe("auth origin configuration", () => {
-  it("canonicalizes HTTPS origins on arbitrary hosts", () => {
+  it("canonicalizes HTTPS origins and explicit HTTP loopback", () => {
     expect(validateAuthBaseURL("https://preview.example.net:8443/")).toBe(
       "https://preview.example.net:8443",
     );
     expect(validateAuthBaseURL("http://localhost:8787/")).toBe(
       "http://localhost:8787",
     );
-    expect(validateAuthBaseURL("http://[::1]:8787")).toBe("http://[::1]:8787");
+    expect(validateAuthBaseURL("http://127.0.0.1:8787/")).toBe(
+      "http://127.0.0.1:8787",
+    );
+    expect(validateAuthBaseURL("http://[::1]:8787/")).toBe("http://[::1]:8787");
   });
-
   it.each([
     "http://example.com",
     "ftp://localhost",
-    "https://user:pass@example.com",
+    "https://u:p@example.com",
     "https://example.com/path",
     "https://example.com?x=1",
     "https://example.com#frag",
@@ -24,27 +27,18 @@ describe("auth origin configuration", () => {
   ])("rejects unsafe or malformed origin %s", (value) => {
     expect(() => validateAuthBaseURL(value)).toThrow();
   });
-
-  it("keeps GitHub-only, non-linking session and cookie policy", () => {
-    const options = authOptions("https://custom.example/", "x".repeat(32), {
-      githubClientId: "id",
-      githubClientSecret: "secret",
-    });
-    expect(options.baseURL).toBe("https://custom.example");
-    expect(options.socialProviders).toHaveProperty("github");
-    expect(options.emailAndPassword).toMatchObject({ enabled: false });
-    expect(options.account?.accountLinking).toMatchObject({
-      enabled: false,
-      disableImplicitLinking: true,
-    });
-    expect(options.session).toMatchObject({
-      expiresIn: 86400,
-      disableSessionRefresh: true,
-    });
-    expect(options.advanced?.useSecureCookies).toBe(true);
-    expect(
-      authOptions("http://localhost:8787", "x".repeat(32)).advanced
-        ?.useSecureCookies,
-    ).toBe(false);
+  it("exposes the custom handler and session API with canonical env settings", async () => {
+    const { server, worker } = createCloudTestHarness();
+    await server.listen();
+    try {
+      await worker.applyD1Migrations("DB");
+      const env = await worker.getEnv();
+      expect(createAuth(env)).toMatchObject({
+        handler: expect.any(Function),
+        getSession: expect.any(Function),
+      });
+    } finally {
+      await server.close();
+    }
   });
 });

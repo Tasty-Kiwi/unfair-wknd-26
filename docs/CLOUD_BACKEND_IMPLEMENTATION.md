@@ -1,156 +1,120 @@
 # Cloud backend implementation
 
-13 November 2026. Branch: `plan/cloud-backend`. Existing PR: [#5](https://github.com/Tasty-Kiwi/unfair-wknd-26/pull/5). No new branch or PR, force-push, or PR merge.
+13 November 2026. Existing branch `plan/cloud-backend`, [PR #5](https://github.com/Tasty-Kiwi/unfair-wknd-26/pull/5). No PR merge or production activation.
 
-The backend is implemented. **Local end-to-end persistence and owner isolation pass through the built Worker and actual local D1.** Real GitHub sign-in is user-verified. A fresh-browser, two-real-GitHub-account acceptance run on staging remains outstanding; do not describe local seeded-session tests as that live proof.
+## Current architecture
 
-The latest user instruction excludes the copied email-login and CPU sections. The implementation therefore retains **GitHub OAuth**, with no password form, password hashing change, provider pivot, new timing benchmark or billing change. Earlier measurements and design disagreements remain historical in the original documents.
+The user explicitly replaced Better Auth with a small custom GitHub OAuth implementation. There is **no auth SDK dependency, auth CLI, password hashing, signing secret, JWT, email flow, account linking or provider framework** in the current runtime. The old probe/generator sources and configs were removed. Applied SQL migration history remains intact.
 
-## Architecture actually implemented
+React/Vite and deterministic simulation stay in the browser. One Cloudflare Worker serves the same-origin API and ASSETS. D1 stores projects and the current auth records. Production/branch-preview cloud remains disabled; the already-approved staging deployment uses its own database.
 
-- React/Vite builder and deterministic simulation run in the browser.
-- One Cloudflare Worker serves `/api` and `/api/*`; existing ASSETS serve everything else, including `/landing`. Both bare and unknown API paths return JSON rather than SPA HTML. `run_worker_first` explicitly includes both patterns.
-- Better Auth **1.7.22** and schema CLI `auth` **1.7.22** are pinned. GitHub is the only provider. Every project request calls the production database-backed session verifier; SDK configuration may be cached, identities/session lookup results are not.
-- Cookies are host-only, HttpOnly, SameSite=Lax and Secure on HTTPS. Session cache and refresh are disabled; expiry is one day. Account linking is disabled and OAuth tokens are encrypted by Better Auth.
-- The auth base URL is a canonical HTTPS origin, with HTTP allowed only on `localhost`, `127.0.0.1` or `[::1]`. Credentials, non-root paths, query strings and fragments are rejected.
-- D1 stores auth state and complete, structurally valid v1 workspace JSON. No node/edge normalization or simulation changes.
+## GitHub sign-in and sessions
 
-Cloudflare routing was checked against its official [static-assets binding documentation](https://developers.cloudflare.com/workers/static-assets/binding/) and the installed Wrangler 4.161.0 schema/types. The runtime integration uses the installed Wrangler test harness and the real production Worker entry point.
+1. A same-origin JSON POST to `/api/auth/sign-in/social` starts GitHub authorization. Client-supplied providers, token shortcuts and external callbacks are rejected by the API wrapper.
+2. The Worker generates independent random 32-byte state, browser nonce and PKCE verifier. D1 stores the state/browser hashes and verifier for ten minutes; an HttpOnly cookie binds the attempt to that browser.
+3. GitHub receives only `read:user`, the fixed callback and an S256 challenge. The callback atomically deletes a matching, unexpired state/browser record **before** exchanging the code, making it one-use.
+4. Only fixed GitHub token/profile endpoints are contacted. Redirects are rejected, fetches time out after ten seconds and decoded JSON is limited to 64 KiB. Code, credentials, provider tokens and raw callback errors are never logged or returned. The access token is discarded after fetching the profile.
+5. The stable positive GitHub numeric ID maps to an internal user ID. Login, display name and email are not authorization keys. Existing GitHub mappings keep their original internal owner IDs.
+6. A new opaque 256-bit session cookie lasts one day. D1 stores only its SHA-256 hash and expiry. Every protected request joins that hash with the identity record; there is no in-memory session cache. Logout deletes the row and clears cookies.
 
-## Genuine model contributions
+HTTPS cookies are `__Host-domino_session` and `__Host-domino_oauth`: Secure, HttpOnly, SameSite=Lax, Path=/, no Domain. Local HTTP loopback uses unprefixed names. Duplicate/malformed/forged/expired cookies are rejected. POST Origin is checked both at the API boundary and in the auth handler.
 
-A new independent three-round implementation discussion finished before coding. Its responses, corrections, disagreements and frozen ownership are appended to [the debate record](CLOUD_BACKEND_DESIGN_DEBATE.md). Actual implementation tasks:
+Auth starts and callbacks use atomic D1 limits of 10 and 20 per trusted client IP per minute. Expired auth data is pruned opportunistically. These are demo resource bounds, not comprehensive abuse protection.
 
-| Model | Provider | Task reference | Actual contribution and reported checks |
-| --- | --- | --- | --- |
-| gpt-6-luna | codex | [Cloud implementation — luna](t3-thread://v2/55319d5f-3d07-4b9d-b7a7-291bcf25c769/thread:delegated-task:command%3Amcp%3Ac2348025-ff76-4a1c-a3b2-ff6a7966428d%3Adelegate-task%3Ac53175b5-5d74-4bb5-8adc-aab6877e6082) | Canonical auth-origin validator; shared use in auth construction/options; configuration and cookie/provider policy tests. Four owned files. Focused auth-config run: 9 passed. |
-| claude-haiku-5-5 | claudeAgent | [Cloud implementation — haiku](t3-thread://v2/55319d5f-3d07-4b9d-b7a7-291bcf25c769/thread:delegated-task:command%3Amcp%3Ac2348025-ff76-4a1c-a3b2-ff6a7966428d%3Adelegate-task%3A5faaf735-5944-4bbd-8895-4b5daac78afa) | Rate-limit response mapping; same-project live-draft comparison; confirmed Open cloud version recovery; client regression and account-switch/expiry/conflict browser tests. Reported app/spec typechecks, 13 client tests and 10 mocked cloud journeys passed. |
-| gemini-4-hydrogen | antigravity | [Cloud implementation — hydrogen](t3-thread://v2/55319d5f-3d07-4b9d-b7a7-291bcf25c769/thread:delegated-task:command%3Amcp%3Ac2348025-ff76-4a1c-a3b2-ff6a7966428d%3Adelegate-task%3A04932613-f12e-4217-a79b-601253b4793d) | Shared isolated Worker test factories; project framing, pagination, validation, incomplete-draft, corrupt-row and per-owner quota tests; configuration guard wiring. Refactored setup while retaining all eight original auth cases. Reported 28 Worker tests passed before its final helper typing adjustment; coordinator reran the final suite. |
+The flow follows GitHub's current official [authorization-code and PKCE documentation](https://docs.github.com/en/apps/oauth-apps/building-oauth-apps/authorizing-oauth-apps). No new cryptographic scheme or custom password authentication was introduced.
 
-Luna and Haiku reported matching executed-model IDs. Hydrogen's separate executed-model field was unavailable; the requested/configured ID is reported without fabricating an executed ID.
+## Database and migration
 
-The coordinator reviewed all code, corrected a Node/Worker Response type mismatch, added test-source typechecking to CI, added Save as New and active-account-change browser tests, and implemented the real built-Worker/D1 browser journey. Dependencies and simulation code were unchanged in this execution. No agent committed or deployed independently.
-
-## Database and migrations
-
-`migrations/0001_auth.sql` contains Better Auth's `user`, `session`, `account`, `verification` and `rateLimit` tables. `migrations/0002_projects.sql` contains:
-
-| Column | Purpose |
+| Active table | Purpose |
 | --- | --- |
-| id | Server-generated UUID, separate from workspace document ID |
-| owner_id | Verified internal auth user ID |
-| name | Trimmed project metadata, 1–120 characters |
-| workspace_json | Canonical validated v1 JSON, at most 1,000,000 UTF-8 bytes |
-| version | Positive integer, starts at 1 and increments atomically |
-| created_at / updated_at | Server-generated ISO timestamps |
+| github_identities | Stable GitHub ID → unique internal owner ID and display name |
+| cloud_sessions | Hashed opaque session, owner and expiry |
+| oauth_attempts | Hashed one-use state/browser binding, verifier and expiry |
+| oauth_limits | Atomic per-route/IP minute counters |
+| projects | Private metadata, complete versioned workspace JSON and CAS version |
 
-The owner/update/id index orders lists; the owner/create index supports creation bounds. A single `INSERT ... SELECT ... WHERE` enforces both fewer than 20 existing projects and fewer than five successful creations in the rolling minute. A single owner/version-restricted UPDATE implements CAS. No count-then-insert race.
+`0001_auth.sql` and `0002_projects.sql` are unchanged. New `0003_github_oauth.sql` creates current auth tables/indexes and imports `account JOIN user` GitHub mappings while preserving internal user IDs. Identical mappings deduplicate; conflicting mappings abort rather than choosing an owner. Legacy auth tables remain unused to avoid destructive migration and permit rollback. The current runtime never reads them.
 
-Both migrations were already applied to approved staging. This execution changes neither migration nor schema. Never overwrite applied migrations: `npm run auth:generate` writes an ignored candidate at `.tmp/auth-schema.sql` for review and a new migration if necessary.
+Old session cookies are ignored, so existing testers must sign in again. Project rows, document IDs and workspace JSON are not rewritten. Before staging migration the ambiguous-mapping count was zero and the project count was zero. After migration there were zero missing legacy mappings and the project count remained zero.
 
-## API contract
+## API and workspace contract
 
-Metadata is `{id,name,version,createdAt,updatedAt}`. The session adapter returns `{userId,name} | null`; identity comes only from Better Auth.
+Session verification returns `{userId,name} | null` from D1. All project SQL binds that verified owner, never a body or URL user ID.
 
-| Endpoint | Request / response |
+| Endpoint | Contract |
 | --- | --- |
-| GET /api/health | Public: `{ok:true,cloudEnabled}` |
+| GET /api/health | Public `{ok:true,cloudEnabled}` |
 | GET /api/me | `{user:{id,name}}` or 401 |
-| GET /api/projects | Bounded `limit`/`offset`; `{projects:[metadata],nextOffset}`, no workspaces |
+| GET /api/projects | Bounded metadata list `{projects,nextOffset}`, no workspace bodies |
 | POST /api/projects | `{name,workspace}` → 201 `{project:metadata}` |
-| GET /api/projects/:id | `{project:{...metadata,workspace}}` |
-| PUT /api/projects/:id | `{name,workspace,expectedVersion}` → updated metadata or 409 |
-| POST /api/auth/sign-in/social | GitHub-only start, fixed same-origin callback |
-| GET /api/auth/callback/github | Better Auth state/PKCE validation and code exchange |
-| GET /api/auth/get-session | Minimized user/session metadata; no raw token/email/IP |
-| POST /api/auth/sign-out | Better Auth session revocation |
+| GET /api/projects/:id | Authorized `{project:{...metadata,workspace}}` |
+| PUT /api/projects/:id | `{name,workspace,expectedVersion}` → incremented metadata or 409 |
+| POST /api/auth/sign-in/social | Fixed GitHub start, `{url,redirect:true}` |
+| GET /api/auth/callback/github | Validated code exchange, fixed success/error return |
+| GET /api/auth/get-session | Minimal user identity or null; no token/private email |
+| POST /api/auth/sign-out | Server-side revocation and cookie clearing |
 
-Project errors use `{error:{code,message,...details},requestId}`. Meaningful statuses include 400 invalid JSON/workspace/envelope, 401 unauthenticated, 403 origin rejection, 404 missing or other-owner row, 405 unsupported method with Allow, 409 version/quota conflict, 413 oversized input, 415 unsupported framing, 429 creation throttling, 500 safe internal error and 503 unconfigured/unavailable cloud.
+Metadata is `{id,name,version,createdAt,updatedAt}`; project errors remain `{error:{code,message,...details},requestId}`. Prepared owner-scoped queries return the same 404 for missing and foreign rows. One atomic owner/version UPDATE prevents lost writes. Single-statement creation predicates enforce 20 projects/account and five successful creates/minute.
 
-Every project query binds the verified owner; SQL uses prepared/bound values. The server never authorizes from a body owner or URL user ID. Missing and foreign IDs are indistinguishable. Mutations require exact Origin and JSON content type. Streamed body limits apply even without Content-Length: 1,050,000 project bytes, 16,384 auth bytes. Only supported auth endpoints are exposed; there is no production test identity or password endpoint.
+Structural v1 validation preserves incomplete drafts, positions, known raw fields, scenarios, validation keys, receipt snapshots and provenance. The cloud row ID never replaces the graph document ID. No compile or scenario revalidation is required to save. The canonical UTF-8 workspace cap is 1,000,000 bytes; streamed project/auth envelopes are limited to 1,050,000 / 16,384 bytes. Unknown extension keys follow the existing schema stripping behavior.
 
-## Workspace and UI behavior
+Unknown API paths return JSON 404, including navigation requests; ASSETS still serves the SPA and /landing. Mutations require exact Origin and JSON framing; errors are safe 400/401/403/404/405/409/413/415/429/500/503 responses. API responses are private/no-store.
 
-Structural `parseWorkspace` validation accepts incomplete drafts; saving never requires a successful compile or scenario revalidation. Known v1 fields survive canonical storage, including positions, raw drafts, named scenarios, validation keys, receipt snapshots and provenance. Unsupported versions are rejected. Unknown extension keys are stripped by the existing schema; no forward-compatibility promise is made.
+## Frontend and review feedback
 
-The cloud row ID never replaces `document.id`. Opening validates the returned workspace before replacement. The same validated inputs still feed the existing browser simulation.
+The existing local-first UI remains: GitHub sign-in/out, My Projects, explicit Save to Cloud, Open and Save as New. Guests can build/simulate/autosave/import/export without auth. Cloud drafts are owner/project-scoped; cloud binding stays outside the workspace format. Saves acknowledge only the confirmed snapshot, later edits remain dirty, and stale completions are ignored.
 
-The UI has GitHub sign-in/out, My projects, Save to cloud, Open and Save as new project. Device autosave retains its existing guest key and 500 ms lifecycle; cloud editing uses owner/project-scoped local slots. Cloud binding/version metadata stays outside the exported workspace. Guests can build, simulate, save locally and import/export without cloud configuration. The builder probes only public `/api/health` on mount; cloud controls remain hidden until it confirms `cloudEnabled: true`. Disabled, failed or malformed responses keep controls hidden without session/project requests, including on an OAuth-return URL. My Projects explains reopening a cloud project after refresh; no automatic rebinding was added.
+Conflict actions stay Keep working locally, Save as new project and Open cloud version with confirmation. Cancel has no replacement side effect. Account changes detach the prior cloud project and restore the guest draft; sign-out does not delete local data. Refresh intentionally opens the device draft; My Projects explains how to reopen cloud work.
 
-Cloud saves acknowledge only the snapshot confirmed by the API; later edits stay dirty. Failed/unknown outcomes preserve the local workspace and show a failure/unconfirmed status. A 409 offers Keep working locally, Save as new project, or Open cloud version after confirmation. There is no force write or automatic merge. Cancel performs no replacement/persistence side effect.
+The review's remaining retry issue is fixed. Failed/timed-out/malformed health probes show **Retry cloud connection**. A retry performs one fresh probe without reload or draft replacement, and preserves OAuth-return intent. Explicit `cloudEnabled:false` keeps cloud controls hidden without retry. Overlapping/stale/unmounted checks cannot apply state.
 
-Generation/abort guards reject stale completions. Account changes detach the old cloud project and restore the guest draft; sign-out preserves scoped drafts. Better Auth 429 responses without a custom code map to `rate_limited`, reading numeric Retry-After or X-Retry-After. Conflict response metadata is unchanged.
+## Actual model and coordinator contributions
 
-## Local setup and checks
+- **Gemini 4 Hydrogen**, `antigravity/gemini-4-hydrogen`: implemented `worker/auth.ts` and `0003_github_oauth.sql`. [Custom GitHub OAuth — backend](t3-thread://v2/55319d5f-3d07-4b9d-b7a7-291bcf25c769/thread:delegated-task:command%3Amcp%3Ac5096eeb-26c8-40a1-a97e-08e83ea6c75b%3Adelegate-task%3Afa49fb43-9138-45d1-a314-c30858942280) Reported SQL import/dedup/conflict checks and source typecheck; it did not run browser/Worker suites.
+- **Claude Haiku 5.5**, `claudeAgent/claude-haiku-5-5`: implemented retry state/action, UI and four browser tests. [OAuth pivot — retry cloud connection](t3-thread://v2/55319d5f-3d07-4b9d-b7a7-291bcf25c769/thread:delegated-task:command%3Amcp%3Ac5096eeb-26c8-40a1-a97e-08e83ea6c75b%3Adelegate-task%3A21930c76-8cfe-4250-b39f-fa0da9922b30) Reported 16 cloud journeys, 102 unit tests and app typecheck passing; integration type errors were left to the coordinator.
+- **GPT-6 Luna**, `codex/gpt-6-luna`: changed auth configuration tests only. [Custom OAuth tests — implementation ready](t3-thread://v2/55319d5f-3d07-4b9d-b7a7-291bcf25c769/thread:delegated-task:command%3Amcp%3Ac5096eeb-26c8-40a1-a97e-08e83ea6c75b%3Adelegate-task%3A1e2e98cf-e67e-4d6b-af61-652b4876f384) It did not migrate the remaining harness/tests or run them. The earlier attempt [Custom GitHub OAuth — tests](t3-thread://v2/55319d5f-3d07-4b9d-b7a7-291bcf25c769/thread:delegated-task:command%3Amcp%3Ac5096eeb-26c8-40a1-a97e-08e83ea6c75b%3Adelegate-task%3A08677b0b-3d7f-47af-a602-24949ee09b46) made no edits because the new server was not available yet.
+- **Coordinator:** removed SDK/CLI/probe dependencies and tooling, integrated entry point/env/config changes, completed the opaque-session harness/browser migration, restored URL-boundary cases, implemented mocked-provider OAuth/security/migration tests, added callback duplicate-param/origin/profile/redirect protections, reused bounded JSON reading, reviewed the retry code, and ran final verification.
 
-Use separate local GitHub OAuth credentials with callback `http://localhost:5173/api/auth/callback/github`. Ignored `.dev.vars` supplies `BETTER_AUTH_SECRET` (random, at least 32 characters), `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET`. Never put these in VITE variables, localStorage, source or logs.
+Luna/Haiku reported matching executed-model IDs. Hydrogen's separate executed-model field was unavailable; no stronger identity claim is made. Historical three-round discussions and the explicit user override remain in [the debate record](CLOUD_BACKEND_DESIGN_DEBATE.md).
+
+## Configuration and local use
+
+Only `AUTH_URL`, `CLOUD_ENABLED`, `DB`, `GITHUB_CLIENT_ID` and `GITHUB_CLIENT_SECRET` are required. AUTH_URL is a canonical HTTPS origin, with HTTP permitted only on localhost/127.0.0.1/[::1]. GitHub credentials belong in ignored .dev.vars or Worker secrets, never VITE variables/localStorage/source/logs. No session signing secret or schema generator remains.
 
 ```sh
 npm ci
 npm run types:worker
 npx wrangler d1 migrations apply DB --local --config wrangler.local.jsonc
 npm run build
-# Separate terminals; browser uses 5173, API runs on 8787:
+# Separate terminals; browser and OAuth callback use localhost:5173:
 npm run dev
 npm run dev:api
 ```
 
-The Vite /api proxy preserves the canonical 5173 browser origin. A direct mutation claiming 8787 as Origin is intentionally rejected. Guest mode needs no auth credentials.
+Keep the existing GitHub OAuth app/callbacks. The Vite /api proxy targets 8787 while the browser stays on the configured 5173 origin. [Setup/runbook](GITHUB_AUTH_SETUP.md)
 
-Final local verification:
+## Verification
 
-| Command | Result |
+| Check | Final local result |
 | --- | --- |
-| npm test | 102 tests, 10 files passed |
-| npm run typecheck:worker | Generated binding types and Worker TypeScript passed |
-| npm run typecheck:tests | Browser and Worker test source TypeScript passed |
-| npm run build | TypeScript/Vite passed; existing upstream Zod annotation warnings only |
-| npm run test:worker | 28 tests, 5 files passed |
-| npm run deploy:check | Production-config dry run passed, no DB binding/cloud disabled |
-| npm run test:e2e | 40 Chromium journeys passed |
+| npm test | 102 tests / 10 files pass |
+| npm run test:worker | 40 tests / 6 files pass |
+| npm run test:e2e | 44 Chromium journeys pass |
+| Worker and test-source typechecks | Pass |
+| TypeScript/Vite build | Pass; existing upstream annotation warnings only |
+| Production-config deploy dry run | Pass; cloud disabled/no D1 |
+| Removed auth packages | npm tree contains no better-auth/auth/better-call |
 
-CI runs npm ci, unit/Worker/test-source typechecks, build, Worker tests, dry run, and Chromium journeys. Build precedes Worker/browser tests because they serve real dist assets. No checks/tests were removed or weakened.
+New tests mock only external GitHub HTTP while using actual local D1 for code exchange, PKCE/binding/replay/expiry, bad/oversized/compressed responses, timeout, stable identity mapping, Secure cookies, hashed sessions, logout and legacy owner migration/conflicts. Existing auth/owner/CAS/quota/size/framing cases remain.
 
-### What the acceptance test actually proves
+The built-Worker browser journey uses the actual runtime, real local D1 and opaque test sessions, with no API interception. It saves a UI-created named scenario, checks the SQL row, logs out/rejects the old cookie, reopens the exact workspace in a fresh context with matching simulation output, updates version 2 and denies a second owner's GET/PUT. Other browser tests prove cloud-disabled guest behavior and transient-health retry without reload/data loss. Synthetic sessions/provider HTTP mocks are not live GitHub proof.
 
-`tests/cloud-worker-journey.spec.ts` launches the **production Worker** and built ASSETS in Wrangler's local harness with an isolated real D1. It creates test-only signed database sessions, not a deployed authentication override. No API requests are intercepted.
+## Deployment and remaining acceptance
 
-The test creates a named receipt-delay scenario through the UI, saves through POST, checks the actual SQL row/owner/workspace, signs out and confirms old-cookie revocation. A separate browser context with no shared localStorage and a separate session for that user lists and reopens the project. Exported workspace equality verifies nodes, edges, positions, document identity, scenarios, validation context and provenance; visible simulation output matches. It updates through PUT and confirms version 2. A second owner receives 404 on GET/PUT and an empty list, and the original row stays at version 2.
+Existing approved staging only: `domino-os-staging`, isolated D1 `75faa40c-c80c-4fd6-ab27-6dc8f6cc66e4`. Migration 0003 was applied there after local tests; no old rows/tables were dropped. The custom flow was deployed as version `b9f1793f-e14f-454e-8d37-a93463b01750`. [Staging verification](STAGING_VERIFICATION.md) records current smoke results and production comparison.
 
-Other tests cover invalid/expired sessions, owner spoofing, quota concurrency, CAS concurrency, 1 MB SQL binding/overflow preservation, raw streaming bounds, malformed requests, methods/routing, corrupt stored JSON, incomplete drafts, sign-out/save races, late Open, account changes, failed saves, conflict cancellation/remote/copy, and all original demo journeys.
+Production `domino-os` and previews retain cloud disabled/no production D1. No new resource, paid upgrade, merge or production activation was made. Legacy signing-secret values, if still stored on an environment, are unused and may be retired separately.
 
-This is genuine local persistence/authorization proof. It does not prove GitHub code exchange in those synthetic browser contexts. Real GitHub sign-in is separately user-verified.
+A **fresh real GitHub sign-in on this implementation** and full two-real-account staging save/reopen/logout/privacy journey remain open. The user's earlier successful sign-in tested the previous SDK flow; it does not automatically verify this replacement. No authenticated endpoint timing/reliability result is inferred from dependency removal. Local persistence/privacy acceptance is passing; complete live acceptance is not claimed.
 
-## Approved staging and production boundary
-
-Existing approved staging: `https://domino-os-staging.tasty-kiwi.workers.dev`, D1 `75faa40c-c80c-4fd6-ab27-6dc8f6cc66e4` (EEUR), config `wrangler.staging.jsonc`. Only these existing resources may be deployed/verified under the user's prior approval. Use the matching staging GitHub callback. Existing secrets stay on the Worker. The integrated app was deployed there as Worker version `53a398e6-45e7-4156-a148-02d0064c2b41`; all nine public/anonymous/OAuth-start checks passed and the production deployment/version remained unchanged.
-
-```sh
-# Existing reviewed migrations; apply only with staging authorization:
-npx wrangler d1 migrations apply DB --remote --config wrangler.staging.jsonc
-npm run build
-npx wrangler deploy --config wrangler.staging.jsonc
-```
-
-Do not rerun schema migrations merely to test requests. No new resources, remote migration, production secret, paid upgrade or production deployment is part of this execution. Staging deployment/version and safe HTTP smoke results are recorded in [staging evidence](STAGING_VERIFICATION.md).
-
-The checked-in production Worker name remains `domino-os`, compatibility date and static routing are preserved, cloud remains disabled and no production D1 is bound. Branch previews explicitly disable cloud and omit D1. A branch push can trigger the existing cloud-disabled preview, not an authorized production rollout.
-
-## Remaining limitations and final acceptance
-
-- Live staging save/reopen/logout and cross-owner denial with **two real GitHub accounts** still need a tester's authenticated sessions. The shared browser reached GitHub's login screen; no credentials/session were available to complete that check. No user passwords or session cookies were requested or exported.
-- GitHub sign-in worked in the user's own test; its exact tested build was not recorded. This remains valid user evidence, not automated proof for every later build.
-- There is no delete, list rename, cloud autosave, sharing, collaboration, revision history, email/password account or advanced recovery UI.
-- Creation quotas are MVP resource bounds, not comprehensive abuse prevention across multiple GitHub accounts.
-- No fresh timing/reliability benchmark is claimed. Historical observations are retained without being reinterpreted as a passed test.
-- Production rollout requires separate authorization and environment configuration.
-
-**Gate A:** GitHub auth implemented; local real-library/D1 session, expiry and logout checks pass; real sign-in user-verified. **Gate B:** project API/owner/CAS/quota/validation pass. **Gate C:** full local built-Worker cross-browser persistence and second-owner denial pass; the two-real-account staging repetition remains open. **Gate D:** complete local suite passes. **Gate E:** changes remain on PR #5, never automatically merged.
-
-## Code review follow-up — cloud-disabled controls
-
-The review of `2fe35ced` correctly found that a disabled production backend still exposed GitHub sign-in. The builder now waits for a validated, three-second-bounded public health probe before rendering cloud controls. This check does not block the editor; failed/malformed probes hide controls. `/api/me` is called on auth return only when availability is confirmed. The prior guest assertion of zero API requests on builder mount is intentionally superseded by health-only probing; landing/simulator initial loads still do not initialize cloud.
-
-`tests/cloud-disabled-journey.spec.ts` serves the actual production configuration and built assets with no D1 or API interception. It verifies `cloudEnabled: false`, no sign-in/My Projects/cloud-save controls, no auth/project requests even with `?builder=1`, working autosave and draft restoration after reload. The unavailable-network UI case and malformed-health unit cases also pass. Enabled-cloud scenarios, including the real local D1 cross-browser journey, remain passing.
-
-Review follow-up checks: 102 unit tests, all 40 browser journeys, all 28 Worker tests, Worker/test-source typechecks, build and deployment dry run passed. The built cloud-disabled and enabled/local-D1 browser journeys were rerun against the final build and both passed; no API/SQL/auth-provider behavior changed here. No staging/production deployment or new timing measurement was made for this UI follow-up. Real two-account staging acceptance and endpoint-level reliability remain unverified; successful sign-in and synthetic local sessions do not close those items. Production cloud activation remains disabled and unapproved.
+Delete, sharing, cloud autosave, revisions, email/password, teams and advanced account/recovery UI remain deferred.

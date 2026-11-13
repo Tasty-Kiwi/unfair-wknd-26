@@ -158,6 +158,156 @@ test("guest editing only probes public health and survives unavailable cloud", a
   ).toHaveValue("Still local");
 });
 
+type HealthPlan = {
+  status: "fail" | "malformed" | "disabled" | "ok";
+  calls: number;
+};
+// Registered after api(), so it takes precedence for /api/health. The plan is read per request.
+async function scriptHealth(page: Page, plan: HealthPlan) {
+  await page.route("**/api/health", (route) => {
+    plan.calls += 1;
+    if (plan.status === "fail")
+      return route.fulfill({
+        status: 503,
+        json: { error: { code: "cloud_unavailable" } },
+      });
+    if (plan.status === "malformed")
+      return route.fulfill({ json: { ok: true } });
+    if (plan.status === "disabled")
+      return route.fulfill({ json: { ok: true, cloudEnabled: false } });
+    return route.fulfill({ json: { ok: true, cloudEnabled: true } });
+  });
+}
+const retryButton = (page: Page) =>
+  builder(page).getByRole("button", {
+    name: "Retry cloud connection",
+    exact: true,
+  });
+
+test("failed public health retries in place and keeps the edited guest draft", async ({
+  page,
+}) => {
+  const state: State = { user: null, projects: new Map() };
+  await api(page, state);
+  const plan: HealthPlan = { status: "fail", calls: 0 };
+  await scriptHealth(page, plan);
+  await page.goto("/");
+  await page
+    .getByRole("button", { name: "Build a network", exact: true })
+    .click();
+  await expect(retryButton(page)).toBeVisible();
+  await expect(
+    builder(page).getByRole("button", { name: "Sign in with GitHub" }),
+  ).toHaveCount(0);
+
+  await builder(page)
+    .getByLabel("Network name", { exact: true })
+    .fill("Edited offline");
+  await expect(builder(page).getByRole("status").first()).toContainText(
+    "Saved locally",
+  );
+
+  // Marks the page. A reload would clear it, so it survives only an in-place retry.
+  await page.evaluate(() => {
+    (window as unknown as { sentinel: number }).sentinel = 1;
+  });
+  // Dev StrictMode probes twice on mount, so count only what the retry adds.
+  const callsBeforeRetry = plan.calls;
+  plan.status = "ok";
+  await retryButton(page).click();
+
+  await expect(
+    builder(page).getByRole("button", { name: "Sign in with GitHub" }),
+  ).toBeVisible();
+  await expect(retryButton(page)).toHaveCount(0);
+  expect(plan.calls).toBe(callsBeforeRetry + 1);
+  expect(
+    await page.evaluate(
+      () => (window as unknown as { sentinel?: number }).sentinel,
+    ),
+  ).toBe(1);
+  await expect(
+    builder(page).getByLabel("Network name", { exact: true }),
+  ).toHaveValue("Edited offline");
+  const stored = await page.evaluate(
+    (storageKey) => localStorage.getItem(storageKey),
+    key,
+  );
+  expect(JSON.parse(stored!).document.name).toBe("Edited offline");
+  // Retry only rechecks health. It never created, opened or replaced a project.
+  expect(state.projects.size).toBe(0);
+});
+
+test("malformed public health offers retry instead of hiding cloud silently", async ({
+  page,
+}) => {
+  const state: State = { user: null, projects: new Map() };
+  await api(page, state);
+  const plan: HealthPlan = { status: "malformed", calls: 0 };
+  await scriptHealth(page, plan);
+  await page.goto("/");
+  await page
+    .getByRole("button", { name: "Build a network", exact: true })
+    .click();
+  await expect(retryButton(page)).toBeVisible();
+  const callsBeforeRetry = plan.calls;
+  plan.status = "ok";
+  await retryButton(page).click();
+  await expect(
+    builder(page).getByRole("button", { name: "Sign in with GitHub" }),
+  ).toBeVisible();
+  expect(plan.calls).toBe(callsBeforeRetry + 1);
+});
+
+test("explicitly disabled cloud stays hidden with no retry and guest editing works", async ({
+  page,
+}) => {
+  const state: State = { user: null, projects: new Map() };
+  await api(page, state);
+  const plan: HealthPlan = { status: "disabled", calls: 0 };
+  await scriptHealth(page, plan);
+  await page.goto("/");
+  await page
+    .getByRole("button", { name: "Build a network", exact: true })
+    .click();
+  await builder(page)
+    .getByLabel("Network name", { exact: true })
+    .fill("Local only");
+  await expect(builder(page).getByRole("status").first()).toContainText(
+    "Saved locally",
+  );
+  await expect(retryButton(page)).toHaveCount(0);
+  await expect(
+    builder(page).getByRole("button", { name: "Sign in with GitHub" }),
+  ).toHaveCount(0);
+  // Editing never probes again, and a disabled answer offers no retry.
+  const callsAfterEdit = plan.calls;
+  await expect(retryButton(page)).toHaveCount(0);
+  expect(plan.calls).toBe(callsAfterEdit);
+});
+
+test("retry after a failed probe on OAuth return still runs the signed-in check", async ({
+  page,
+}) => {
+  const state: State = { user, projects: new Map() };
+  await api(page, state);
+  const plan: HealthPlan = { status: "fail", calls: 0 };
+  await scriptHealth(page, plan);
+  await page.goto("/?builder=1");
+  await expect(retryButton(page)).toBeVisible();
+  // The return flag leaves the address bar even though the probe failed.
+  expect(new URL(page.url()).searchParams.has("builder")).toBe(false);
+
+  const callsBeforeRetry = plan.calls;
+  plan.status = "ok";
+  await retryButton(page).click();
+  // The status line shows the message after the account state, as "· Signed in as …".
+  await expect(
+    builder(page).getByRole("region", { name: "Cloud" }).getByRole("status"),
+  ).toContainText("Signed in as Test owner.");
+  expect(plan.calls).toBe(callsBeforeRetry + 1);
+});
+
 test("GitHub navigation flushes the device draft first", async ({ page }) => {
   const state: State = { user: null, projects: new Map() };
   await api(page, state);

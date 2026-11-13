@@ -1,5 +1,7 @@
 # Better Auth CPU feasibility check
 
+Historical record: Better Auth and the probe/generator tooling were removed by the later user-approved custom OAuth replacement. Source paths and commands below describe that earlier probe and are not current setup instructions. The original sources remain in Git history at 76cb26e.
+
 Result on 13 November 2026: **The email/password path failed the Workers Free feasibility gate.** The user subsequently required staying on Free and approved GitHub authentication instead; see [the current setup](GITHUB_AUTH_SETUP.md).
 
 ## Approved scope and execution

@@ -51,7 +51,7 @@ const workspace = createSampleWorkspace;
 function create(cookie: string, value = workspace()) {
   return createCloudProject(server, cookie, { workspace: value });
 }
-describe("real Better Auth and native D1 HTTP", () => {
+describe("custom GitHub auth and native D1 HTTP", () => {
   it("verifies database sessions, returns no tokens and revokes sessions on signout", async () => {
     expect((await request("/api/me")).status).toBe(401);
     const cookie = await login("person@example.test");
@@ -69,8 +69,7 @@ describe("real Better Auth and native D1 HTTP", () => {
     expect(session.status).toBe(200);
     const data = (await session.json()) as { user: object; session?: object };
     expect(data.user).not.toHaveProperty("email");
-    expect(data.session).not.toHaveProperty("token");
-    expect(data.session).not.toHaveProperty("ipAddress");
+    expect(data).not.toHaveProperty("session");
     expect(session.headers.get("cache-control")).toContain("no-store");
     const out = await request("/api/auth/sign-out", "POST", {}, cookie);
     expect(out.status).toBe(200);
@@ -79,22 +78,16 @@ describe("real Better Auth and native D1 HTTP", () => {
       401,
     );
     expect(
-      await db.prepare("SELECT count(*) AS n FROM session").first("n"),
+      await db.prepare("SELECT count(*) AS n FROM cloud_sessions").first("n"),
     ).toBe(0);
   });
   it("rejects forged and expired cookies and all password auth paths", async () => {
     expect(
-      (
-        await request(
-          "/api/me",
-          "GET",
-          undefined,
-          "better-auth.session_token=forged",
-        )
-      ).status,
+      (await request("/api/me", "GET", undefined, "domino_session=forged"))
+        .status,
     ).toBe(401);
     const cookie = await login("expired@example.test");
-    await db.prepare("UPDATE session SET expiresAt = 0").run();
+    await db.prepare("UPDATE cloud_sessions SET expires_at = 0").run();
     expect((await request("/api/me", "GET", undefined, cookie)).status).toBe(
       401,
     );
@@ -140,7 +133,6 @@ describe("real Better Auth and native D1 HTTP", () => {
     expect(url.searchParams.get("code_challenge")).toBeTruthy();
     expect(url.searchParams.get("scope")?.split(" ").sort()).toEqual([
       "read:user",
-      "user:email",
     ]);
     const stateCookies = started.headers.getSetCookie().join(";");
     expect(stateCookies).toMatch(/HttpOnly/i);
@@ -164,10 +156,10 @@ describe("real Better Auth and native D1 HTTP", () => {
       expect(callback.headers.get("location")).toContain(
         "/?builder=1&authError=1",
       );
-      expect(cookies(callback)).not.toContain("session_token");
+      expect(cookies(callback)).not.toContain("domino_session");
     }
     expect(
-      await db.prepare("SELECT count(*) AS n FROM session").first("n"),
+      await db.prepare("SELECT count(*) AS n FROM cloud_sessions").first("n"),
     ).toBe(0);
   });
   it("enforces the persistent OAuth start limiter through the actual HTTP handler", async () => {
@@ -187,7 +179,7 @@ describe("real Better Auth and native D1 HTTP", () => {
       ).status,
     ).toBe(429);
     expect(
-      await db.prepare("SELECT count(*) AS n FROM rateLimit").first("n"),
+      await db.prepare("SELECT count(*) AS n FROM oauth_limits").first("n"),
     ).toBeGreaterThan(0);
   });
   it("restores full workspaces, denies the other account and permits only one concurrent CAS save", async () => {

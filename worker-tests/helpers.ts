@@ -1,4 +1,3 @@
-import { serializeSignedCookie } from "better-call";
 import { createTestHarness } from "wrangler";
 import { createCoreExample } from "../src/lib/builder/factories";
 import type { BuilderWorkspaceV1 } from "../src/lib/builder/types";
@@ -6,18 +5,28 @@ import type { ProjectMetadata } from "../src/lib/cloud/contracts";
 
 export const TEST_ORIGIN = "http://localhost:5173";
 
-// Test-only secrets; no deployed identity override or provider credentials.
-export const TEST_AUTH_SECRET =
-  "test-only-session-signing-secret-at-least-32-characters";
-
+// All identity setup is isolated to local test databases, never a deployed bypass.
 export const CLOUD_TEST_TABLES = [
   "projects",
-  "session",
-  "account",
-  "verification",
-  "user",
-  "rateLimit",
+  "cloud_sessions",
+  "oauth_attempts",
+  "oauth_limits",
+  "github_identities",
 ] as const;
+
+export function randomTestToken(): string {
+  return Buffer.from(crypto.getRandomValues(new Uint8Array(32))).toString(
+    "base64url",
+  );
+}
+
+export async function hashTestToken(token: string): Promise<string> {
+  const digest = await crypto.subtle.digest(
+    "SHA-256",
+    new TextEncoder().encode(token),
+  );
+  return Buffer.from(digest).toString("hex");
+}
 
 export type CloudTestHarness = ReturnType<typeof createCloudTestHarness>;
 export type CloudTestServer = CloudTestHarness["server"];
@@ -29,7 +38,6 @@ export function createCloudTestHarness() {
       {
         configPath: "./wrangler.local.jsonc",
         secrets: {
-          BETTER_AUTH_SECRET: TEST_AUTH_SECRET,
           GITHUB_CLIENT_ID: "test-client-id",
           GITHUB_CLIENT_SECRET: "test-client-secret",
         },
@@ -47,53 +55,31 @@ export async function resetCloudTables(db: D1Database): Promise<void> {
   }
 }
 
-/**
- * Seed a real local D1 user + session row and return a Better Auth signed cookie
- * plus the seeded userId. Uses production session verification without OAuth.
- */
+/** Seed an opaque session in local D1; production verification still reads its hash. */
 export async function seedSessionCookie(
   db: D1Database,
-  email: string,
-  options?: {
-    name?: string;
-    userId?: string;
-    expiresAtMs?: number;
-  },
+  label: string,
+  options?: { name?: string; userId?: string; expiresAtMs?: number },
 ): Promise<{ cookie: string; userId: string }> {
   const userId = options?.userId ?? crypto.randomUUID();
-  const token = crypto.randomUUID();
-  const now = Date.now();
-  const expiresAt = options?.expiresAtMs ?? now + 86_400_000;
-  const name = options?.name ?? "Test User";
-
+  const token = randomTestToken();
   await db
     .prepare(
-      'INSERT INTO "user" (id,name,email,emailVerified,createdAt,updatedAt) VALUES (?, ?, ?, 1, ?, ?)',
+      "INSERT INTO github_identities (github_id,user_id,name) VALUES (?,?,?)",
     )
-    .bind(userId, name, email, now, now)
+    .bind("test:" + label, userId, options?.name ?? "Test User")
     .run();
-
   await db
     .prepare(
-      "INSERT INTO session (id,expiresAt,token,createdAt,updatedAt,userId) VALUES (?, ?, ?, ?, ?, ?)",
+      "INSERT INTO cloud_sessions (token_hash,user_id,expires_at) VALUES (?,?,?)",
     )
-    .bind(crypto.randomUUID(), expiresAt, token, now, now, userId)
+    .bind(
+      await hashTestToken(token),
+      userId,
+      options?.expiresAtMs ?? Date.now() + 86_400_000,
+    )
     .run();
-
-  const cookie = (
-    await serializeSignedCookie(
-      "better-auth.session_token",
-      token,
-      TEST_AUTH_SECRET,
-      {
-        httpOnly: true,
-        sameSite: "lax",
-        path: "/",
-      },
-    )
-  ).split(";")[0];
-
-  return { cookie, userId };
+  return { cookie: `domino_session=${token}`, userId };
 }
 
 export type WorkerRequestOptions = {

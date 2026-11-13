@@ -1,35 +1,33 @@
-# GitHub sign-in setup and release checks
+# GitHub sign-in setup
 
-Current choice: **Better Auth 1.7.22 + GitHub OAuth + D1, Workers Free only**. The user approved this pivot after the password CPU check failed. The probe was deleted. The user has now separately approved and completed staging resource creation/migrations/deployment. No paid plan or production deployment is approved. See [current staging evidence](STAGING_VERIFICATION.md).
+Current implementation: a small custom GitHub OAuth flow on Workers with D1-backed opaque sessions. Better Auth, its CLI and signing secret are no longer used. No new authentication dependency is required.
 
-## OAuth application
+## GitHub OAuth app
 
-The repository/app owner registers an **OAuth App** at [GitHub Developer settings](https://github.com/settings/applications/new). This is for sign-in only; no repository or organization permissions are requested.
+Keep the existing GitHub OAuth app and client credentials. The callback path is unchanged:
 
-| Field | Value |
+| Environment | Callback |
 | --- | --- |
-| Application name | DominoOS |
-| Homepage | `https://domino-os.tasty-kiwi.workers.dev` |
-| Production callback | `https://domino-os.tasty-kiwi.workers.dev/api/auth/callback/github` |
-| Local callback | `http://localhost:5173/api/auth/callback/github` |
-| Prepared staging callback | `https://domino-os-staging.tasty-kiwi.workers.dev/api/auth/callback/github` |
-| Device flow | Off; unused |
+| Local | `http://localhost:5173/api/auth/callback/github` |
+| Approved staging | `https://domino-os-staging.tasty-kiwi.workers.dev/api/auth/callback/github` |
+| Future production | `https://domino-os.tasty-kiwi.workers.dev/api/auth/callback/github` |
 
-GitHub's current documentation supports additional callback URLs. Register only the environments actually being tested. Separate local/staging and production apps are preferable for credential isolation; if the dashboard supports only one callback, create separate apps. No custom domain is needed. [GitHub registration](https://docs.github.com/en/apps/oauth-apps/building-oauth-apps/creating-an-oauth-app), [Better Auth GitHub guide](https://better-auth.com/docs/authentication/github)
+Use a separate app for local/staging versus production where possible. Register only the callback being tested. No owned domain or device flow is needed. The Worker requests only `read:user`, exchanges the code with S256 PKCE, fetches the stable GitHub user ID and discards the GitHub access token. It does not request private email, repository or organization access. See GitHub's official [authorization-code flow](https://docs.github.com/en/apps/oauth-apps/building-oauth-apps/authorizing-oauth-apps).
 
-Supply the Client ID and Client Secret through secure input, one value per input. Never paste a secret into chat, source, a PR, a screenshot or a `VITE_` variable. The generated Better Auth session secret is separate from the GitHub Client Secret. The library requests only `read:user user:email`; it uses GitHub's stable provider account identity, while project ownership uses the internal session user ID. Do not add `repo` scope.
+## Configuration
 
-## Local development
+`AUTH_URL` is the canonical application origin in each Wrangler config. HTTPS is required except explicit HTTP loopback for local development. `CLOUD_ENABLED` and a D1 `DB` binding control cloud availability.
 
-Use ignored `.dev.vars` next to Wrangler configuration:
+Only two server secrets are required, supplied through ignored `.dev.vars` locally or Wrangler secrets remotely:
 
 ```dotenv
-BETTER_AUTH_SECRET=<generated high-entropy value, at least 32 characters>
-GITHUB_CLIENT_ID=<local OAuth app client ID>
-GITHUB_CLIENT_SECRET=<local OAuth app client secret>
+GITHUB_CLIENT_ID=<OAuth app client ID>
+GITHUB_CLIENT_SECRET=<OAuth app client secret>
 ```
 
-`wrangler.local.jsonc` already sets `CLOUD_ENABLED=true`, `BETTER_AUTH_URL=http://localhost:5173`, local-only DB, ASSETS and API routing. It must never be deployed. Run:
+Do not use `VITE_` variables, source, localStorage or logs for these values. `BETTER_AUTH_SECRET` is obsolete; an unused legacy value can be removed separately after migration. It is never read by the new runtime. There is no session signing key: cookies contain cryptographically random tokens, and D1 stores their SHA-256 hashes.
+
+## Local development
 
 ```sh
 npm ci
@@ -41,11 +39,19 @@ npm run dev
 npm run dev:api
 ```
 
-Open `http://localhost:5173`, enter the builder and use Sign in with GitHub. Vite forwards `/api` to local Wrangler on 8787; the browser and OAuth callback stay on 5173. A successful return to `/?builder=1` opens the builder and verifies `/api/me`; it does not automatically replace the current guest draft. A failed/declined login returns the builder with a plain error and preserves local work.
+Use `http://localhost:5173`; the Vite proxy forwards `/api` to Wrangler on 8787. A direct mutation with an incorrect Origin is rejected. GitHub returns to `/?builder=1`; the current local draft is preserved. After refresh, reopen a cloud project through My Projects.
 
-Without credentials, `npm run dev` continues to support the guest app. Do not put test credentials or an identity override in a deployed configuration.
+A failed public health probe offers Retry cloud connection without reloading or discarding local work. An explicit `cloudEnabled:false` hides cloud controls and does not offer retry. Guest editing and local autosave work without credentials.
 
-## Automated verification
+## Migrations and the auth transition
+
+Apply migrations in order; do not rewrite `0001_auth.sql` or `0002_projects.sql`.
+
+`0003_github_oauth.sql` creates the current identity/session/one-use OAuth-state/rate-limit tables and imports old GitHub account mappings with the **same internal owner IDs**. Identical legacy mappings are deduplicated; conflicting mappings abort rather than guessing. Existing project rows and workspace document IDs are untouched. Old auth tables remain as unused migration history, not a runtime dependency. No migration or schema generator runs during requests.
+
+Existing sessions must sign in again after this change; their old cookies are ignored. Successful sign-in with the previous Better Auth build is historical evidence and must be repeated for the custom flow.
+
+## Verification
 
 ```sh
 npm test
@@ -57,22 +63,18 @@ npm run deploy:check
 npm run test:e2e
 ```
 
-The Worker harness uses an isolated local D1 and explicit **test-only** OAuth/session secrets. It does not contact GitHub. Seeded database sessions exercise the real cookie verifier and owner queries. OAuth-start tests inspect the provider URL/state and reject forged callbacks, but do not prove a real code exchange. The browser suite includes UI API mocks and a separate built-Worker journey with real local D1, fresh browser contexts, matching exported workspaces/simulation, logout revocation and second-owner GET/PUT denial. See [implementation evidence](CLOUD_BACKEND_IMPLEMENTATION.md).
+OAuth tests mock only external GitHub HTTP responses and use actual local D1 for one-use state, PKCE, identity mapping, session hashes and revocation. Browser persistence tests seed opaque sessions only in isolated local D1 and exercise the production Worker without API interception. These are not live GitHub-provider proof.
 
-## Approved staging, then production
+## Approved staging and release boundary
 
-`wrangler.staging.jsonc` prepares the exact Worker name `domino-os-staging`, D1 name `domino-os-staging`, callback origin and secret requirements. The user approved staging creation, migrations, saved secrets and deployment on 13 November 2026. D1 `75faa40c-c80c-4fd6-ab27-6dc8f6cc66e4` was created in EEUR and both migrations applied. The staging configuration now contains that actual ID. Production deployment remains unapproved. Deployment results and remaining gates are recorded separately.
+Use existing `wrangler.staging.jsonc`, Worker `domino-os-staging` and D1 `75faa40c-c80c-4fd6-ab27-6dc8f6cc66e4`. The user approved staging resources, migrations and deployment. Before deploying the new runtime, review/apply migration 0003 on that isolated database:
 
-After approval: create the staging D1, bind its actual ID, apply the two reviewed migrations remotely, supply the secrets securely and deploy the built frontend/Worker using `--config wrangler.staging.jsonc`. No automatic provisioning, migration-on-request, or production-data tests. Query-string redaction is enabled in deployed observability config to avoid recording OAuth callback codes/state in request URLs.
+```sh
+npx wrangler d1 migrations apply DB --remote --config wrangler.staging.jsonc
+npm run build
+npx wrangler deploy --config wrangler.staging.jsonc
+```
 
-Production keeps the existing `domino-os` Worker name. Its checked-in config has cloud disabled and no DB binding until approved resource setup is complete. Configure a distinct production D1 ID, the exact production URL and production secrets; enable cloud only after staging passes. Branch previews explicitly disable cloud and remove the DB binding. Inspect the resolved preview deployment before upload to confirm isolation.
+Query-string redaction remains enabled so callback codes/state are not logged. Production `domino-os` and branch previews remain cloud-disabled with no production DB. Do not create production resources, merge the PR or activate production cloud without separate approval.
 
-## Live acceptance gates
-
-1. Real GitHub sign-in is user-verified: the user reported it worked during testing on 13 November 2026. Declined login, browser logout and old-cookie rejection remain live checks. Confirm Secure/HttpOnly/SameSite=Lax host-only production cookies. No OAuth codes, secrets or tokens in application logs/API responses.
-2. User A saves a workspace with nodes, positions, raw incomplete fields and named scenarios. Sign out, then reopen the project in a fresh browser with no shared localStorage.
-3. User B sees only B's projects. Direct GET/PUT of A's known ID returns 404, and A's project remains unchanged.
-4. Two saves from one version yield one success and one 409. Network failure, timeout, rejected size and sign-out during a request preserve local work and cannot apply stale results.
-5. Verify the public landing page, guest builder and deterministic simulator with auth unavailable, then repeat the existing regression suite.
-
-Record Worker version, database/migration state, the accounts/contexts used and results. The user's latest implementation instruction excludes new email-login and CPU work; historical findings remain in the staging record without a new performance claim. No production deployment or live two-account completion claim until separately authorized and verified.
+Live acceptance still requires fresh GitHub sign-in on this custom flow, save/reopen with scenarios in another browser, logout/old-cookie rejection, and GET/PUT denial from a second real GitHub account. Reliability/performance claims require real authenticated endpoint measurements; no new measurement is inferred from the SDK removal. Current deployment evidence is in [STAGING_VERIFICATION.md](STAGING_VERIFICATION.md).

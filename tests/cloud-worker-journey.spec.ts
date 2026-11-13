@@ -1,6 +1,6 @@
 import { test, expect, type BrowserContext, type Page } from "@playwright/test";
 import { createTestHarness } from "wrangler";
-import { serializeSignedCookie } from "better-call";
+import { randomTestToken, hashTestToken } from "../worker-tests/helpers";
 import { readFile } from "node:fs/promises";
 import { createCoreExample } from "../src/lib/builder/factories";
 import type { BuilderWorkspaceV1 } from "../src/lib/builder/types";
@@ -8,11 +8,9 @@ import type { BuilderWorkspaceV1 } from "../src/lib/builder/types";
 // This runs the built SPA and production Worker against isolated local D1.
 // Only session setup is synthetic: no API interception or deployed auth bypass.
 // It proves persistence/authorization through real cookies, not GitHub code exchange.
-const secret = "browser-test-only-signing-secret-with-at-least-32-characters";
 const workerOptions = {
   configPath: "./wrangler.local.jsonc",
   secrets: {
-    BETTER_AUTH_SECRET: secret,
     GITHUB_CLIENT_ID: "browser-test-client",
     GITHUB_CLIENT_SECRET: "browser-test-secret",
   },
@@ -27,7 +25,7 @@ test.beforeAll(async () => {
   origin = url.origin;
   // The real browser's Origin must match the configured canonical auth origin.
   await server.update({
-    workers: [{ ...workerOptions, vars: { BETTER_AUTH_URL: origin } }],
+    workers: [{ ...workerOptions, vars: { AUTH_URL: origin } }],
   });
   const worker = server.getWorker<Env>();
   await worker.applyD1Migrations("DB");
@@ -39,38 +37,29 @@ test.afterAll(async () => {
 });
 
 async function session(context: BrowserContext, userId: string) {
-  const now = Date.now();
   await db
     .prepare(
-      'INSERT OR IGNORE INTO "user" (id,name,email,emailVerified,createdAt,updatedAt) VALUES (?, ?, ?, 1, ?, ?)',
+      "INSERT OR IGNORE INTO github_identities (github_id,user_id,name) VALUES (?,?,?)",
     )
-    .bind(userId, userId, `${userId}@example.test`, now, now)
+    .bind("test:" + userId, userId, userId)
     .run();
-  const token = crypto.randomUUID();
+  const token = randomTestToken();
   await db
     .prepare(
-      "INSERT INTO session (id,expiresAt,token,createdAt,updatedAt,userId) VALUES (?, ?, ?, ?, ?, ?)",
+      "INSERT INTO cloud_sessions (token_hash,user_id,expires_at) VALUES (?,?,?)",
     )
-    .bind(crypto.randomUUID(), now + 86_400_000, token, now, now, userId)
+    .bind(await hashTestToken(token), userId, Date.now() + 86_400_000)
     .run();
-  const cookie = (
-    await serializeSignedCookie("better-auth.session_token", token, secret, {
-      httpOnly: true,
-      sameSite: "lax",
-      path: "/",
-    })
-  ).split(";")[0];
-  const separator = cookie.indexOf("=");
   await context.addCookies([
     {
-      name: cookie.slice(0, separator),
-      value: cookie.slice(separator + 1),
+      name: "domino_session",
+      value: token,
       url: origin,
       httpOnly: true,
       sameSite: "Lax",
     },
   ]);
-  return cookie;
+  return `domino_session=${token}`;
 }
 
 const builder = (page: Page) =>

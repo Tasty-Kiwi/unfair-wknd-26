@@ -6,6 +6,7 @@ import {
   CLOUD_MAX_WORKSPACE_BYTES,
   CLOUD_PROJECT_LIMIT,
   projectNameSchema,
+  type CloudHealthResponse,
   type CloudProject,
   type CloudUser,
   type ProjectMetadata,
@@ -194,6 +195,26 @@ export type CloudConflict = {
   updatedAt: string | null;
 };
 
+// "failed" covers timeouts, network errors and malformed health responses. Only
+// "failed" offers a retry. "disabled" is an explicit server answer and stays hidden.
+export type CloudAvailability = "checking" | "enabled" | "disabled" | "failed";
+
+type HealthRun = { controller: AbortController };
+
+// Removes the one-shot OAuth return flags from the address bar. The return intent is kept in a ref.
+function clearReturnFlags() {
+  const next = new URL(window.location.href);
+  if (
+    !next.searchParams.has("authError") &&
+    !next.searchParams.has("builder")
+  ) {
+    return;
+  }
+  next.searchParams.delete("authError");
+  next.searchParams.delete("builder");
+  window.history.replaceState(window.history.state, "", next.toString());
+}
+
 export function useBuilderCloud({
   host,
   workspace,
@@ -208,7 +229,12 @@ export function useBuilderCloud({
 
   const [session, setSession] = useState<CloudSession>({ kind: "unknown" });
   // Fail closed for cloud UI until the public configuration check succeeds.
-  const [cloudAvailable, setCloudAvailable] = useState(false);
+  const [availability, setAvailability] =
+    useState<CloudAvailability>("checking");
+  // The one in-flight health probe. Its identity decides whether a completion is current.
+  const healthRunRef = useRef<HealthRun | null>(null);
+  // An OAuth return whose signed-in check has not run yet. Survives a failed probe so Retry can run it.
+  const returnPendingRef = useRef(false);
   const [binding, setBinding] = useState<CloudBinding | null>(null);
   const bindingRef = useRef<CloudBinding | null>(null);
   const [save, setSave] = useState<CloudSaveState>({ kind: "idle" });
@@ -714,20 +740,64 @@ export function useBuilderCloud({
     leaveCloud("Switched to your device draft.");
   }
 
-  // Probe public availability on builder mount. Session/project endpoints are
-  // untouched until cloud is configured; guest editing never waits for this.
+  // Probes public availability. Runs on mount and on Retry. Only one probe is in
+  // flight at a time, and a probe that was superseded or unmounted cannot write state.
+  // Session/project endpoints are untouched until cloud is configured; guest editing
+  // never waits for this. Health does not use the op lock, so an unrelated cloud
+  // action or epoch change cannot strand the availability state at "checking".
+  function checkAvailability() {
+    if (healthRunRef.current) return;
+    const run: HealthRun = { controller: new AbortController() };
+    healthRunRef.current = run;
+    const isLatest = () => healthRunRef.current === run;
+    setAvailability("checking");
+    void (async () => {
+      try {
+        let health: CloudHealthResponse;
+        try {
+          health = await client.health(run.controller.signal);
+        } catch {
+          if (isLatest()) {
+            setAvailability("failed");
+            clearReturnFlags();
+          }
+          return;
+        }
+        if (!isLatest()) return;
+        clearReturnFlags();
+        if (!health.cloudEnabled) {
+          returnPendingRef.current = false;
+          setAvailability("disabled");
+          return;
+        }
+        setAvailability("enabled");
+        if (returnPendingRef.current) {
+          returnPendingRef.current = false;
+          // Same owner and session rules as Open and Save. Uses this run's signal.
+          const token: Token = {
+            controller: run.controller,
+            epoch: epochRef.current,
+            kind: "availability",
+          };
+          const user = await ensureUser(token);
+          if (!isLatest()) return;
+          if (user && user !== "signed-out") {
+            setMessage(`Signed in as ${user.name}.`);
+          }
+        }
+      } finally {
+        // Held through the return check, so Retry cannot overlap it.
+        if (isLatest()) healthRunRef.current = null;
+      }
+    })();
+  }
+
+  // Probe public availability on builder mount.
   useEffect(() => {
     const url = new URL(window.location.href);
     const authError = url.searchParams.get("authError") === "1";
-    const returned = url.searchParams.get("builder") === "1";
-    // The return flags are removed only after the check finishes. A StrictMode
-    // remount then still sees them and repeats the check, instead of losing it.
-    const clearFlags = () => {
-      const next = new URL(window.location.href);
-      next.searchParams.delete("authError");
-      next.searchParams.delete("builder");
-      window.history.replaceState(window.history.state, "", next.toString());
-    };
+    if (url.searchParams.get("builder") === "1")
+      returnPendingRef.current = true;
     if (authError) {
       setMessage(
         "GitHub sign-in did not finish. Your work on this device is unchanged.",
@@ -736,38 +806,20 @@ export function useBuilderCloud({
       next.searchParams.delete("authError");
       window.history.replaceState(window.history.state, "", next.toString());
     }
-    const token = beginOp("availability");
-    if (token) {
-      void (async () => {
-        try {
-          const health = await client.health(token.controller.signal);
-          if (!isCurrent(token)) return;
-          setCloudAvailable(health.cloudEnabled);
-          if (health.cloudEnabled && returned) {
-            const user = await ensureUser(token);
-            if (!isCurrent(token)) return;
-            if (user && user !== "signed-out") {
-              setMessage(`Signed in as ${user.name}.`);
-            }
-          }
-          if (returned) clearFlags();
-        } catch {
-          if (!isCurrent(token)) return;
-          setCloudAvailable(false);
-          if (returned) clearFlags();
-        } finally {
-          endOp(token);
-        }
-      })();
-    }
-    return () => invalidate();
+    checkAvailability();
+    return () => {
+      healthRunRef.current?.controller.abort();
+      healthRunRef.current = null;
+      invalidate();
+    };
     // Runs once per mount. Callbacks read refs, so stale closures are not a risk.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return {
     draftKey: slotKeyOf(binding),
-    cloudAvailable,
+    cloudAvailable: availability === "enabled",
+    availability,
     session,
     binding,
     dirty,
@@ -798,6 +850,8 @@ export function useBuilderCloud({
       },
       keepLocal: () => setConflict(null),
       switchToDeviceDraft,
+      // Rechecks public health only. Never replaces or opens a project.
+      retryCloudConnection: () => checkAvailability(),
     },
   };
 }

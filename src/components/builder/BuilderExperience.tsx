@@ -579,6 +579,22 @@ export function BuilderExperience({ onClose }: { onClose: () => void }) {
         </span>
       </nav>
 
+      {cloud.availability === "failed" && (
+        <div className="flex flex-wrap items-center gap-2 pb-3">
+          <span className="text-sm">
+            Cloud is unavailable right now. Your work on this device is
+            unchanged.
+          </span>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={cloud.actions.retryCloudConnection}
+          >
+            Retry cloud connection
+          </Button>
+        </div>
+      )}
+
       {cloud.cloudAvailable && (
         <section
           className="flex flex-wrap items-center gap-2 pb-3"

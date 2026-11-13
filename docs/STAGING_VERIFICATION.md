@@ -8,13 +8,25 @@
 - Account: Tasty Kiwi, `74f486ac4925bc5b7ccaa9fcf865170e`.
 - Worker: `domino-os-staging`.
 - D1: `domino-os-staging`, ID `75faa40c-c80c-4fd6-ab27-6dc8f6cc66e4`, EEUR.
-- Migrations applied remotely: `0001_auth.sql`, `0002_projects.sql`.
-- Current Worker version: `53a398e6-45e7-4156-a148-02d0064c2b41`.
+- Migrations applied remotely: `0001_auth.sql`, `0002_projects.sql`, `0003_github_oauth.sql`.
+- Current Worker version: `b9f1793f-e14f-454e-8d37-a93463b01750`.
 - Config: `wrangler.staging.jsonc`; minification enabled, version preview URLs disabled, query-string redaction and logs/traces enabled.
-- Exact Better Auth version: 1.7.22. The earlier startup experiment used `feat/cloud-projects` (implementation `7756bc1`, main integration `ce8568a`, startup change `7d00402`). These commits returned to PR #5's original `plan/cloud-backend` branch. The current staging upload was built there after the new three-round implementation discussion and integration of all three agents' changes. Production is unchanged.
-- GitHub Client ID/Secret and generated session secret were uploaded from an ignored, mode-0600 JSON file. Values were not printed or committed.
+- Current auth: custom GitHub OAuth with opaque D1-backed sessions, no auth SDK/signing secret. AUTH_URL replaces BETTER_AUTH_URL. Previous SDK versions/deployments below are historical. Runtime/dependency/probe/generator code was removed; applied migration history is retained.
+- GitHub credentials were originally uploaded from an ignored, mode-0600 JSON file. The previous signing secret, if still stored, is unused by the new runtime. Values were not printed or committed.
 
 The first full upload returned Cloudflare HTTP 500/code 10013. A retry encountered a transient local DNS/connectivity failure. A minimal SELECT 1 handler deployed successfully under the same staging name; it exposed no user/project data. The minified full app then deployed and replaced it. This sequence does not establish the exact cause of the initial upload failure.
+
+## Current custom OAuth deployment
+
+The user explicitly requested replacing Better Auth and fixing transient health recovery. The additive migration 0003 and new Worker were deployed only to the existing approved staging resources. No new remote resource, production secret, production data write, paid upgrade or merge was made.
+
+Before migration: zero conflicting GitHub mappings and zero cloud projects. After migration: zero missing legacy mappings and the project count remained zero. The new tables preserve old internal owner IDs; old auth sessions must sign in again. No old table or project row was dropped.
+
+Current local checks: **102 unit tests, 40 Worker/runtime tests, 44 Chromium journeys**, Worker/test-source typechecks, build and dry run pass. The provider success/error/state/PKCE/session/migration tests use external GitHub HTTP mocks with real local D1. The built-Worker fresh-browser persistence/privacy test now uses opaque local test sessions and the actual production verifier. Neither claims a live GitHub code exchange.
+
+All nine remote routing/anonymous/OAuth-start checks passed on `b9f1793f-e14f-454e-8d37-a93463b01750`: cloud enabled, anonymous me/projects 401, unknown API JSON 404, fixed GitHub callback with state/S256/read:user, Secure/HttpOnly/Lax/host-only state cookie, forged callback safely rejected. Production deployment/version were compared and unchanged. No fresh authenticated endpoint CPU measurement or live two-account test was made.
+
+Failed/malformed/timed-out health now offers Retry cloud connection in place; explicitly disabled cloud remains hidden. Retry and OAuth-return recovery are covered by four new browser tests.
 
 ## Confirmed remote HTTP behavior
 
@@ -28,7 +40,7 @@ On the complete app:
 | `/api/projects` without session | 401 JSON |
 | Bare `/api`, unknown `/api/nope` with navigation headers | 404 JSON; no SPA fallback |
 | GitHub OAuth start | 200, correct provider URL, configured client ID and exact staging callback |
-| OAuth protections | Random state and S256 PKCE present; scopes only `read:user user:email` |
+| OAuth protections | Random state and S256 PKCE present; scope only `read:user` |
 | OAuth state cookie | Secure, HttpOnly, SameSite=Lax, host-only |
 | Forged callback state/code | 302 to the safe error return; no authenticated session |
 | Deployed bindings/settings | Only staging DB ID; expected secret names; query-string redaction enabled |
@@ -37,9 +49,9 @@ Python's default user agent was rejected by Cloudflare with 403/1010 before the 
 
 Production deployment `a5917882-a7d7-4ea1-9418-524455dcad8d`, version `c438a69d-1282-4954-a93f-10c29aee3e60`, was read before and after and remains identical. No production bindings, data, code or billing were changed.
 
-## Current implementation verification
+## Earlier SDK implementation verification
 
-The latest approved staging upload contains canonical auth-origin validation, confirmed Open cloud version recovery and rate-limit feedback. No migration, new remote resource, secret change, production deployment or billing change was needed. Its nine routing/OAuth-start smoke checks passed, including exact callback/state/PKCE/cookie assertions and forged-state rejection. Production deployment/version were compared and unchanged again.
+At the earlier SDK checkpoint, the approved staging upload contained canonical auth-origin validation, confirmed Open cloud version recovery and rate-limit feedback. No migration, new remote resource, secret change, production deployment or billing change was needed. Its nine routing/OAuth-start smoke checks passed, including exact callback/state/PKCE/cookie assertions and forged-state rejection. Production deployment/version were compared and unchanged again.
 
 The integrated source passed **97 unit tests, 28 Worker/runtime tests, 39 Chromium journeys, Worker and test-source typechecks, build and deployment dry run**. The new browser journey uses built ASSETS, the production Worker, real isolated local D1 and test-only signed database sessions, without API interception. It proves save, logout/revocation, fresh-browser reopen of the exact workspace/scenarios, matching simulation output, update and second-owner GET/PUT denial. It does not claim two real GitHub accounts were authenticated.
 
@@ -65,16 +77,16 @@ The first GraphQL reads for exact sub-minute timestamps returned no samples. A m
 
 Independent post-main verification by Luna also passed **12 Worker tests**, **32 Chromium journeys** and the production-config dry run before the startup-only change. It found no material owner-check, CAS or stale-response issue. These checks used local runtime/seeded sessions and browser API mocks, not real GitHub authorization.
 
-## User-reported browser verification
+## Historical user-reported browser verification
 
-On 13 November 2026, the user reported: “When I was testing, GitHub sign-in did work.” Record real GitHub sign-in as **user-verified**, separately from the automated OAuth-start and seeded-session tests above. The report did not specify the tested build/version; it does not by itself verify logout, cross-browser workspace restoration, second-account isolation or request CPU reliability.
+On 13 November 2026, the user reported: “When I was testing, GitHub sign-in did work.” That sign-in used the previous SDK flow. It remains historical user evidence; the new custom OAuth flow requires fresh real-provider verification. The report did not specify the tested build/version; it does not by itself verify logout, cross-browser workspace restoration, second-account isolation or request CPU reliability.
 
 ## Still required
 
-- Live staging browser logout and old-session rejection; local revocation passes and real GitHub sign-in is user-verified as recorded above.
-- Live staging project create/list/open/update with scenarios, then reopen in a fresh browser; the built-Worker/local-D1 version of this journey passes.
-- Live two-account owner isolation if two real accounts are available.
-- CPU measurements for the real callback and authenticated project paths, including cold requests and a representative size boundary.
-- Production rollout remains unapproved. No new performance benchmark is claimed; historical observations above were excluded from the latest implementation task by the user.
+- Fresh real GitHub sign-in on the custom implementation, browser logout and old-session rejection.
+- Live staging save/list/open/update with scenarios, then reopen in another browser.
+- Live two-real-account GET/PUT privacy checks and unchanged original data.
+- Actual authenticated endpoint reliability measurements before making a performance claim.
+- Separate authorization/configuration before any production rollout.
 
-Local regression evidence before deployment: 91 unit tests, 12 Worker/runtime tests, 32 Chromium journeys, Worker typecheck/build/dry-runs. The backend initialization optimization was followed by typecheck and the affected 12 runtime tests. Browser API mocks and seeded sessions do not prove real GitHub identity.
+Older SDK measurements and test counts above are historical, not results for this replacement. Current architecture, migration and test evidence are in [CLOUD_BACKEND_IMPLEMENTATION.md](CLOUD_BACKEND_IMPLEMENTATION.md).

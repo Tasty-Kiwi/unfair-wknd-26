@@ -17,11 +17,10 @@
   },
   "vars": {
     "CLOUD_ENABLED": "true",
-    "BETTER_AUTH_URL": "https://domino-os-staging.tasty-kiwi.workers.dev",
+    "AUTH_URL": "https://domino-os-staging.tasty-kiwi.workers.dev",
   },
   "secrets": {
     "required": [
-      "BETTER_AUTH_SECRET",
       "GITHUB_CLIENT_ID",
       "GITHUB_CLIENT_SECRET",
     ],

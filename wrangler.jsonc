@@ -8,7 +8,7 @@
   // Cloud remains disabled until approved D1 and GitHub setup is complete.
   "vars": {
     "CLOUD_ENABLED": "false",
-    "BETTER_AUTH_URL": "https://domino-os.tasty-kiwi.workers.dev",
+    "AUTH_URL": "https://domino-os.tasty-kiwi.workers.dev",
   },
   // Branch builds run `wrangler preview`; static assets use the top-level settings.
   "previews": { "vars": { "CLOUD_ENABLED": "false" }, "d1_databases": [] },

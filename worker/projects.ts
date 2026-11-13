@@ -187,7 +187,7 @@ function sanitizeAuthCallbackResponse(
   response: Response,
   env: CloudApiEnv,
 ): Response {
-  const trustedOrigin = new URL(env.BETTER_AUTH_URL ?? "").origin;
+  const trustedOrigin = new URL(env.AUTH_URL ?? "").origin;
 
   if (response.status >= 300 && response.status < 400) {
     const location = response.headers.get("Location");
