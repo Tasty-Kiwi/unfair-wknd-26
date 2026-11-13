@@ -46,6 +46,7 @@ import { SupplyGraph, type Selection } from "@/components/graph/SupplyGraph";
 import { ScenarioPanel } from "@/components/scenarios/ScenarioPanel";
 import { ImpactPanel } from "@/components/scenarios/ImpactPanel";
 import type { Scenario } from "@/lib/types";
+import { ThemeToggle } from "@/components/theme/ThemeToggle";
 import "./experience.css";
 
 const BASELINE: Scenario = {
@@ -516,9 +517,12 @@ export function BuilderExperience({ onClose }: { onClose: () => void }) {
           <h1>{workspace.document.name || "Build a network"}</h1>
           <p>Build your material plan, then test a named disruption.</p>
         </div>
-        <Button variant="outline" onClick={close}>
-          <ArrowLeft data-icon="inline-start" /> Back to Simulate
-        </Button>
+        <div className="builder-experience__header-actions">
+          <ThemeToggle />
+          <Button variant="outline" onClick={close}>
+            <ArrowLeft data-icon="inline-start" /> Back to Simulate
+          </Button>
+        </div>
       </header>
 
       <nav

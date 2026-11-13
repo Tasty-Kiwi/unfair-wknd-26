@@ -6,6 +6,9 @@ import "@fontsource/ibm-plex-sans/latin-600.css";
 import "@fontsource/ibm-plex-sans-condensed/latin-500.css";
 import "@fontsource/ibm-plex-sans-condensed/latin-600.css";
 import "./index.css";
+import { initTheme } from "./lib/theme";
+
+initTheme();
 const App = React.lazy(() => import("./App"));
 const LandingPage = React.lazy(() => import("./landing/LandingPage"));
 const isLanding = window.location.pathname.replace(/\/$/, "") === "/landing";

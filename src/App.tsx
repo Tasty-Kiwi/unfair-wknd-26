@@ -53,6 +53,7 @@ import { ScenarioPanel } from "@/components/scenarios/ScenarioPanel";
 import { ImpactPanel } from "@/components/scenarios/ImpactPanel";
 import "@/components/scenarios/panels.css";
 import { BuilderExperience } from "@/components/builder/BuilderExperience";
+import { ThemeToggle } from "@/components/theme/ThemeToggle";
 
 const money = (n: number) =>
   new Intl.NumberFormat("en-IE", {
@@ -451,6 +452,7 @@ export default function App() {
             <RotateCcw data-icon="inline-start" />
             Reset demo
           </Button>
+          <ThemeToggle />
         </div>
       </header>
       <div className="scenario-strip">

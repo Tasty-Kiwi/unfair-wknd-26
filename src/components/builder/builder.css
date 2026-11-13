@@ -313,6 +313,27 @@
   --kind-ink: #873a5a;
 }
 
+:root.dark .builder-node--supplier {
+  --kind-fill: #2e2718;
+  --kind-ink: #d9b56e;
+}
+:root.dark .builder-node--component {
+  --kind-fill: #182b24;
+  --kind-ink: #6fc9a6;
+}
+:root.dark .builder-node--receipt {
+  --kind-fill: #251f33;
+  --kind-ink: #b5a0e0;
+}
+:root.dark .builder-node--product {
+  --kind-fill: #1a2633;
+  --kind-ink: #8db8de;
+}
+:root.dark .builder-node--order {
+  --kind-fill: #33202a;
+  --kind-ink: #e49ab9;
+}
+
 .builder-node[class*="builder-node--"] {
   background: var(--kind-fill, var(--sheet));
   border-color: var(--kind-ink, var(--ink));

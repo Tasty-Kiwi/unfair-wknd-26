@@ -53,11 +53,12 @@ export const RELATIONSHIP_LABELS: Record<RelationshipKind, string> = {
  * reserved for problems and selection.
  */
 export const RELATIONSHIP_COLORS: Record<RelationshipKind, string> = {
-  primarySupplier: "#1f7a6d", // teal
-  receiptSupplier: "#a8740c", // ochre
-  receiptComponent: "#7a4fa0", // violet
-  bom: "#4d7a1f", // olive
-  orderedProduct: "#a23b72", // magenta
+  // Values live in index.css so each theme can tune them.
+  primarySupplier: "var(--rel-primary-supplier)", // teal
+  receiptSupplier: "var(--rel-receipt-supplier)", // ochre
+  receiptComponent: "var(--rel-receipt-component)", // violet
+  bom: "var(--rel-bom)", // olive
+  orderedProduct: "var(--rel-ordered-product)", // magenta
 };
 
 /** Plain-language arrow for each relationship, used in the connection form. */

@@ -15,6 +15,7 @@ import { Factory, Box, Cog, ClipboardList, Focus } from "lucide-react";
 import type { Dataset, SimulationResult, Scenario } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { ReceiptTimeline } from "./ReceiptTimeline";
+import { useTheme } from "@/lib/theme";
 import "@xyflow/react/dist/style.css";
 
 export type Selection = {
@@ -128,6 +129,7 @@ function GraphInner({
 }) {
   const narrow = useNarrow();
   const [full, setFull] = useState(false);
+  const theme = useTheme();
   const [componentFocus, setComponentFocus] = useState("MTR-01");
   const focused = data.components.some((c) => c.id === componentFocus)
     ? componentFocus
@@ -438,7 +440,7 @@ function GraphInner({
               minZoom={0.15}
               maxZoom={1.5}
               proOptions={{ hideAttribution: true }}
-              colorMode="light"
+              colorMode={theme}
             >
               <Controls showInteractive={false} />
               <FitOnChange signature={`${full}-${focused}-${data.name}`} />

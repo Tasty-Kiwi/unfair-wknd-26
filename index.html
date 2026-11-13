@@ -27,6 +27,20 @@
       }
     </script>
     <title>DominoOS — material availability what-if</title>
+    <script>
+      // Set the theme before first paint so dark mode never flashes light.
+      (function () {
+        // /landing applies the same preference itself.
+        if (location.pathname.replace(/\/$/, "") === "/landing") return;
+        try {
+          var t = localStorage.getItem("dominoos.landing.theme.v2");
+          if (t !== "light" && t !== "dark")
+            t = matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+          if (t === "dark") document.documentElement.classList.add("dark");
+          document.documentElement.style.colorScheme = t;
+        } catch (e) {}
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>
