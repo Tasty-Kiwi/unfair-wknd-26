@@ -1,0 +1,33 @@
+// Local development only. Never deploy this configuration or its placeholder DB ID.
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "domino-os-local",
+  "main": "worker/index.ts",
+  "compatibility_date": "2026-11-12",
+  "assets": {
+    "directory": "./dist",
+    "binding": "ASSETS",
+    "not_found_handling": "single-page-application",
+    "run_worker_first": ["/api", "/api/*"],
+  },
+  "vars": {
+    "CLOUD_ENABLED": "true",
+    "BETTER_AUTH_URL": "http://localhost:5173",
+  },
+  "secrets": {
+    "required": [
+      "BETTER_AUTH_SECRET",
+      "GITHUB_CLIENT_ID",
+      "GITHUB_CLIENT_SECRET",
+    ],
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "domino-os-local",
+      "database_id": "00000000-0000-0000-0000-000000000001",
+      "migrations_dir": "migrations",
+      "remote": false,
+    },
+  ],
+}

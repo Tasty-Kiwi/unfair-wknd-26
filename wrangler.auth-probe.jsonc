@@ -1,0 +1,16 @@
+// Isolated feasibility probe. Explicit approval required before deployment.
+// No D1 bindings, assets, accounts, or project data.
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "domino-os-auth-cpu-check",
+  "account_id": "74f486ac4925bc5b7ccaa9fcf865170e",
+  "main": "worker/auth-cpu-probe.ts",
+  "compatibility_date": "2026-11-12",
+  "workers_dev": true,
+  "secrets": { "required": ["AUTH_PROBE_SECRET"] },
+  "observability": {
+    "enabled": true,
+    "traces": { "enabled": true },
+    "head_sampling_rate": 1
+  }
+}

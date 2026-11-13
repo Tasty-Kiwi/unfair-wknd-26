@@ -90,7 +90,17 @@ Use **Import data**. Downloadable example JSON and CSV are available in the impo
 
 - Dates must be real ISO calendar dates, `YYYY-MM-DD`, on or after `asOf`. Counts must be nonnegative integers; BOM and order quantities must be positive. References, duplicate IDs, approval and product scope are checked using Zod plus semantic validation.
 - Each file is limited to 2 MB (one JSON or up to five CSVs). A rejected file leaves the current data and scenario unchanged. Imported plans get illustrative six-day disruption and recovery presets derived from their first receipt; these do not guarantee that a particular imported order will be affected or recovered.
-- This original JSON/CSV import path keeps state in browser memory; refresh resets it. Export a report if you need a record. Builder workspace persistence is separate. Nothing is uploaded or persisted on a server.
+- This original JSON/CSV import path keeps state in browser memory; refresh resets it. Export a report if you need a record. It does not upload data. Builder workspace persistence is separate; signed-in users can explicitly save builder workspaces to cloud when cloud features are configured.
+
+## Optional cloud projects
+
+Cloud projects use Better Auth **GitHub sign-in**, a same-origin Worker API and D1. Email/password sign-in is disabled. The public demo and guest builder remain available without authentication; local autosave and JSON import/export continue to work.
+
+In the builder, use Sign in with GitHub, My projects, Save to cloud and Open. Cloud saves are explicit and version-checked. A conflict keeps the device copy and offers Save as new project. Each account can keep 20 projects and create at most 5 per minute; a cloud workspace is limited to 1,000,000 UTF-8 bytes.
+
+For local development, follow [GitHub setup](docs/GITHUB_AUTH_SETUP.md), apply the local migrations, and run `npm run dev` alongside `npm run dev:api`. Credentials belong in ignored `.dev.vars`, never `VITE_` variables. Guest development works without credentials. `npm run auth:generate` writes a candidate schema to ignored `.tmp/auth-schema.sql`; review it and create a new migration rather than overwriting applied migration history.
+
+The checked-in production and branch-preview configurations keep cloud disabled. The separately approved staging deployment is described in [staging verification](docs/STAGING_VERIFICATION.md). Real GitHub login, authenticated cross-browser saving and Free-plan CPU reliability are still release gates; this implementation is not production-approved.
 
 ## Model and limits
 

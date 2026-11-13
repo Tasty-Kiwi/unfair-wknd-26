@@ -1269,3 +1269,25 @@ Keep existing **84 unit, 26 browser, `npm run build`, and `wrangler deploy --dry
 </details>
 
 
+
+
+## Implementation follow-up — GitHub pivot, 13 November 2026
+
+This is subsequent implementation evidence and user direction, not an additional invented discussion round or retrospective consensus.
+
+The user approved local implementation with Gemini 4 Hydrogen on architecture, Claude Haiku 5.5 on design and GPT-6 Luna on verification/gluing. The account is Workers Free. An explicitly approved isolated password probe made four synthetic requests, reported aggregate CPU p50 73.110 ms and p99 89.517 ms (including an unauthorized control), and was deleted with settings API 404 confirmation. These measurements fail the 10 ms password feasibility gate. They do not measure full D1-backed login. [Probe record](AUTH_CPU_CHECK.md)
+
+The user then said “No, we have to stay on free” and “If email and password doesn't work, let's just do GitHub auth then.” This explicitly authorizes Better Auth GitHub OAuth, retaining D1 sessions/projects, and supersedes the earlier email/password decision. No paid upgrade or silent provider substitution occurred.
+
+Implementation tasks, actual contributions:
+
+- Provider `antigravity`, configured `gemini-4-hydrogen`, separate executed-model field unavailable: implemented OAuth configuration and exact auth routes in four Worker files; did not execute commands/tests. Task suffix `631657e4-542d-444b-ae15-c60b2074e826`.
+- Provider `claudeAgent`, configured/executed `claude-haiku-5-5`: frontend implementation task in progress at this entry. Task suffix `887c6e3e-ceb6-403a-b955-dab3d77a38af`. Completion and evidence must be recorded separately.
+- Provider `codex`, configured/executed `gpt-6-luna`: initial verification task `eda84cca-a8c1-42a3-a408-05702c9319bb` made no edits and ran no tests, reporting that it had not found the auth implementation in `src`; actual auth lives under `worker/`. The coordinator adapted and executed the real local integration tests. Do not attribute those test results to Luna.
+- Earlier independent CPU evidence review `78480e45-2593-40cb-8fd1-ec7d4ea6cf8c`, configured/executed `gpt-6-luna`, agreed the aggregate failed the Free gate, while retaining sample and missing full-D1-auth limitations; read-only, no cloud/test execution.
+
+The current plan/runbook records GitHub setup, Free-only deployment gates and remaining real-provider verification. No remote D1 or further Worker deployment is approved by these task assignments.
+
+Verification follow-up: provider `codex`, configured/executed `gpt-6-luna`, task `7870ab4f-d3f3-42d3-8618-f25933a8f0b4`, reviewed the current source read-only and found no critical issue. It executed 91 unit tests, Worker typecheck, frontend build and deployment dry-run successfully. Its Worker and browser commands were blocked by sandbox `listen EPERM`; skipped tests from that attempt are not passing evidence. The coordinator reran those commands with local-port permission: **12 Worker/runtime tests and all 31 Chromium journeys passed** (26 existing + 5 new mocked-cloud journeys). Real GitHub code exchange and deployed CPU remain unverified.
+
+Frontend completion: Haiku task `887c6e3e-ceb6-403a-b955-dab3d77a38af` completed with the GitHub-only controls, project dialogs/client/state hook, scoped local storage and seven unit tests. It ran the build and 91 unit tests, not Playwright. The coordinator reviewed its added Input primitive, fixed remaining unload/autosave/sign-out guards, and reran the final checks. Final local evidence is **91 unit tests, 12 Worker/runtime tests, all 32 Chromium journeys (26 existing + 6 cloud mocked-API journeys), Worker typecheck, build and dry-runs**. Real provider authentication and remote CPU are still pending.

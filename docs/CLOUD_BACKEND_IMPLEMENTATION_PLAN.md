@@ -1,6 +1,10 @@
 # DominoOS cloud backend implementation plan
 
-Status: **PLAN ONLY — implementation awaits approval.** Prepared 13 November 2026 after the required independent proposals, cross-examination, revised proposals, and an additional review of the user's email/password pivot. See [the discussion record](CLOUD_BACKEND_DESIGN_DEBATE.md).
+Status: **Staging deployed; real GitHub/project acceptance and Free CPU tail remain under verification.** The email/password CPU gate failed; the approved isolated probe was deleted and cleanup confirmed. The user then explicitly chose GitHub authentication. Better Auth now disables password endpoints and uses GitHub OAuth with database-backed sessions. Local verification: 91 unit tests, 12 Worker/runtime tests and 32 Chromium journeys pass; typecheck/build/dry-run pass. Remote D1 creation/migrations and unauthenticated API/OAuth-start checks are verified. Real GitHub code exchange, authenticated cross-browser saving, live second-account isolation and the Free-plan CPU gate remain unverified. [CPU evidence](AUTH_CPU_CHECK.md), [GitHub setup/runbook](GITHUB_AUTH_SETUP.md). The original discussion remains historical in [the discussion record](CLOUD_BACKEND_DESIGN_DEBATE.md).
+
+Review changes: pin Better Auth and its CLI to **1.7.22**; check the actual account plan before project UI work; cap each account at **20 projects**, with at most **5 successful creations per minute**; keep the interface to Sign in, My Projects, Save to Cloud and Open Project, plus Sign out. GitHub handles account registration and recovery; DominoOS has no password form. Conflicts offer only Keep working locally and Save as new project. Estimates are not acceptance gates.
+
+The user requested this implementation split: **Gemini 4 Hydrogen — backend architecture; Claude Haiku 5.5 — simple UI design; GPT-6 Luna — verification and integration.** The coordinator owns shared configuration, dependencies and the feasibility/release gates. No repeat of the architecture debate is needed.
 
 Deadline: **14 November 2026, 20:00 Europe/Vilnius (18:00 UTC)**.
 
@@ -8,19 +12,19 @@ Acceptance: a user signs in, saves a supply-chain project to Cloudflare, and ope
 
 ## 1. Decision and approval boundary
 
-Choose **Better Auth email/password authentication, database-backed sessions, and Cloudflare D1**, served by the existing `domino-os` Worker alongside its Vite assets. Keep local autosave and add explicit cloud create/list/open/update with optimistic concurrency. Simulation remains entirely in the browser.
+Choose **Better Auth GitHub OAuth authentication, database-backed sessions, and Cloudflare D1**, served by the existing `domino-os` Worker alongside its Vite assets. Keep local autosave and add explicit cloud create/list/open/update with optimistic concurrency. Simulation remains entirely in the browser.
 
-This supersedes the original Clerk preference and the discussion's intermediate GitHub OAuth recommendation. The user confirmed that only the existing `workers.dev` URL is available, asked about Better Auth and email/password, and explicitly chose to defer email verification and password reset until after the hackathon. No OAuth apps, Clerk instance, SMTP provider, or owned domain are required by the selected P0.
+This supersedes Clerk and the later email/password proposal. Only `workers.dev` is available and the user requires Workers Free. The default password path measured well above Free's 10 ms budget. The user's later instruction, “If email and password doesn't work, let's just do GitHub auth then,” authorizes this provider pivot. No owned domain, password form, password hashing or email service is required. A GitHub OAuth application and its server credentials are required.
 
-Better Auth is a self-hosted authentication library. Its maintained hashing, session, cookie and CSRF implementation replaces neither with handwritten equivalents. We take responsibility for its configuration, migrations, runtime compatibility and updates. All three models conditionally accepted this change; none established that hashing fits this account's Worker CPU allowance.
+Better Auth manages OAuth state, code exchange, sessions, cookies and CSRF checks. Project ownership remains the stable internal `session.user.id`; GitHub email is not an authorization key. Account linking is disabled. Simulation remains in the browser.
 
-**Hard gate:** benchmark the pinned library's actual bundled signup/login/wrong-password paths on an approved staging Worker in the actual Cloudflare account. Do not lower hashing security, introduce a production bypass, silently buy a plan, or switch providers if the gate fails. Stop and report the blocker. Keeping the public demo operational is a fallback, not completion of cloud-project acceptance.
+**Hard gate:** prove real GitHub login/logout, private project save/load, cookies, and deployed CPU on an explicitly approved isolated Worker/D1 setup in this Free account. Removing password hashing removes the measured bottleneck; it does not establish that all OAuth/project request paths fit 10 ms. No paid upgrade, auth bypass, weakened hashing or further provider switch without user direction. The public demo remaining available is not completion of cloud-project acceptance.
 
-Approval of this document authorizes only the work explicitly approved next. Creating databases, setting deployed secrets, applying remote migrations, pushing/merging a deployment-triggering branch, and deploying require their own applicable authorization. No such operations were performed for this plan.
+Approval of this document authorizes only the work explicitly approved next. Creating databases, setting deployed secrets, applying remote migrations, pushing/merging a deployment-triggering branch, and deploying require their own applicable authorization. The later user approval covered only the isolated CPU probe, its generated secret, telemetry reads and deletion; those operations are complete. The user subsequently approved staging creation, migrations, secrets and deployment; these have now been performed for `domino-os-staging` only. Production remains unchanged and unapproved. See [staging evidence](STAGING_VERIFICATION.md).
 
 ## 2. Verified repository assessment
 
-Remote `main`, local `main`, and the initial `origin/main` ref were verified at `0d7f2130251889871217ddddb6b0986f1855ebec`. The planning branch is `plan/cloud-backend`; it was created before any file edits. The working tree was clean initially. No `AGENTS.md` was found in the repository inventory.
+Remote `main`, local `main`, and the initial `origin/main` ref were verified at `0d7f2130251889871217ddddb6b0986f1855ebec`. The planning branch is `plan/cloud-backend`; it was created before any file edits. Implementation is now isolated on `feat/cloud-projects`; the published planning PR remains at its documentation-only commit. The working tree was clean initially. No `AGENTS.md` was found in the repository inventory.
 
 | Contract | Observed implementation | Integration consequence |
 | --- | --- | --- |
@@ -69,44 +73,32 @@ Do not trust Content-Length or count JavaScript code units. Cancel an over-limit
 
 ## 4. Authentication and security
 
-Use one reviewed stable `better-auth` version with its React client (`better-auth/react`) and direct `database: env.DB`. Direct D1 support is documented since 1.5; no Drizzle, `better-auth-cloudflare`, JWT plugin or KV is needed. Pin the matching development `auth` CLI in the lockfile. Check package engines against CI's Node 22 and the repository's stated minimum before choosing the release. [D1 support](https://better-auth.com/blog/1-5), [Workers guide](https://better-auth.com/docs/guides/cloudflare)
+Pin **`better-auth@1.7.22`** and the generation CLI **`auth@1.7.22`**, direct `database: env.DB`. The official changelog and installed types were checked; do not substitute older tutorial code. No custom OAuth/session implementation, Drizzle, KV or JWT plugin. [Workers guide](https://better-auth.com/docs/guides/cloudflare), [GitHub provider](https://better-auth.com/docs/authentication/github)
 
-Construct auth using explicit request environment/binding configuration, not mutable global request state. Pass a fixed `baseURL` and exact `trustedOrigins`; never derive trust from arbitrary Host, Origin or forwarded headers. Retain the current compatibility date; current Cloudflare docs enable Node compatibility for dates from `2026-08-04`, including this project's date. Verify installed Wrangler/workerd behavior rather than adding flags or upgrading dates speculatively. [Compatibility rules](https://developers.cloudflare.com/workers/configuration/compatibility-flags/#nodejs-compatibility-flag)
+Configure auth from the request environment using a fixed `BETTER_AUTH_URL`, a high-entropy `BETTER_AUTH_SECRET`, and server-only `GITHUB_CLIENT_ID`/`GITHUB_CLIENT_SECRET`. Exact trusted origin, host-only cookies, production Secure + HttpOnly + SameSite=Lax. Current compatibility date is preserved and generated runtime types are used.
 
-P0 auth configuration choices, to verify against installed types:
+- Email/password is disabled; signup, login/password, reset, email verification, email changes and deletion routes are not exposed.
+- GitHub's default identity scopes are `read:user` and `user:email`, confirmed in installed provider source. Do not request repository or organization access. The provider fetches private email metadata when needed; no guessed email fallback or email-based ownership.
+- GitHub provider handles authorization-code exchange. Better Auth generates state/code verifier, validates the callback and creates the D1 session. Application code does not construct OAuth state or accept arbitrary provider tokens.
+- Session lifetime 86,400 seconds, refresh disabled, cookie cache disabled. `auth.api.getSession({ headers })` runs on every protected request. Revoked/expired/forged cookies yield 401; no production test identity mode.
+- Encrypt provider tokens at rest using the library option; disable explicit and implicit account linking. No GitHub API actions beyond sign-in.
+- Database-backed rate limiter: global 100 requests/minute/IP; OAuth starts 10/minute/IP; callbacks 20/minute/IP. Use only Cloudflare's `CF-Connecting-IP`. Test venue/NAT behavior without disabling abuse controls.
+- Missing DB, URL, secret or GitHub credentials yields 503; health reports cloud disabled. Guest editing does not depend on GitHub or D1. Provider/network failures leave the current workspace intact and do not create a fake session.
 
-- Built-in email/password enabled; minimum 12, maximum 128 characters; unchanged library hashing parameters.
-- `requireEmailVerification: false`; no email-sending hooks; `emailVerified` remains false.
-- `autoSignIn: false`: signup returns a generic acknowledgement and the UI moves to Sign in. Do not automatically submit a synthetic signup user ID to the API or treat signup success as authentication.
-- No social providers, account linking, email changes, user deletion, reset or verification routes exposed.
-- Session lifetime 86,400 seconds; `disableSessionRefresh: true`; cookie cache disabled; no secondary session store. Test actual expiry and response headers.
-- Database-backed auth rate limiting enabled explicitly in development/test and production. Initial rules: sign-in 10 attempts/minute/IP, signup 5/minute/IP; global auth ceiling 100/minute/IP. Review thresholds in the staging venue/NAT test without removing protection. These are cost/abuse controls, not a guarantee against distributed attacks.
-- Use only platform-supplied `CF-Connecting-IP` on Cloudflare ingress. Do not trust arbitrary `X-Forwarded-For`; local tests supply a known test address without introducing an identity bypass.
-
-Forward only this method/path allowlist to `auth.handler`:
+Expose only:
 
 | Method | Path | Responsibility |
 | --- | --- | --- |
-| POST | `/api/auth/sign-up/email` | Library signup; bounded body, Origin, persistent limiter, password hashing |
-| POST | `/api/auth/sign-in/email` | Library login and session cookie |
-| POST | `/api/auth/sign-out` | Library session revocation and cookie removal |
-| GET | `/api/auth/get-session` | Minimal client session status; test response exposes no credential material |
+| POST | `/api/auth/sign-in/social` | Bounded JSON, exact same-origin Origin, provider restricted to GitHub, fixed safe return URLs; library OAuth start |
+| GET | `/api/auth/callback/github` | Cross-site navigation allowed; library state validation/code exchange; safe same-origin return |
+| POST | `/api/auth/sign-out` | Library session revocation and cookie clearing; exact Origin |
+| GET | `/api/auth/get-session` | Minimal session status with credential fields removed |
 
-All other auth paths return application JSON 404; wrong methods return JSON 405. Preserve library Set-Cookie and rate-limit headers. Never proxy application project requests through a server-side signup/login call: library `auth.api` calls bypass its HTTP limiter. For projects, call `auth.api.getSession({ headers: request.headers })` on **every protected request**, with cookie caching disabled, and derive owner solely from `session.user.id`. Missing/forged/expired/revoked session returns 401. No bearer JWT fallback or caller-provided identity. [Sessions](https://better-auth.com/docs/concepts/session-management), [rate limiting](https://better-auth.com/docs/concepts/rate-limit)
+The sign-in envelope rejects arbitrary scopes, `idToken`, `accessToken`, other providers and arbitrary return URLs. The fixed success URL is `/?builder=1`; errors return `/?builder=1&authError=1`. Callback GET must not require a same-origin Origin header: navigation comes from GitHub. OAuth state checking remains mandatory. Unknown auth paths return JSON 404; wrong methods 405. Preserve library Set-Cookie and limiter headers.
 
-Cookie and request controls:
+Project mutations additionally require exact same-origin Origin and JSON Content-Type. No permissive CORS. All private responses use `Cache-Control: private, no-store`. Every project query includes the authenticated owner; foreign IDs and missing IDs both return 404. Prepared statements and server-generated UUIDs only. No passwords, cookies, OAuth codes/state values, tokens, secret values or workspace data in application logs; no raw stack traces to clients.
 
-- Production cookie must be Secure, HttpOnly, SameSite=Lax and host-only (no Domain attribute or cross-subdomain cookies). Verify browser behavior, including clearing the same cookie on logout.
-- Retain library CSRF/Origin checks. Project mutations additionally require exact same-origin Origin and JSON Content-Type; reject missing/cross-site/null Origin with 403 and unsupported media type with 415. GETs never modify project contents.
-- Same-origin fetch with browser credentials; no wildcard CORS or credentialed cross-origin access. Private API responses use `Cache-Control: private, no-store` and are never inserted into a public Worker cache.
-- Use `crypto.randomUUID()` for project IDs. Prepared statements everywhere. Every project SELECT/UPDATE restricts the verified owner. Unknown and foreign IDs have the same 404 body.
-- No passwords, cookies, session tokens, hashes, request bodies, secret values or workspace payloads in logs/traces. Record request ID, route, status and timing only. Sanitize exception messages.
-
-No-verification/recovery boundary, chosen by the user: an email is an **unverified login identifier**, not proof of mailbox ownership. Someone can register an address they do not own; no email-based linking, recovery or trust is allowed. Forgetting a password means losing access to that account's cloud projects. Signup must disclose this, and the existing workspace export remains available. Suggested concise copy: “Email verification and password reset are unavailable in this hackathon version. Keep your password and export a backup.”
-
-Current library docs describe generic duplicate-email signup responses with `autoSignIn:false`; two agents disputed this. Verify the pinned HTTP behavior, including timing and error shape, and report any remaining enumeration exposure. Do not promise complete enumeration resistance. Generic invalid-credentials login messages are required. [Email/password behavior](https://better-auth.com/docs/authentication/email-password)
-
-The earlier Workers password-resolution issue is **closed**, not evidence of a current broken release. Nonetheless, inspect the selected bundle and benchmark signup, valid login, wrong password, unknown email, and limited requests. Workers Free documents 10 ms CPU/request; Paid has a different allowance. Account plan and hash CPU are unknown. No weakening hashes or unauthorized spending. [Closed issue](https://github.com/better-auth/better-auth/issues/9649), [Worker limits](https://developers.cloudflare.com/workers/platform/limits/)
+Local runtime tests prove state URL creation, callback rejection, database session verification/revocation and project authorization/CAS/limits. They use test-only seeded D1 sessions, a maintained signed-cookie helper, and test OAuth credentials. They **do not** prove a real GitHub authorization or production cookie/CPU behavior. See section 11 and the runbook for remaining live checks.
 
 ## 5. Worker architecture and routing
 
@@ -136,10 +128,10 @@ One database per deployed environment. Production has six application tables, **
 
 | Table | Justification |
 | --- | --- |
-| `user` | Better Auth's stable account identity and unverified email metadata |
+| `user` | Better Auth's stable internal user identity and GitHub profile metadata |
 | `session` | Expiring/revocable library sessions |
-| `account` | Credential account/password hash storage managed by the library |
-| `verification` | Core library schema; retain generated contract even though P0 sends no verification/reset emails |
+| `account` | GitHub provider account identity and encrypted OAuth tokens managed by the library |
+| `verification` | Core library schema, including OAuth state; no verification/reset emails |
 | `rateLimit` | Shared auth-attempt limits across Worker isolates |
 | `projects` | Private versioned workspace persistence |
 
@@ -181,6 +173,8 @@ All application responses are JSON; errors use `{ "error": { "code": "...", "mes
 
 List order is `updated_at DESC, id ASC`; fetch limit+1 metadata records to determine nextOffset. Offset pagination can shift during edits; acceptable for P0 with refresh, not a snapshot guarantee. No full workspaces in list responses. Strictly validate envelope keys so a forged `owner_id`/`userId` is rejected with 400 and cannot affect ownership. Workspace nested unknown-key handling stays consistent with the current schema.
 
+Project creation is bounded without a billing/quota subsystem: **20 projects per verified account**, and **5 successful creations in a rolling minute**. Enforce both predicates inside the same `INSERT ... SELECT ... WHERE` statement, with owner-bound counts, so concurrent requests cannot pass a separate count-then-insert check. Return `409 project_limit_reached` or `429 creation_rate_limited` without a write; distinguish these from version conflicts. A person can still use multiple GitHub accounts, so this is a demo resource bound rather than comprehensive abuse prevention.
+
 PUT uses one atomic statement:
 
 ```sql
@@ -207,9 +201,9 @@ Do not transparently retry POST after a timeout: the server might have committed
 
 ## 8. Frontend and local/cloud state
 
-Add one lazy account/projects area using existing Button/Dialog/Alert primitives. Preserve Build and Simulate modes. Signed out: Sign in / Create account, Continue locally, existing device save and export. No full dashboard or route library. Cloud UI failure must not unmount the builder or delay the public app behind an auth-loading screen.
+Add one lazy account/projects area using existing Button/Dialog/Alert primitives. Preserve Build and Simulate modes. Signed out: Sign in with GitHub, Continue locally, existing device save and export. No full dashboard or route library. Cloud UI failure must not unmount the builder or delay the public app behind an auth-loading screen.
 
-Account form: email, password, plus required library signup name supplied as a neutral `DominoOS user` default (no profile feature). Use email/new-password/current-password autocomplete correctly, allow paste/password managers, accessible labels and busy/error announcements. Clear password values after completion/closing; never persist them. Signup acknowledgement leads to a separate Sign in form. No reset/verification UI pretending to work.
+Account entry is one **Sign in with GitHub** button, with busy/error feedback. Persist the current local draft before navigating away. If persistence fails, stay in the builder and offer the existing export. On return `/?builder=1`, reopen the builder and fetch `/api/me`; do not automatically replace its guest workspace or bind a cached project. No password inputs, signup toggle or account recovery UI.
 
 My Projects: metadata list, explicit Open, Save current as new project, Save to cloud, Save as new/copy, Sign out. Initial project name comes from `document.name` or `Untitled project` in a required editable name input; it is cloud metadata and does not rewrite the document. First complete the vertical slice before list polish.
 
@@ -224,7 +218,7 @@ Store cloud context outside v1: `{ ownerId, projectId, version, name, acknowledg
 
 Preserve `dominoos.builder.workspace.v1` as the guest device draft. A cloud project uses an owner/project-scoped key such as `dominoos.builder.cloud-draft.v1:<ownerId>:<projectId>` through a small Storage facade passed to the existing storage helpers; maintain the same 500 ms autosave behavior and v1 validation. Before adopting a newly created cloud ID, synchronously save the latest draft into its scoped slot; the existing guest draft remains recoverable.
 
-Cloud metadata/recovery descriptors are separate, owner-tagged records. No passwords, cookies or session tokens in localStorage. P0 does not automatically bind cloud IDs after reload: startup shows the guest draft; after authentication, My Projects offers explicit recovery of that owner's saved local cloud draft versus fetching the remote workspace. A recovered draft is cloud-dirty until a fresh owner-authorized GET establishes the current version; never overwrite remote using an unverified cached version.
+Cloud metadata/recovery descriptors are separate, owner-tagged records. No passwords, cookies or session tokens in localStorage. P0 does not automatically bind cloud IDs after reload: startup shows the guest draft; after authentication, My Projects offers explicit Open from the server. A differing saved device copy must be confirmed before replacement; no automatic recovery or adoption of a cached version. Rich recovery UI is deferred.
 
 Cancel pending autosave timers before changing storage context. Each timer captures both its workspace and its original target slot; it must never write an account workspace into the guest key or another account's slot after a transition.
 
@@ -243,7 +237,7 @@ If the final local flush fails, do not discard that workspace while restoring gu
 
 One cloud save in flight per active context; disable duplicate submissions. Saves capture a snapshot plus owner/context/version. Success acknowledges that snapshot only; later edits remain dirty. Project/account changes invalidate all older completions with operation generations and AbortController. The same guards apply to lists, opens, account callbacks and errors. Cross-tab edits may still conflict, so D1 CAS remains authoritative.
 
-409 P0 choices: **Keep editing locally** (default), **Save as new project**, or **Open cloud version** through the same confirmed/backup-safe Open flow. No force overwrite, auto-merge or automatic adoption of `currentVersion`. Haiku preferred deferring the third action; reuse of the required safe Open flow is the coordinator's bounded choice.
+409 P0 choices: **Keep working locally** (default) or **Save as new project**. No force overwrite, auto-merge, automatic adoption of `currentVersion`, conflict comparison or recovery dashboard. Opening a project retains a simple replacement confirmation and the existing local/export fallback; richer recovery choices follow only after the cross-browser acceptance test works.
 
 ## 9. Development, configuration and deployment
 
@@ -253,7 +247,7 @@ Keep Vite guest development unchanged. Add `/api` proxy to a separately running 
 | --- | --- | --- |
 | Local | Local D1 state, local-only development secret | `--local`, `remote:false`, shared persist directory; no Cloudflare login needed for local data |
 | Test | Fresh temporary D1 plus test-only verifier entry or real library test accounts | No production IDs/secrets; no test identity switch in deployed code |
-| Staging | Dedicated `domino-os-staging` Worker and D1 via `env.staging` | Separate secret and URL, synthetic accounts/projects only |
+| Staging | Prepared `wrangler.staging.jsonc`, `domino-os-staging` Worker and D1; placeholder ID until approved creation | Separate secret and URL, synthetic accounts/projects only |
 | Production | Existing top-level `domino-os` Worker plus `domino-os-projects` D1 | Explicit approval, remote migrations before deployment |
 | Branch previews | Explicit `previews.d1_databases: []`, preview `CLOUD_ENABLED:false`, no usable auth config | Guest only; verify actual resolved config/bindings before any preview upload |
 
@@ -266,37 +260,38 @@ Required configuration:
 | `DB` | D1 binding with explicit per-environment database ID; Cloudflare release owner creates after approval |
 | `BETTER_AUTH_SECRET` | High-entropy secret, at least 32 characters; distinct local/staging/production values, library-supported generation; secret store only |
 | `BETTER_AUTH_URL` | Public fixed browser-facing origin: production `https://domino-os.tasty-kiwi.workers.dev`, local 5173 or direct 8787, staging actual URL |
+| `GITHUB_CLIENT_ID` / `GITHUB_CLIENT_SECRET` | OAuth app credentials; server-only, supplied securely by app owner; environment-specific callback registration |
 | `CLOUD_ENABLED` | Explicit feature availability; false never bypasses auth, only refuses cloud endpoints |
 | Trusted origins | Exact environment-specific origins derived from reviewed config, not wildcard siblings |
 | Cloudflare build/deploy credential | Existing deployment system's credential; release owner verifies it can deploy and perform separately authorized migrations |
 
 No frontend secret or publishable key is needed. Existing `.env*` and `.dev.vars*` ignore rules protect local configuration. Examples contain names/placeholders only. Do not run a provisioning CLI wizard during planning or let missing resource IDs trigger automatic provisioning during implementation.
 
-**Planned local commands** (scripts/files below do not exist yet):
+**Local commands** (implemented scripts; actual GitHub credentials are needed only for live login):
 
 ```sh
 npm ci
-# One-time after approval: add reviewed exact better-auth and matching auth CLI versions.
-# auth:generate uses local pinned CLI, shared auth options, generation-only SQLite config.
-npm run auth:generate
-npx wrangler d1 migrations apply DB --local --env staging --persist-to .wrangler/state
-npx wrangler types
+npm run types:worker
+npx wrangler d1 migrations apply DB --local --config wrangler.local.jsonc
 npm run build
-# Terminal A: frontend guest/HMR plus same-origin API proxy
+# Terminal A
 npm run dev
-# Terminal B: local API, local D1 only
-npx wrangler dev --local --env staging --port 8787 --persist-to .wrangler/state
-# Built-assets integration alternative: use 8787 directly, with auth URL set to 8787.
+# Terminal B
+npm run dev:api
 ```
 
-The generation script should invoke the pinned `auth generate --config scripts/auth-schema.ts --output migrations/0001_auth.sql` against an empty supported SQLite connection, not a production database. Node SQLite/version/CLI loading is a proof item in Gate A, not a command claimed to work already. Review generated SQL before applying. A rerun must not overwrite reviewed migration history.
+Use ignored `.dev.vars` for local credentials and the fixed browser-facing origin `http://localhost:5173`. The GitHub callback is `http://localhost:5173/api/auth/callback/github`, forwarded by Vite to 8787. Never deploy `wrangler.local.jsonc` or its placeholder database ID. [GitHub setup](GITHUB_AUTH_SETUP.md)
 
-**Planned verification commands:**
+`migrations/0001_auth.sql` was generated by the pinned CLI against an empty SQLite connection; `0002_projects.sql` adds the project table. Both have applied locally and to the approved staging D1. `npm run auth:generate` now writes only a candidate `.tmp/auth-schema.sql`, leaving applied migrations untouched. Review differences and add a new migration for future schema changes.
+
+**Verification commands:**
 
 ```sh
 npm test
-npm run test:worker
+npm run types:worker
+npm run typecheck:worker
 npm run build
+npm run test:worker
 npm run deploy:check
 npm run test:e2e
 # Against a separately started built local Worker with isolated data:
@@ -311,14 +306,18 @@ Use Wrangler's installed `createTestHarness()` for isolated workerd/D1 integrati
 # Verify authenticated account and permissions first.
 npx wrangler whoami
 npx wrangler d1 create domino-os-projects
-npx wrangler d1 create domino-os-projects-staging
+npx wrangler d1 create domino-os-staging
 # Bind the returned IDs explicitly, then configure each environment.
-npx wrangler secret put BETTER_AUTH_SECRET --env staging
-npx wrangler d1 migrations apply DB --remote --env staging
+npx wrangler secret put BETTER_AUTH_SECRET --config wrangler.staging.jsonc
+npx wrangler secret put GITHUB_CLIENT_ID --config wrangler.staging.jsonc
+npx wrangler secret put GITHUB_CLIENT_SECRET --config wrangler.staging.jsonc
+npx wrangler d1 migrations apply DB --remote --config wrangler.staging.jsonc
 npm run build
-npx wrangler deploy --env staging
+npx wrangler deploy --config wrangler.staging.jsonc
 # After staging gates and separate production approval:
 npx wrangler secret put BETTER_AUTH_SECRET
+npx wrangler secret put GITHUB_CLIENT_ID
+npx wrangler secret put GITHUB_CLIENT_SECRET
 npx wrangler d1 migrations apply DB --remote
 npm run deploy
 ```
@@ -332,15 +331,15 @@ Freeze section 7 plus the `verifySession(request, env) -> {userId,name}|null` in
 | Owner | Exclusive implementation files / responsibility | Dependencies |
 | --- | --- | --- |
 | A — backend/integration | `worker/index.ts`, `worker/projects.ts`, `worker/http.ts`, `src/lib/cloud/contracts.ts`, `migrations/0002_projects.sql`, `wrangler.jsonc`, `vite.config.ts`, Worker tsconfig/types, `vitest.worker.config.ts`, backend tests, CI, package.json/lockfile | B's verifier/auth-handler interface; C's client contract review |
-| B — authentication | `worker/auth.ts`, shared auth options, `scripts/auth-schema.ts`, `migrations/0001_auth.sql`, `src/lib/auth-client.ts`, `src/components/account/AccountControls.tsx`, real-auth HTTP tests | A integrates B's dependency/script/type requests; approved staging resources for CPU gate |
+| B — authentication | `worker/auth.ts`, shared auth options, `scripts/auth-schema.ts`, `migrations/0001_auth.sql`, `src/lib/cloud/client.ts` (C implements the shared client), `src/components/account/AccountControls.tsx`, real-auth HTTP tests | A integrates B's dependency/script/type requests; approved staging resources for CPU gate |
 | C — product integration | `src/lib/cloud/client.ts`, `src/lib/cloud/drafts.ts`, cloud save-state hook, project dialog, BuilderExperience integration, relevant CSS, frontend/browser tests, README/config examples | Frozen API; B's account controls/client interface |
 
-`BuilderExperience.tsx` has one editor (C). `App.tsx`/`main.tsx` need changes only if C demonstrates a minimal lazy integration need; C owns them. Existing schema/storage/compiler/scenario/simulation files stay unchanged unless a proven packaging need requires a reviewed narrow edit. C can provide a Storage facade without changing the fixed-key storage functions. B does not edit package.json concurrently: send exact dependency/script requirements to A. No independent developer silently deploys, edits main or alters resource bindings.
+`BuilderExperience.tsx` has one editor (C). `App.tsx`/`main.tsx` need changes only if C demonstrates a minimal lazy integration need; C owns them. Existing schema/storage/compiler/scenario/simulation files stay unchanged unless a proven packaging need requires a reviewed narrow edit. The storage helpers accept an optional key while preserving their original guest-key default and JSON format. B does not edit package.json concurrently: send exact dependency/script requirements to A. No independent developer silently deploys, edits main or alters resource bindings.
 
 ### First vertical slice, before polishing My Projects
 
-1. A wires API/static routing and local D1; B proves SDK schema, signup/login/session/logout and the persistent limiter. C builds account form plus a minimal save/open control against the frozen contract.
-2. Create an account, sign in, open the existing builder with nodes and a named scenario, save its current workspace as a cloud project, record returned ID/version.
+1. A wires API/static routing and local D1; B proves SDK schema, GitHub login/session/logout and the persistent limiter. C builds the GitHub entry plus a minimal save/open control against the frozen contract.
+2. Sign in with GitHub, open the existing builder with nodes and a named scenario, save its current workspace as a cloud project, record returned ID/version.
 3. Sign out; verify server session revocation and preserved guest/account-local drafts.
 4. Sign in again in a **fresh browser context with no shared localStorage**, list/open the same project, and assert nodes, raw draft values, positions, viewport, scenarios and validation/provenance context.
 5. Use a second account: its list excludes the project; direct GET/PUT of the known ID return 404 and leave the first account's row unchanged.
@@ -365,21 +364,21 @@ Only then complete update/conflict/error states and list usability. No project-l
 | 14. Public demo | Auth config missing/API offline/script failure; landing/demo/build/simulate/import/export remain usable | Production URL signed out |
 | 15. Existing regressions | All 84 baseline unit tests and all 26 browser journeys plus build/dry run retained | Production demo walkthrough |
 
-Additional real-library auth tests: password bounds, invalid-credentials error, stored value is a library password hash, cookies carry correct flags, no credential-bearing response/log, duplicate signup behavior, Origin/CSRF failures, auth allowlist, database-backed 429 across separate instances/concurrent requests, correct rate-limit short circuit before hashing, no resets/linking/email-change access. Test NAT behavior so a small group can sign in during a venue demo. Avoid claiming an exact distributed-attempt bound unless measured.
+Additional real-library auth tests: GitHub-only authorization URL/scopes and state, unknown/expired/replayed state rejection, no session on callback failure, exact return URLs, alternate token/provider body rejection, correct cookie flags, no credential-bearing API response/log, Origin/CSRF failures, auth allowlist and persistent HTTP 429. Test NAT behavior at the venue.
 
-Use a factory-injected **test-only** verifier for repeatable owner/API tests against real local D1; do not mock D1 CAS/SQL as the only authorization proof. Also run real Better Auth signup/session/revocation through HTTP with an isolated database. Mocks prove application authorization logic, not live password/cookie security. Test deployed routing with navigation headers against built assets, not Vite's proxy alone. Run the 1 MB bound-parameter save rather than inferring it from SQL text limits.
+Run owner/API tests against real local D1, including atomic SQL CAS/quota behavior. Test-only seeded sessions signed with the maintained cookie helper exercise production session verification without introducing a deployed bypass. Real GitHub code exchange must be tested live. Test deployed routing with navigation headers against built assets, not Vite's proxy alone. Run the 1 MB bound-parameter save rather than inferring it from SQL text limits.
 
-Live staging gate uses two real accounts controlled by testers, synthetic workspaces, another browser/device, actual hashing CPU logs, denied cross-owner attempts, expiry/logout and network failure. Record Worker version, migration state, account plan, sample count, CPU p50/p95/max and any limit errors; 20 representative attempts plus a limited concurrent burst is an initial check, not a load/security audit. Production smoke repeats the acceptance with fresh synthetic accounts and public guest journeys after explicit deployment approval. If credentials/authorization are absent, leave live acceptance unverified; never replace it with mocked claims.
+Live staging gate uses two real accounts controlled by testers, synthetic workspaces, another browser/device, actual OAuth/project CPU telemetry, denied cross-owner attempts, expiry/logout and network failure. Record Worker version, migration state, account plan, sample count, CPU p50/p95/max and any limit errors; 20 representative attempts plus a limited concurrent burst is an initial check, not a load/security audit. Production smoke repeats the acceptance with fresh synthetic accounts and public guest journeys after explicit deployment approval. If credentials/authorization are absent, leave live acceptance unverified; never replace it with mocked claims.
 
 ## 12. Effort, checkpoints and deferred work
 
-Planning allowance: **30–44 person-hours, approximately 14–20 focused elapsed hours with three developers**, including integration and verification. Estimates are uncertain: Luna's revised estimate was 20–30 person-hours, Haiku around 30 with a pessimistic viability assessment, and Hydrogen proposed roughly 18 elapsed hours. External setup/approval waits are additional. Near 16:05 Vilnius on 13 November there were about 28 hours until the user deadline; this is a tight conditional plan, not a delivery guarantee.
+The user asked to disregard the person-hours estimate. Use proof in this order: **actual account plan and authentication/CPU → private project backend → simple cross-browser frontend → regressions/release checks**. Do not polish or expand login/recovery UI before the vertical slice works. Earlier estimates remain historical discussion only.
 
 | Gate | Stop/go evidence |
 | --- | --- |
-| 0 — before implementation | User approves this plan and email/password/no-recovery boundary; freeze API/file ownership |
+| 0 — before implementation | User approves the GitHub pivot with Workers Free required; freeze API/file ownership |
 | A — first 2–3 focused hours | Pinned package engines/bundle, six-table schema and fresh local migrations, real auth HTTP login/logout/session/rate-limit tests; identify account plan and approve any staging resource operations |
-| B — before full cloud UI, target T+4h | Approved staging signup/login/wrong-password CPU under actual plan, shared limiter and cookies pass; no hash weakening/unauthorized plan upgrade; preview isolation proven |
+| B — before enabling cloud remotely | Approved staging real GitHub login/logout and project CPU within Free allowance, shared limiter and cookies pass; no unauthorized plan upgrade; preview isolation proven |
 | C — target T+8h | First vertical slice works in fresh contexts, second-user isolation passes |
 | D — target T+12–16h | Update CAS, size/error/recovery/async guards, full baseline and cloud suites pass; review complete diff |
 | Release freeze — 14 Nov 16:00 Vilnius | Staging acceptance green, production configuration/migrations/deploy explicitly authorized; leave four hours for production smoke/fallback |
@@ -387,6 +386,6 @@ Planning allowance: **30–44 person-hours, approximately 14–20 focused elapse
 
 A failed gate stops cloud rollout and triggers a concrete report. Ship the working local demo if necessary, but report the cloud acceptance criterion as unmet. No spontaneous provider migration, handwritten crypto, reduced hash cost or deadline-driven auth bypass. Existing preview/production data must not be used for destructive tests.
 
-P1 only after P0: delete project, list rename, automatic cloud autosave, richer conflict comparison/merge UI. Deferred beyond this hackathon: verification and password recovery/email delivery (explicit user choice), OAuth, teams/roles/sharing/templates, real-time collaboration, revision history, attachments, billing/notifications, additional services, normalized node tables and simulation changes. Verification/recovery becomes a prerequisite before promoting this limited account product for broader use.
+P1 only after P0: delete project, list rename, automatic cloud autosave, richer conflict comparison/merge UI. Deferred beyond this hackathon: email/password accounts, verification/recovery/email delivery, additional OAuth providers, teams/roles/sharing/templates, real-time collaboration, revision history, attachments, billing/notifications, additional services, normalized node tables and simulation changes. GitHub handles recovery of the GitHub account; DominoOS does not offer separate recovery or account linking.
 
-Remaining disagreements: auth hashing feasibility is unmeasured; rate thresholds trade venue NAT access against abuse protection; Haiku was substantially more pessimistic about scope and preferred fewer conflict actions; models differed on auth schema tooling and whether to pivot providers at a failed gate. Coordinator resolution: narrow safe Open reuse, explicit CPU/schema gates, bounded persistent limiting, and **stop/review rather than automatic provider pivot**. See the full decision history in the debate document.
+Remaining disagreements: the password CPU probe failed on Free; the user explicitly selected GitHub instead. Remote smoke CPU has been measured and shows unresolved cold-request spikes; real OAuth callback and authenticated project paths remain unmeasured. Rate thresholds trade venue NAT access against abuse protection; Haiku was substantially more pessimistic about scope and preferred fewer conflict actions; models differed on auth schema tooling and whether to pivot providers at a failed gate. Coordinator resolution: narrow safe Open reuse, explicit CPU/schema gates, bounded persistent limiting, and **stop/review rather than automatic provider pivot**. See the full decision history in the debate document and the new [CPU evidence](AUTH_CPU_CHECK.md).
