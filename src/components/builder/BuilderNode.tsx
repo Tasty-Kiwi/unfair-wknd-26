@@ -1,3 +1,4 @@
+import type { CSSProperties } from "react";
 import { Handle, Position, type Node, type NodeProps } from "@xyflow/react";
 import {
   Box,
@@ -8,7 +9,11 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import type { NodeKind, RelationshipKind } from "@/lib/builder/types";
-import { KIND_LABELS, RELATIONSHIP_LABELS } from "./documentEdits";
+import {
+  KIND_LABELS,
+  RELATIONSHIP_COLORS,
+  RELATIONSHIP_LABELS,
+} from "./documentEdits";
 
 export type BuilderFlowData = {
   nodeKey: string;
@@ -68,7 +73,12 @@ export function BuilderNode({ data, selected }: NodeProps<BuilderFlowNode>) {
           position={Position.Left}
           id={kind}
           className="builder-handle"
-          style={{ top: handleTop(index, ports.inputs.length) }}
+          style={
+            {
+              top: handleTop(index, ports.inputs.length),
+              "--rel": RELATIONSHIP_COLORS[kind],
+            } as CSSProperties
+          }
           aria-label={`${RELATIONSHIP_LABELS[kind]} input`}
         />
       ))}
@@ -79,7 +89,12 @@ export function BuilderNode({ data, selected }: NodeProps<BuilderFlowNode>) {
           position={Position.Right}
           id={kind}
           className="builder-handle"
-          style={{ top: handleTop(index, ports.outputs.length) }}
+          style={
+            {
+              top: handleTop(index, ports.outputs.length),
+              "--rel": RELATIONSHIP_COLORS[kind],
+            } as CSSProperties
+          }
           aria-label={`${RELATIONSHIP_LABELS[kind]} output`}
         />
       ))}
