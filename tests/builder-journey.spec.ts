@@ -235,9 +235,8 @@ test("blank graph -> named motor disruption -> baseline comparison -> reload and
     builder.getByText("Saved locally", { exact: true }),
   ).toBeVisible();
   await page.reload();
-  await page
-    .getByRole("button", { name: "Build a network", exact: true })
-    .click();
+  await expect(builder).toBeVisible();
+  await expect(page).toHaveURL(/builder=1/);
   await expect(
     builder.getByLabel("Scenario name", { exact: true }),
   ).toHaveValue("Motor shortage");
@@ -365,9 +364,8 @@ test("incomplete draft survives refresh; duplicate BOM, incompatible handles and
     .getByRole("button", { name: "Save workspace", exact: true })
     .click();
   await page.reload();
-  await page
-    .getByRole("button", { name: "Build a network", exact: true })
-    .click();
+  await expect(builder).toBeVisible();
+  await expect(page).toHaveURL(/builder=1/);
   await fit(builder);
   await canvas.locator('.builder-node[data-kind="component"]').click();
   await expect(
@@ -617,9 +615,8 @@ test("pan and zoom restore after reload and same-ID import without invalidating 
     .getByRole("button", { name: "Save workspace", exact: true })
     .click();
   await page.reload();
-  await page
-    .getByRole("button", { name: "Build a network", exact: true })
-    .click();
+  await expect(builder).toBeVisible();
+  await expect(page).toHaveURL(/builder=1/);
   await expectViewport(builder, saved.workspace.document.viewport);
   await canvas.scrollIntoViewIfNeeded();
   const restoredViewport = await canvasViewport(builder);
@@ -634,6 +631,25 @@ test("pan and zoom restore after reload and same-ID import without invalidating 
   await expect(
     builder.getByText("Saved locally", { exact: true }),
   ).toBeVisible();
+  // React Flow's onMoveEnd commits after its DOM transform changes. Wait for
+  // that exact viewport to reach storage before starting an atomic import.
+  await expect
+    .poll(async () => {
+      const stored = await page.evaluate(
+        () =>
+          JSON.parse(localStorage.getItem("dominoos.builder.workspace.v1")!)
+            .document.viewport,
+      );
+      const actual = await canvasViewport(builder);
+      return (
+        Math.max(
+          Math.abs(stored.x - actual.x),
+          Math.abs(stored.y - actual.y),
+          Math.abs(stored.zoom - actual.zoom),
+        ) < 0.001
+      );
+    })
+    .toBe(true);
   page.once("dialog", (dialog) => dialog.accept());
   await builder
     .getByLabel("Import workspace JSON", { exact: true })
@@ -726,9 +742,8 @@ test("same-ID retarget review shows current receipt, supplier and component befo
     .getByRole("button", { name: "Save workspace", exact: true })
     .click();
   await page.reload();
-  await page
-    .getByRole("button", { name: "Build a network", exact: true })
-    .click();
+  await expect(builder).toBeVisible();
+  await expect(page).toHaveURL(/builder=1/);
   await expect(review).toContainText(
     "Previously validated component: Servo motor",
   );

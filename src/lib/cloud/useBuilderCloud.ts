@@ -201,17 +201,12 @@ export type CloudAvailability = "checking" | "enabled" | "disabled" | "failed";
 
 type HealthRun = { controller: AbortController };
 
-// Removes the one-shot OAuth return flags from the address bar. The return intent is kept in a ref.
+// Removes the one-shot OAuth error flag. Builder is durable navigation state and
+// must remain in the URL for refreshes and bookmarks.
 function clearReturnFlags() {
   const next = new URL(window.location.href);
-  if (
-    !next.searchParams.has("authError") &&
-    !next.searchParams.has("builder")
-  ) {
-    return;
-  }
+  if (!next.searchParams.has("authError")) return;
   next.searchParams.delete("authError");
-  next.searchParams.delete("builder");
   window.history.replaceState(window.history.state, "", next.toString());
 }
 

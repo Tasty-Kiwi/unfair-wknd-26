@@ -54,9 +54,8 @@ test("cloud-disabled production hides auth controls and preserves guest editing 
     )
     .toBe("Guest work stays local");
   await page.reload();
-  await page
-    .getByRole("button", { name: "Build a network", exact: true })
-    .click();
+  await expect(builder).toBeVisible();
+  await expect(page).toHaveURL(/builder=1/);
   await expect(builder.getByLabel("Network name", { exact: true })).toHaveValue(
     "Guest work stays local",
   );

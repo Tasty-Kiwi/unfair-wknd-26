@@ -80,7 +80,13 @@ function blank(): BuilderWorkspaceV1 {
 const REPLACE_MESSAGE =
   "Replace the current network and its scenarios? Export workspace JSON first if you want to keep it.";
 
-export function BuilderExperience({ onClose }: { onClose: () => void }) {
+export function BuilderExperience({
+  onClose,
+  registerNavigationGuard,
+}: {
+  onClose: () => void;
+  registerNavigationGuard?: (guard: () => boolean) => () => void;
+}) {
   const [initial] = useState(() => loadWorkspace());
   const [workspace, setWorkspace] = useState<BuilderWorkspaceV1>(
     () => initial.workspace ?? blank(),
@@ -93,6 +99,7 @@ export function BuilderExperience({ onClose }: { onClose: () => void }) {
   );
   const [error, setError] = useState(initial.error ?? "");
   const [notice, setNotice] = useState("");
+  const [validationRequested, setValidationRequested] = useState(false);
   const [view, setView] = useState<"build" | "simulate">("build");
   const [selection, setSelection] = useState<Selection | null>(null);
   const [compare, setCompare] = useState(false);
@@ -248,6 +255,7 @@ export function BuilderExperience({ onClose }: { onClose: () => void }) {
   }
 
   function run() {
+    setValidationRequested(true);
     if (!compiled.ok) {
       setError("Fix all network issues before running.");
       return;
@@ -401,6 +409,7 @@ export function BuilderExperience({ onClose }: { onClose: () => void }) {
 
   // Replaces the editor content with no prompt. Callers confirm first.
   function adopt(next: BuilderWorkspaceV1, allow: boolean, note = "") {
+    setValidationRequested(false);
     change(next);
     setSaveAllowed(allow);
     setCanvasSession((session) => session + 1);
@@ -445,17 +454,28 @@ export function BuilderExperience({ onClose }: { onClose: () => void }) {
     return true;
   }
 
-  function close() {
+  function prepareClose() {
     if (
       hasCloudChanges() &&
       !window.confirm(
         "Your cloud changes are saved only on this device. Leave the builder? Export JSON first if you need a backup.",
       )
     )
-      return;
-    if (latest.current !== lastSaved.current && !saveLocal()) return;
-    onClose();
+      return false;
+    if (latest.current !== lastSaved.current && !saveLocal()) return false;
+    return true;
   }
+
+  function close() {
+    if (!prepareClose()) return false;
+    onClose();
+    return true;
+  }
+
+  useEffect(() => {
+    if (!registerNavigationGuard) return;
+    return registerNavigationGuard(prepareClose);
+  }, [registerNavigationGuard, workspace, allowSave, draftKey]);
 
   // New blank, example and import all come through here. They detach any cloud binding.
   function replace(next: BuilderWorkspaceV1) {
@@ -506,6 +526,11 @@ export function BuilderExperience({ onClose }: { onClose: () => void }) {
       ? "Fictional example"
       : "Authored in builder";
   const issues = compiled.ok ? [] : compiled.issues;
+  const untouchedBlank =
+    !workspace.document.name.trim() &&
+    !workspace.document.asOf &&
+    workspace.document.nodes.length === 0 &&
+    workspace.document.edges.length === 0;
   return (
     <main className="builder-experience" aria-label="Supply chain builder">
       <header className="builder-experience__header">
@@ -792,8 +817,9 @@ export function BuilderExperience({ onClose }: { onClose: () => void }) {
           key={`${workspace.document.id}:${canvasSession}`}
           document={workspace.document}
           onChange={updateDocument}
-          issues={issues}
+          issues={untouchedBlank && !validationRequested ? [] : issues}
           onValidate={() => {
+            setValidationRequested(true);
             if (compiled.ok) {
               setError("");
               setNotice(
@@ -869,6 +895,7 @@ export function BuilderExperience({ onClose }: { onClose: () => void }) {
             </section>
           )}
           <SupplyGraph
+            preferNames
             data={compiled.dataset}
             result={assessment.result}
             scenario={assessment.scenario}
@@ -890,6 +917,7 @@ export function BuilderExperience({ onClose }: { onClose: () => void }) {
           />
           <div className="builder-experience__panels">
             <ImpactPanel
+              preferNames
               data={compiled.dataset}
               result={assessment.result}
               selectedOrderId={

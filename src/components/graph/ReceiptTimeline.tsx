@@ -30,12 +30,14 @@ export function ReceiptTimeline({
   scenario,
   componentId,
   onMoveReceipt,
+  preferNames = false,
 }: {
   data: Dataset;
   result: SimulationResult;
   scenario: Scenario;
   componentId: string;
   onMoveReceipt?: (deliveryId: string, date: string) => void;
+  preferNames?: boolean;
 }) {
   const track = useRef<HTMLDivElement>(null);
   // Track width in px, so label placement can check what actually fits.
@@ -85,7 +87,9 @@ export function ReceiptTimeline({
     marks.push({
       key: d.id,
       date: d.availableDate,
-      label: `${d.id} · ${d.quantity}`,
+      label: preferNames
+        ? `${d.quantity} units · ${data.suppliers.find((s) => s.id === d.supplierId)?.name ?? d.id}`
+        : `${d.id} · ${d.quantity}`,
       kind: "receipt",
       deliveryId: d.id,
     });
@@ -96,7 +100,9 @@ export function ReceiptTimeline({
     marks.push({
       key: use.alternativeId,
       date: use.availableDate,
-      label: `${use.alternativeId} · ${use.quantity}`,
+      label: preferNames
+        ? `${use.quantity} units · ${data.suppliers.find((s) => s.id === alt.supplierId)?.name ?? use.alternativeId}`
+        : `${use.alternativeId} · ${use.quantity}`,
       kind: "alternative",
     });
   }
@@ -111,6 +117,9 @@ export function ReceiptTimeline({
       const next = line!.lateDeliveries.map((d) => d.availableDate).sort()[0];
       return {
         id: order.orderId,
+        customer:
+          data.orders.find((x) => x.id === order.orderId)?.customer ??
+          order.orderId,
         date: order.requiredDate,
         required: line!.required,
         shortage: line!.shortage,
@@ -284,7 +293,9 @@ export function ReceiptTimeline({
                 >
                   <i className="grip" aria-hidden="true" />
                   <em>
-                    {m.label} · {when(m.date)}
+                    {preferNames
+                      ? `${when(m.date)} · ${m.label}`
+                      : `${m.label} · ${when(m.date)}`}
                   </em>
                 </span>
               );
@@ -296,8 +307,11 @@ export function ReceiptTimeline({
             key={n.id}
             className={`timeline-row ${n.shortage ? "is-short" : ""}`}
           >
-            <span className="timeline-label">
-              {n.id} needs {n.required}
+            <span
+              className="timeline-label"
+              title={preferNames ? n.id : undefined}
+            >
+              {preferNames ? n.customer : n.id} needs {n.required}
             </span>
             <div className="timeline-track">
               <span className="need-run" style={{ width: x(n.date) }} />

@@ -50,16 +50,16 @@ Production runs `cloudEnabled: false`. Do not enable it for this release or pres
 
 ## 5. Devpost submission — last step (human tasks)
 
-Drafts are ready in [docs/SUBMISSION.md](docs/SUBMISSION.md), [docs/PITCH.md](docs/PITCH.md) and [DEMO_SCRIPT.md](DEMO_SCRIPT.md). Nothing has been entered in the portal.
+Use [docs/DEVPOST_READY.md](docs/DEVPOST_READY.md) as the single source for official requirements, submission copy, links and human-owned fields. The video plan is in [docs/VIDEO_PRODUCTION.md](docs/VIDEO_PRODUCTION.md); [docs/PITCH.md](docs/PITCH.md) and [DEMO_SCRIPT.md](DEMO_SCRIPT.md) are supporting presenter notes. Nothing has been entered in the portal.
 
-- [ ] **Repository access:** make the repo public or grant GitHub user `Nedomas` access. The permission check still returns `none` and the repo is private.
+- [ ] **Repository access:** repo may remain private if GitHub user `Nedomas` is invited. Current access is unverified; repository edit/invite attempts returned 404 and invitation listing returned 403. Ask a repository administrator to grant Read access and verify.
 - [ ] **Video:** record and edit a demo of at most 3:00 that opens on the working product.
-- [ ] **Upload:** post it to YouTube or Vimeo (public or unlisted) and check playback while signed out.
+- [ ] **Upload:** post it to YouTube or Vimeo as Public or Unlisted and check playback while signed out.
 - [ ] **Try it out:** enter `https://domino-os.tasty-kiwi.workers.dev/landing` (demo: `/`) and open it in an incognito window.
 - [ ] **Built with:** React, TypeScript, Vite, Tailwind CSS, React Flow, Cloudflare Workers, D1, GitHub OAuth, plus any other tools actually used.
 - [ ] **Team:** the team name and every member's full name and email.
-- [ ] **Disclosures:** state that the project began at the hackathon, and list any pre-existing work truthfully (or None).
-- [ ] **Optional slides link:** only if a useful deck already exists.
+- [ ] **Disclosures:** truthfully disclose pre-existing work; do not state “None” without team confirmation.
+- [ ] **Optional slides link:** slides are optional; add a link only if a useful deck already exists.
 - [ ] **Final review:** check links, spelling, permissions, video visibility and required fields, then submit before 20:00 and save the confirmation.
 
 ## Suggested cutoffs — 14 November (Vilnius)
@@ -75,3 +75,25 @@ Drafts are ready in [docs/SUBMISSION.md](docs/SUBMISSION.md), [docs/PITCH.md](do
 Video split: about 20 s problem, 100 s live product, 40 s local builder and evidence, 20 s vision and team. Show the product in the opening seconds.
 
 **Release rule:** the guest demo must stay reliable without cloud. If the public URL fails, present from the tested local fallback.
+
+## Final execution — 14 November
+
+- [x] Reviewed and merged PRs #8–#11 sequentially; main CI and Cloudflare builds passed after each. Merged remote task branches deleted after incorporation checks.
+- [x] Official event rules consolidated in `docs/DEVPOST_READY.md`; About is under 150 words; no fabricated team details or pre-existing-work attestation.
+- [x] Focused UX fixes implemented and independently code/visually reviewed: names, blank-state validation, durable builder navigation/save guard, recovery payoff, laptop space and JSON export clarity.
+- [x] Full integrated checks executed; details and safe guest fallback in `docs/FINAL_RELEASE_EXECUTION.md`.
+- [ ] Repository owner: invite Nedomas with Read access and verify status. Agent admin requests denied (403); permission still `none`.
+- [ ] Repository owner: update description; visibility remains private.
+- [ ] Team: confirm team details and pre-existing-work/build-period disclosures; review video, upload to YouTube/Vimeo, submit before deadline and retain confirmation.
+- [ ] Production cloud: not approved; keep disabled. Live cloud gates remain open.
+
+## Final guest UX execution — 14 November
+
+- [x] PRs #8–#11 incorporated, with successful main CI and production builds checked sequentially.
+- [x] Readable builder result names; helpful blank state with strict requested validation; durable builder refresh/history with synchronous draft-save guard.
+- [x] Explicit modeled recovery payoff, JSON report label, laptop spacing and selected-scenario contrast.
+- [x] Integrated local verification: 102 unit, 44 Worker and 73 Chromium journeys; both typechecks/build/dry run passed.
+- [x] Official requirements consolidated in `docs/DEVPOST_READY.md`; About 122 words.
+- [ ] Final focused UX PR merge and production source/asset verification (pending CI).
+- [ ] Owner-only repository description update and Nedomas invitation (API denied 403).
+- [ ] Actual team/member and pre-existing-work facts, watched/uploaded video, and Devpost submission.

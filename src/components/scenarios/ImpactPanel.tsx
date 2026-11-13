@@ -13,22 +13,41 @@ export interface ImpactPanelProps {
   data: Dataset;
   result: SimulationResult;
   selectedOrderId?: string;
+  preferNames?: boolean;
 }
 
-function sourceLabel(allocation: Allocation): string {
+function sourceLabel(
+  allocation: Allocation,
+  data: Dataset,
+  preferNames: boolean,
+): string {
   if (allocation.sourceType === "inventory") return "Stock on hand";
-  if (allocation.sourceType === "delivery")
-    return `Delivery ${allocation.sourceId}`;
-  return `Alternative ${allocation.sourceId}`;
+  const supplierId =
+    allocation.sourceType === "delivery"
+      ? data.deliveries.find((item) => item.id === allocation.sourceId)
+          ?.supplierId
+      : data.alternatives.find((item) => item.id === allocation.sourceId)
+          ?.supplierId;
+  const supplier = data.suppliers.find((item) => item.id === supplierId);
+  if (preferNames && supplier)
+    return `${supplier.name} ${allocation.sourceType === "delivery" ? "receipt" : "alternative"} (${allocation.sourceId})`;
+  return allocation.sourceType === "delivery"
+    ? `Delivery ${allocation.sourceId}`
+    : `Alternative ${allocation.sourceId}`;
 }
 
 function supplierLabel(
   supplierId: string | undefined,
   data: Dataset,
+  preferNames: boolean,
 ): string | null {
   if (!supplierId) return null;
   const supplier = data.suppliers.find((s) => s.id === supplierId);
-  return supplier ? `${supplier.id} · ${supplier.name}` : supplierId;
+  return supplier
+    ? preferNames
+      ? `${supplier.name} (${supplier.id})`
+      : `${supplier.id} · ${supplier.name}`
+    : supplierId;
 }
 
 function orderMissingUnits(order: OrderResult): number {
@@ -39,6 +58,7 @@ export function ImpactPanel({
   data,
   result,
   selectedOrderId,
+  preferNames = false,
 }: ImpactPanelProps) {
   const baseId = useId();
 
@@ -85,7 +105,9 @@ export function ImpactPanel({
             >
               {result.orders.map((order) => (
                 <option key={order.orderId} value={order.orderId}>
-                  {order.orderId} · {orderCustomer.get(order.orderId)}
+                  {preferNames
+                    ? `${orderCustomer.get(order.orderId) ?? "Unknown customer"} · ${order.orderId}`
+                    : `${order.orderId} · ${orderCustomer.get(order.orderId)}`}
                   {orderMissingUnits(order)
                     ? ` · ${orderMissingUnits(order)} short`
                     : ""}
@@ -98,11 +120,15 @@ export function ImpactPanel({
             <div className="impact-detail" aria-live="polite">
               <header className="impact-detail__header">
                 <h3 className="impact-panel__subtitle">
-                  {active.orderId} ·{" "}
+                  {preferNames
+                    ? `${orderCustomer.get(active.orderId) ?? "Unknown customer"} · `
+                    : `${active.orderId} · `}
                   {productName.get(active.productId) ?? active.productId}
                 </h3>
                 <p className="impact-detail__meta">
-                  {orderCustomer.get(active.orderId) ?? "Unknown customer"} ·
+                  {preferNames
+                    ? `${active.orderId} · `
+                    : `${orderCustomer.get(active.orderId) ?? "Unknown customer"} · `}
                   required {active.requiredDate}
                 </p>
                 <StatusBadge status={active.status} />
@@ -129,6 +155,7 @@ export function ImpactPanel({
                     }
                     required={active.requiredDate}
                     data={data}
+                    preferNames={preferNames}
                     baseId={`${baseId}-${active.orderId}-${line.componentId}`}
                   />
                 ))}
@@ -163,12 +190,14 @@ function MaterialLineCard({
   label,
   required,
   data,
+  preferNames,
   baseId,
 }: {
   line: MaterialLine;
   label: string;
   required: string;
   data: Dataset;
+  preferNames: boolean;
   baseId: string;
 }) {
   const short = line.shortage > 0;
@@ -204,9 +233,9 @@ function MaterialLineCard({
               className="impact-allocation"
             >
               <span>
-                {sourceLabel(allocation)}
-                {supplierLabel(allocation.supplierId, data)
-                  ? ` · ${supplierLabel(allocation.supplierId, data)}`
+                {sourceLabel(allocation, data, preferNames)}
+                {supplierLabel(allocation.supplierId, data, preferNames)
+                  ? ` · ${supplierLabel(allocation.supplierId, data, preferNames)}`
                   : ""}
               </span>
               <span className="impact-allocation__qty">
@@ -225,7 +254,9 @@ function MaterialLineCard({
             {line.lateDeliveries.map((delivery) => (
               <li key={delivery.id} className="impact-allocation">
                 <span>
-                  Delivery {delivery.id} · {delivery.quantity} units
+                  {preferNames
+                    ? `${data.suppliers.find((supplier) => supplier.id === delivery.supplierId)?.name ?? "Supplier"} receipt (${delivery.id}) · ${delivery.quantity} units`
+                    : `Delivery ${delivery.id} · ${delivery.quantity} units`}
                 </span>
                 <span className="impact-allocation__qty">
                   available {delivery.availableDate}
