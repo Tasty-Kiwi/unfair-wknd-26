@@ -49,7 +49,7 @@ Executed `npm test` (102), `npm run typecheck:worker`, `npm run typecheck:tests`
 
 Independent code review found no scoped defects. Claude inspected actual light/dark laptop/mobile screenshots; selected-scenario contrast and truncated receipt labels were corrected. PR #12 merged as `8fca52a7e51bfcd52af2abc9344fc990c946fa4b`. Both final PR runs, main CI and Cloudflare production build passed. Seven live JS/CSS assets byte-match the built release; public health returns cloud disabled. All 23 production guest smoke journeys passed.
 
-A real production browser recording with local synthesized narration is complete as a reviewable 147-second H.264/AAC draft, not human narration or an uploaded video. Local file: `.tmp/final-execution/video/needtrace-demo.mp4`; captions and source metadata sit alongside it. The submission owner must watch the whole export, confirm personal/build-period facts, upload to YouTube/Vimeo and submit. See the authoritative [Devpost package](DEVPOST_READY.md).
+A real production browser recording with local synthesized narration is complete as a reviewable 147-second H.264/AAC draft, not human narration or an uploaded video. Shared recording: [production demo MP4](release/final/production/needtrace-demo.mp4); captions and source metadata sit alongside it. The submission owner must watch the whole export, confirm personal/build-period facts, upload to YouTube/Vimeo and submit. See the authoritative [Devpost package](DEVPOST_READY.md).
 
 ### Independent PR correction
 

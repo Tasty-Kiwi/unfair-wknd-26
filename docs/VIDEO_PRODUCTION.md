@@ -75,6 +75,6 @@ Use these links only after checking that they open in a clean browser. The legac
 
 ## Produced browser draft
 
-A real production guest-browser capture with synthesized macOS Samantha narration has been generated: `.tmp/final-execution/video/needtrace-demo.mp4`, 147 seconds, 1366×768, H.264/AAC, approximately 5.2 MB. `.tmp/final-execution/video/capture.json` records the public source and capture time. [SubRip captions](release/final/production/demo-captions.srt) are included. The filmed builder scenario was saved and exported as workspace JSON.
+A real production guest-browser capture with synthesized macOS Samantha narration has been generated: [production demo MP4](release/final/production/needtrace-demo.mp4), 147 seconds, 1366×768, H.264/AAC, approximately 5.2 MB. [video capture metadata](release/final/production/video-capture.json) records the public source and capture time. [SubRip captions](release/final/production/demo-captions.srt) are included. The filmed builder scenario was saved and exported as workspace JSON.
 
 This is an automated recording draft, not human usability evidence or an approved/uploaded submission. Watch the entire video and audio, verify names/numbers/legibility, approve or replace synthesized narration, then upload to YouTube/Vimeo. Test the final URL while signed out. Personal/team and pre-existing-work facts must still be supplied.

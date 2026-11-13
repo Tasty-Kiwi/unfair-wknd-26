@@ -104,7 +104,7 @@ Video split: about 20 s problem, 100 s live product, 40 s local builder and evid
 - [x] Seven production JS/CSS assets byte-match the verified build. Public `/api/health`: `ok: true`, `cloudEnabled: false`.
 - [x] 23 real production browser journeys passed: demo/recovery, partial recovery, guest builder navigation and failed-save guard, imports/reset/export/local saving.
 - [x] Actual production light/dark 1366×768 and 390×844 screenshots captured in `docs/release/final/production/`.
-- [x] Real production browser video with synthesized narration produced: `.tmp/final-execution/video/needtrace-demo.mp4` (147 seconds, H.264/AAC), plus captions. This is a reviewable draft.
+- [x] Real production browser video with synthesized narration produced: [production demo MP4](docs/release/final/production/needtrace-demo.mp4) (147 seconds, H.264/AAC), plus captions. This is a reviewable draft.
 - [ ] Presenter: watch and approve the complete video/audio, upload to YouTube/Vimeo, and check signed-out access.
 - [ ] Repository owner: grant Nedomas Read access and update description; neither admin action succeeded (403).
 - [ ] Team/submission owner: supply real team data and truthful pre-existing-work disclosures; complete Devpost, submit and save confirmation.
