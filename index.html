@@ -8,6 +8,24 @@
       name="description"
       content="DominoOS — see what breaks before it breaks. An interactive, fictional manufacturing material-availability simulator."
     />
+    <script>
+      const landingPaint = document.createElement("style");
+      landingPaint.textContent =
+        'html[data-landing-theme="dark"] body { background: #0E1519; color: #F1F3EF; } html[data-landing-theme="light"] body { background: #F2F1EC; color: #182227; }';
+      document.head.appendChild(landingPaint);
+      if (location.pathname.replace(/\/$/, "") === "/landing") {
+        let theme = "light";
+        try {
+          if (localStorage.getItem("dominoos.landing.theme.v2") === "dark")
+            theme = "dark";
+        } catch {}
+        document.documentElement.dataset.landingTheme = theme;
+        document.documentElement.style.backgroundColor =
+          theme === "dark" ? "#0E1519" : "#F2F1EC";
+        document.querySelector('meta[name="theme-color"]').content =
+          theme === "dark" ? "#0E1519" : "#F2F1EC";
+      }
+    </script>
     <title>DominoOS — material availability what-if</title>
   </head>
   <body>
