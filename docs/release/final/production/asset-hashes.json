@@ -1,0 +1,37 @@
+[
+  {
+    "asset": "LandingPage-aS2OTz1i.css",
+    "sha256": "02373f69cd3d0faa2233ac85233855a592b6cc1f8a4fe1c4f5e194143050774a",
+    "matches": true
+  },
+  {
+    "asset": "index-D5zB8IHo.js",
+    "sha256": "77ba379cfbe8e7c70a7e9e512ed2155d73a46e8eb7bc6ef949a7fe11576fff01",
+    "matches": true
+  },
+  {
+    "asset": "App-BBaEnHAs.js",
+    "sha256": "7717bec0d62127dddf72da4c2e4d564a98c955c59d1d57b3536da6862eff370f",
+    "matches": true
+  },
+  {
+    "asset": "index-CsoiF70n.css",
+    "sha256": "452c8dcd1215af2404b4a4c27c4bf1d0e5f014b7c7f5b492b32430f3cc89e4a5",
+    "matches": true
+  },
+  {
+    "asset": "LandingPage-CwSUSfAj.js",
+    "sha256": "39f2f4bc9b39c179cce13922e9b664f190cac0fe76453449708222bf653cb201",
+    "matches": true
+  },
+  {
+    "asset": "App-DlydXds8.css",
+    "sha256": "625b8308a4ccff0817b61b8c5120d4343de382b2132e792a43e3dbe80e882322",
+    "matches": true
+  },
+  {
+    "asset": "simulation-DH1FdoPa.js",
+    "sha256": "f190d8fbffd4dd66c2d001420e860ac89e5d79297bc2c30e39d96cd26170e4d7",
+    "matches": true
+  }
+]

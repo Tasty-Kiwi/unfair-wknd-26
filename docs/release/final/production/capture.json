@@ -1,0 +1,7 @@
+{
+  "url": "https://domino-os.tasty-kiwi.workers.dev",
+  "sourceCommit": "8fca52a7e51bfcd52af2abc9344fc990c946fa4b",
+  "capturedAt": "2026-11-13T23:22:04.751Z",
+  "sourceEvidence": "Cloudflare successful production check be359cd9-f27e-4efb-beb2-79321ab7066e; seven JS/CSS asset comparison saved with release evidence",
+  "cloudEnabled": false
+}

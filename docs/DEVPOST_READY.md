@@ -66,3 +66,17 @@ The hostname contains the legacy DominoOS name; the product is Needtrace. Verify
 - [ ] Review the Devpost preview with the team, submit before **14 November 2026, 20:00 Europe/Vilnius**, and retain the confirmation.
 
 For the video shot list and narration use [VIDEO_PRODUCTION.md](VIDEO_PRODUCTION.md). The [pitch notes](PITCH.md) and [60-second demo](../DEMO_SCRIPT.md) are supporting presenter material, not separate submission authorities.
+
+## Final production assets (verified guest release)
+
+Functional release: `8fca52a7e51bfcd52af2abc9344fc990c946fa4b` (PR #12). Production build and main CI passed; seven JS/CSS assets match; 23 live guest journeys passed. Production cloud remains disabled.
+
+Use these actual production captures; source/time metadata and asset hashes are in [production evidence](release/final/production/capture.json):
+
+- [Needtrace landing, light](release/final/production/landing-light-1366.png) / [dark](release/final/production/landing-dark-1366.png).
+- [Supplier delay and shortage](release/final/production/shortage-light-1366.png).
+- [Modeled recovery payoff](release/final/production/recovery-light-1366.png).
+- [Editable builder](release/final/production/builder-light-1366.png).
+- [Mobile guest interface](release/final/production/landing-dark-390.png).
+
+The actual 2:27 browser recording is ready locally at `.tmp/final-execution/video/needtrace-demo.mp4` with synthesized narration; [captions](release/final/production/demo-captions.srt) are supplied. A presenter must watch the whole video/audio, approve it, upload to YouTube/Vimeo, and provide the final link. No upload or Devpost submission has occurred. Team names/emails, build period and pre-existing-work disclosures are still required. Repository access remains `none` for Nedomas: no invitation was sent because admin requests returned 403.

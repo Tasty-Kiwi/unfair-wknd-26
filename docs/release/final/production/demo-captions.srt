@@ -1,0 +1,31 @@
+1
+00:00:00,000 --> 00:00:11,823
+Needtrace helps manufacturers see which customer orders are affected when supply changes, and test possible responses. This is a fictional material plan, with real deterministic calculations.
+
+2
+00:00:14,000 --> 00:00:25,214
+The original plan covers all ten customer orders. Now we introduce a supplier disruption. Aster Motion's motor receipt moves six days, from November seventeenth to November twenty third.
+
+3
+00:00:31,000 --> 00:00:42,833
+Order one oh two needs four motors by November twenty second. Only two remain after the earlier order reserves six. The allocation evidence identifies the two missing motors and the receipt arriving too late.
+
+4
+00:00:50,000 --> 00:01:03,101
+Needtrace compares two modeled responses: restore the original delivery timing, or use approved alternative supply. The assumptions are visible. Supplier confirmation and purchasing costs remain real world decisions.
+
+5
+00:01:08,000 --> 00:01:19,816
+Apply the two Vector motors. Material coverage is restored, while the original Aster receipt remains late. This changes a simulation. It does not place a purchase or confirm a supplier promise.
+
+6
+00:01:27,000 --> 00:01:40,274
+You can also build your own network. Start with the core example, connect suppliers, materials and customer orders, and run the same engine. Results now use customer names, with identifiers retained as evidence.
+
+7
+00:01:50,000 --> 00:02:00,943
+Named scenarios and workspaces save in this browser. Export workspace JSON for a portable copy. The guest demo needs no sign in, and production cloud saving remains disabled.
+
+8
+00:02:07,000 --> 00:02:20,064
+Simulator imports show replaced and retained data before applying. They clear on refresh. Needtrace models material availability, not factory capacity or shipment forecasts. See what breaks before it breaks.
