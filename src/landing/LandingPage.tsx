@@ -1,5 +1,14 @@
 import { useEffect, useState } from "react";
-import { ArrowDown, ArrowUpRight, Sun, Moon, Check } from "lucide-react";
+import {
+  ArrowDown,
+  ArrowRight,
+  ArrowUpRight,
+  Sun,
+  Moon,
+  Check,
+  Package,
+  Factory,
+} from "lucide-react";
 import {
   demoData,
   NORMAL_SCENARIO,
@@ -9,25 +18,19 @@ import {
 import { simulate } from "../lib/simulation";
 import "./landing.css";
 const states = [
-  { name: "On time", short: "On time", scenario: NORMAL_SCENARIO },
+  { name: "On time", label: "On time", scenario: NORMAL_SCENARIO },
   {
     name: "Delivery delayed",
-    short: "Delay +6 days",
+    label: "6 days late",
     scenario: DISRUPTION_SCENARIO,
   },
   {
     name: "Alternative supply applied",
-    short: "Recovery",
+    label: "Try recovery",
     scenario: RECOVERY_SCENARIO,
   },
 ];
-const reports = states.map(({ scenario }) => simulate(demoData, scenario));
-const currency = (n: number) =>
-  new Intl.NumberFormat("en-IE", {
-    style: "currency",
-    currency: "EUR",
-    maximumFractionDigits: 0,
-  }).format(n);
+const reports = states.map((s) => simulate(demoData, s.scenario));
 function DemoLink() {
   return (
     <a className="lp-cta" href="/">
@@ -37,25 +40,26 @@ function DemoLink() {
 }
 export default function LandingPage() {
   const [active, setActive] = useState(1);
+  const [showcase, setShowcase] = useState("allocation");
   const [theme, setTheme] = useState(() =>
     document.documentElement.dataset.landingTheme === "dark" ? "dark" : "light",
   );
   const result = reports[active];
-  const order = result.orders.find((o) => o.orderId === "ORD-102")!;
-  const motor = order.lines.find((l) => l.componentId === "MTR-01")!;
-  const receipt = result.deliveries.find((d) => d.id === "PO-101")!;
-  const delayed = receipt.availableDate === "2026-11-23";
+  const motor = result.orders
+    .find((o) => o.orderId === "ORD-102")!
+    .lines.find((l) => l.componentId === "MTR-01")!;
   const recovered = active === 2;
+  const delayed = active !== 0;
   useEffect(() => {
     document.title = "DominoOS — See what breaks before it breaks";
     document.documentElement.dataset.landingTheme = theme;
     document
       .querySelector('meta[name="theme-color"]')
-      ?.setAttribute("content", theme === "dark" ? "#0E1519" : "#F2F1EC");
+      ?.setAttribute("content", theme === "dark" ? "#0D1422" : "#F2F1EC");
     try {
       localStorage.setItem("dominoos.landing.theme.v2", theme);
     } catch {
-      /* Choice still works when storage is blocked. */
+      /* optional storage */
     }
   }, [theme]);
   return (
@@ -71,444 +75,394 @@ export default function LandingPage() {
           </span>
           DominoOS
         </a>
-        <span className="lp-brandline">See what breaks before it breaks.</span>
         <nav aria-label="Landing navigation">
-          <a className="lp-how-nav" href="#how-it-works">
+          <a className="lp-product-nav" href="#lp-evidence">
             The product
           </a>
           <div className="lp-theme" role="group" aria-label="Color theme">
             {["light", "dark"].map((t) => (
               <button
                 key={t}
-                type="button"
                 aria-label={`${t === "light" ? "Light" : "Dark"} mode`}
                 aria-pressed={theme === t}
                 onClick={() => setTheme(t)}
               >
                 {t === "light" ? (
-                  <Sun size={15} aria-hidden="true" />
+                  <Sun size={16} aria-hidden="true" />
                 ) : (
-                  <Moon size={15} aria-hidden="true" />
+                  <Moon size={16} aria-hidden="true" />
                 )}
                 <span>{t === "light" ? "Light" : "Dark"}</span>
               </button>
             ))}
           </div>
-          <a className="lp-open" href="/">
-            Open demo <ArrowUpRight size={16} aria-hidden="true" />
-          </a>
         </nav>
       </header>
       <main id="lp-main" tabIndex={-1}>
         <section className="lp-hero lp-wrap" aria-labelledby="lp-title">
           <div className="lp-intro">
-            <div>
-              <p className="lp-eyebrow">
-                <span /> Material availability, made visible
-              </p>
-              <h1 id="lp-title">
-                One late delivery.
-                <br />
-                <span>
-                  Which orders are
-                  <br className="lp-desktop-break" /> now at risk?
-                </span>
-              </h1>
-            </div>
-            <div className="lp-intro-side">
-              <p>
-                Move a supplier receipt. See which customer commitments run
-                short, trace the missing materials, and test an approved
-                alternative.
-              </p>
+            <p className="lp-eyebrow">
+              <span /> Manufacturing plans. Consequences, made clear.
+            </p>
+            <h1 id="lp-title">
+              One late delivery.
+              <br />
+              <em>See the orders at risk.</em>
+            </h1>
+            <p className="lp-lead">
+              A supplier slips. A customer order runs short.
+              <br className="lp-desktop-break" /> See the connection. Test a way
+              through.
+            </p>
+            <div className="lp-actions">
               <DemoLink />
-              <a className="lp-text-link" href="#how-it-works">
+              <a className="lp-text-link" href="#lp-evidence">
                 See how it works <ArrowDown size={16} aria-hidden="true" />
               </a>
-              <p className="lp-small">
-                Fictional plan. Real calculations. No account.
-              </p>
             </div>
           </div>
           <div
-            className="lp-stage"
-            data-state={active}
-            aria-label="Interactive fictional supply scenario"
+            className={`lp-demo ${recovered ? "is-recovered" : delayed ? "is-delayed" : "is-on-time"}`}
           >
-            <div className="lp-stage-toolbar">
-              <p>
-                <span className="lp-live-dot" /> Live scenario{" "}
-                <span className="lp-toolbar-muted">/ Northstar · Nov 2026</span>
-              </p>
-              <div
-                className="lp-state-controls"
-                role="group"
-                aria-label="Supply scenario"
-              >
-                {states.map((s, i) => (
-                  <button
-                    type="button"
-                    key={s.name}
-                    aria-label={s.name}
-                    aria-pressed={active === i}
-                    onClick={() => setActive(i)}
-                  >
-                    <span className="lp-state-number">0{i + 1}</span>
-                    {s.short}
-                  </button>
-                ))}
+            <div className="lp-scene">
+              <div className="lp-receipt">
+                <div className="lp-object-icon">
+                  <Factory size={22} aria-hidden="true" />
+                </div>
+                <span className="lp-label">SUPPLIER RECEIPT</span>
+                <h2>Aster Motion</h2>
+                <p className="lp-dates">
+                  {delayed ? (
+                    <>
+                      <s>17</s> <ArrowRight size={19} aria-hidden="true" /> 23
+                      Nov
+                    </>
+                  ) : (
+                    "17 November"
+                  )}
+                </p>
+                <span className="lp-delivery-status">
+                  {delayed ? "+6 days" : "On schedule"}
+                </span>
               </div>
-            </div>
-            <div className="lp-stage-body">
-              <div
-                className={`lp-system ${delayed ? "is-delayed" : ""} ${recovered ? "is-recovered" : ""}`}
-              >
-                <div
-                  className="lp-axis"
-                  aria-label={`Aster receipt ${delayed ? "23" : "17"} November; ORD-102 due 22 November`}
-                >
-                  <div className="lp-axis-title">
-                    PO-101 · Aster Motion · 5 motors{" "}
-                  </div>
-                  <div className="lp-date-track" aria-hidden="true">
-                    {Array.from({ length: 19 }, (_, i) => (
-                      <i
-                        key={i}
-                        className="lp-minor-tick"
-                        style={{ left: `${(i / 18) * 100}%` }}
-                      />
-                    ))}
-                    {delayed && (
-                      <>
-                        <div className="lp-ghost" style={{ left: "27.77%" }}>
-                          17 Nov
-                        </div>
-                        <div
-                          className="lp-dimension"
-                          style={{ left: "27.77%", width: "33.34%" }}
-                        >
-                          +6 days
-                        </div>
-                        <div
-                          className="lp-late-gap"
-                          style={{ left: "55.55%", width: "5.56%" }}
-                        >
-                          <span>1 day after due</span>
-                        </div>
-                      </>
-                    )}
-
-                    {[12, 15, 18, 21, 24, 27, 30].map((d, i) => (
-                      <span
-                        className="lp-tick"
-                        key={d}
-                        style={{ left: `${(i / 6) * 100}%` }}
-                      >
-                        {d}
-                      </span>
-                    ))}
-                    <div className="lp-due" style={{ left: "55.55%" }}>
-                      <span>
-                        Order due
-                        <br />
-                        <b>22 Nov</b>
-                      </span>
-                    </div>
-                    <div
-                      className="lp-receipt"
-                      style={{ left: delayed ? "61.11%" : "27.77%" }}
+              <span className="lp-connector" aria-hidden="true">
+                <ArrowRight />
+              </span>
+              <div className="lp-material">
+                <span className="lp-label">4 MOTORS FOR ORD-102</span>
+                <div className="lp-tokens" aria-hidden="true">
+                  {Array.from({ length: motor.required }, (_, i) => (
+                    <span
+                      key={i}
+                      className={
+                        i >= motor.allocated
+                          ? "missing"
+                          : recovered && i >= 2
+                            ? "alternative"
+                            : "allocated"
+                      }
                     >
-                      <span>PO-101 · {delayed ? "23 Nov" : "17 Nov"}</span>
-                      <i />
-                    </div>
-                    {recovered && (
-                      <div className="lp-alt-date" style={{ left: "33.33%" }}>
-                        18 Nov
-                        <br />
-                        <b>Vector +2</b>
-                      </div>
-                    )}
-                  </div>
-                </div>
-                <ol
-                  className="lp-chain"
-                  aria-label="Supplier to customer order"
-                >
-                  <li className="lp-chain-node">
-                    <span className="lp-node-label">Supplier</span>
-                    <strong>Aster Motion</strong>
-                    <small>PO-101 · {delayed ? "23" : "17"} Nov</small>
-                  </li>
-                  <li className="lp-chain-node">
-                    <span className="lp-node-label">Component</span>
-                    <strong>Servo motor</strong>
-                    <small>MTR-01</small>
-                  </li>
-                  <li className="lp-chain-node">
-                    <span className="lp-node-label">Product</span>
-                    <strong>Precision actuator</strong>
-                    <small>PA-410</small>
-                  </li>
-                  <li
-                    className={`lp-chain-node lp-order ${motor.shortage ? "is-short" : "is-covered"}`}
-                  >
-                    <span className="lp-node-label">Customer order</span>
-                    <strong>ORD-102</strong>
-                    <small>Required 22 Nov</small>
-                    <span className="lp-order-status">
-                      {motor.shortage ? (
-                        "2 motors short"
-                      ) : (
-                        <>
-                          <Check size={14} aria-hidden="true" /> Materials
-                          covered
-                        </>
-                      )}
+                      <Package size={22} />
+                      {i >= motor.allocated ? <b>?</b> : <Check size={16} />}
                     </span>
-                  </li>
-                </ol>
-                <div
-                  className={`lp-alternative ${recovered ? "lp-applied" : "lp-unapplied"}`}
-                >
-                  <span aria-hidden="true">↳</span>
-                  <div>
-                    <strong>Vector Components</strong>
-                    <small>2 modeled approved motors · 18 Nov</small>
-                  </div>
-                  <span>
-                    {recovered ? "Applied to scenario" : "Available to model"}
-                  </span>
+                  ))}
                 </div>
-              </div>
-              <div
-                className="lp-outcome"
-                role="status"
-                aria-live="polite"
-                aria-atomic="true"
-              >
-                <p className={motor.shortage ? "lp-risk" : "lp-covered"}>
-                  {motor.shortage ? "Material shortage" : "Materials covered"}
-                </p>
-                <div
-                  className={`lp-big-result ${motor.shortage ? "lp-risk" : ""}`}
-                >
-                  <strong data-testid="landing-shortage">
-                    {motor.shortage}
-                  </strong>
-                  <span>
-                    of {motor.required} motors
-                    <br />
-                    missing by 22 Nov
-                  </span>
-                </div>
-                <div className="lp-allocation">
-                  <span>{motor.allocated}</span> allocated on time
-                </div>
-                <div className="lp-exposure">
-                  <strong data-testid="landing-exposure">
-                    {currency(result.summary.atRiskValue)}
-                  </strong>
-                  <span>fictional order value at material risk</span>
-                  <small>Exposure, not a predicted loss.</small>
-                </div>
-                <p className="lp-result-note">
-                  {active === 0
-                    ? "All 10 orders covered. The receipt arrives before ORD-102 needs it."
+                <p>
+                  {motor.shortage
+                    ? "2 available. 2 missing."
                     : recovered
-                      ? "Coverage restored. The original Aster receipt still arrives on 23 Nov."
-                      : ""}
+                      ? "2 in stock + 2 alternatives."
+                      : "All four available on time."}
                 </p>
+                <div
+                  className={`lp-vector ${recovered ? "lp-applied" : ""}`}
+                  hidden={!recovered}
+                >
+                  {recovered ? (
+                    <Check size={16} aria-hidden="true" />
+                  ) : (
+                    <span aria-hidden="true">↳</span>
+                  )}
+                  <span>
+                    {recovered
+                      ? "Vector fills the gap · Applied to scenario"
+                      : "An alternative to test"}
+                    <small>
+                      {recovered
+                        ? "2 modeled motors · 18 Nov"
+                        : "Vector Components · 2 motors"}
+                    </small>
+                  </span>
+                </div>
+              </div>
+              <span className="lp-connector" aria-hidden="true">
+                <ArrowRight />
+              </span>
+              <div className="lp-order" role="status" aria-live="polite">
+                <div className="lp-order-top">
+                  <span>ORD-102</span>
+                  <span>Precision actuator</span>
+                </div>
+                <div className="lp-order-outcome" key={active}>
+                  {motor.shortage ? (
+                    <>
+                      <strong data-testid="landing-shortage">
+                        {motor.shortage}
+                      </strong>
+                      <span>motors short</span>
+                    </>
+                  ) : (
+                    <>
+                      <Check
+                        className="lp-covered-icon"
+                        size={48}
+                        aria-hidden="true"
+                      />
+                      <strong className="lp-covered">Covered</strong>
+                      <span
+                        data-testid="landing-shortage"
+                        className="lp-sr-only"
+                      >
+                        0
+                      </span>
+                    </>
+                  )}
+                </div>
+                <p>
+                  {motor.shortage
+                    ? "Needed 22 Nov. Next receipt 23 Nov."
+                    : recovered
+                      ? "The gap closes. The delay stays."
+                      : "Materials ready by the required date."}
+                </p>
+                <div className="lp-order-bottom">
+                  <span className="lp-status-dot" />
+                  {motor.shortage
+                    ? "Material shortage"
+                    : recovered
+                      ? "Recovery simulated"
+                      : "All 10 orders covered"}
+                </div>
+                <p className="lp-stakes">
+                  {new Intl.NumberFormat("en-IE", {
+                    style: "currency",
+                    currency: "EUR",
+                    maximumFractionDigits: 0,
+                  }).format(result.summary.atRiskValue)}{" "}
+                  fictional order value at material risk. Exposure, not loss.
+                </p>
+                <span className="lp-sr-only">
+                  {recovered
+                    ? "Applied to scenario. The original Aster receipt still arrives on 23 Nov."
+                    : ""}
+                </span>
               </div>
             </div>
-          </div>
-          <details className="lp-summary lp-visually-hidden">
-            <summary>Read the three-state example</summary>
-            <p>
-              On time: all ten orders have material coverage. Delayed six days:
-              ORD-102 requires four motors; two are allocated, two are missing.
-              Two Vector motors restore coverage in the recovery scenario.
-              Approval and availability are fictional inputs. Recovery does not
-              place a purchase or confirm supply.
-            </p>
-          </details>
-        </section>
-        <section className="lp-explain lp-wrap" aria-labelledby="lp-why">
-          <div>
-            <p className="lp-eyebrow">01 / Follow the allocation</p>
-            <h2 id="lp-why">Why eight motors aren’t enough.</h2>
-            <p>
-              A stock count alone misses the commitment. Earlier orders reserve
-              material first. DominoOS shows what remains when each order needs
-              it.
-            </p>
-          </div>
-          <div className="lp-stock-proof">
-            <div className="lp-stock-label">
-              <span>8 motors on hand</span>
-              <span>Required-date priority</span>
-            </div>
-            <div className="lp-stock" aria-hidden="true">
-              {Array.from({ length: 8 }, (_, i) => (
-                <i key={i} className={i < 6 ? "is-reserved" : ""} />
+            <div
+              className="lp-state-controls"
+              role="group"
+              aria-label="Supply scenario"
+            >
+              {states.map((s, i) => (
+                <button
+                  key={s.name}
+                  aria-label={s.name}
+                  aria-pressed={active === i}
+                  onClick={() => setActive(i)}
+                >
+                  <span className="lp-step">0{i + 1}</span>
+                  {s.label}
+                </button>
               ))}
             </div>
-            <div className="lp-stock-label">
-              <span>6 reserved for ORD-101</span>
-              <strong>2 left for ORD-102</strong>
+            <div className="lp-demo-caption">
+              <span>Fictional plan. Live DominoOS calculations.</span>
+              <details className="lp-summary">
+                <summary>Why this result?</summary>
+                <p>
+                  Eight motors are in stock. ORD-101 reserves six first, leaving
+                  two for ORD-102’s requirement of four on 22 November. Moving
+                  PO-101 from 17 to 23 November leaves two missing. Two modeled
+                  Vector motors on 18 November restore coverage; the original
+                  receipt stays late.
+                </p>
+                <p>
+                  <strong data-testid="landing-exposure">
+                    {new Intl.NumberFormat("en-IE", {
+                      style: "currency",
+                      currency: "EUR",
+                      maximumFractionDigits: 0,
+                    }).format(result.summary.atRiskValue)}
+                  </strong>{" "}
+                  fictional order value at material risk. Exposure, not a
+                  predicted loss. Approval and availability are fictional
+                  inputs; no purchase is placed.
+                </p>
+              </details>
             </div>
-            <p>
-              Inspect the reservation, the missing quantity and the late
-              receipt. Same inputs. Same answer.
-            </p>
           </div>
         </section>
         <section
-          id="how-it-works"
-          className="lp-product lp-wrap"
-          aria-labelledby="lp-evidence"
+          className="lp-evidence"
+          id="lp-evidence"
+          aria-labelledby="lp-evidence-title"
         >
-          <div className="lp-section-heading">
-            <div>
-              <p className="lp-eyebrow">02 / Inside the simulator</p>
-              <h2 id="lp-evidence">A shortage you can trace.</h2>
-            </div>
-            <p>
-              Change the supply. Trace the impact. Compare the response. Every
-              result connects back to a material, a date and a customer order.
-            </p>
-          </div>
-          <a
-            className="lp-product-image"
-            href="/"
-            aria-label="Open the simulator shown in this real screenshot"
-          >
-            <picture>
-              <source
-                media="(max-width: 900px)"
-                srcSet="/landing/allocation-mobile.png"
-              />
-              <img
-                src="/landing/simulator-detail.png"
-                width="1100"
-                height="760"
-                loading="lazy"
-                alt="Real DominoOS simulator showing the red supplier-to-ORD-102 path and the dated motor shortage timeline."
-              />
-            </picture>
-          </a>
-          <div className="lp-image-caption">
-            <span>Actual application · fictional Northstar plan</span>
-            <span>Light application interface in both page themes</span>
-          </div>
-          <div className="lp-evidence-points">
-            <p>
-              <b>01</b> See the affected order in the supply network.
-            </p>
-            <p>
-              <b>02</b> Inspect exactly which materials arrive too late.
-            </p>
-            <p>
-              <b>03</b> Model a response and recalculate coverage.
-            </p>
-          </div>
-        </section>
-        <section
-          id="builder"
-          className="lp-builder lp-wrap"
-          aria-labelledby="lp-builder-title"
-        >
-          <div className="lp-builder-copy">
-            <p className="lp-eyebrow">03 / Make it your own</p>
-            <h2 id="lp-builder-title">
-              Your network.
-              <br />
-              Your next what-if.
-            </h2>
-            <p>
-              Connect suppliers, materials, products and customer orders on an
-              editable canvas. Start with an example or build a network of your
-              own, then simulate its material coverage.
-            </p>
-            <a href="/" className="lp-text-link">
-              Open demo to build a network{" "}
-              <ArrowUpRight size={18} aria-hidden="true" />
-            </a>
-            <p className="lp-small">
-              In the simulator, choose <strong>Build a network</strong>.
-            </p>
-            <div className="lp-storage-note">
-              <strong>Workspaces stay in this browser.</strong>
+          <div className="lp-wrap lp-evidence-grid">
+            <div className="lp-evidence-copy">
+              <p className="lp-eyebrow">GO FROM THE SIGNAL TO THE SOURCE</p>
+              <h2 id="lp-evidence-title">
+                No black box. <br />
+                Follow the evidence.
+              </h2>
               <p>
-                Builder workspaces save locally; export JSON for a portable
-                copy. CSV/JSON imports in the simulator are session-only and
-                clear on refresh. Neither is uploaded to a server.
+                Know which material is missing, which order needs it, and which
+                supply could change the outcome.
               </p>
-            </div>
-          </div>
-          <figure>
-            <a
-              href="/landing/builder-detail.png"
-              target="_blank"
-              rel="noreferrer"
-              aria-label="View full-size real builder screenshot"
-            >
-              <img
-                src="/landing/builder-detail.png"
-                width="709"
-                height="260"
-                alt="Actual editable builder canvas showing suppliers, material stock, a dated receipt, a product and customer orders."
-                loading="lazy"
-              />
-            </a>
-            <figcaption>
-              Actual builder · motor assembly example · view full size ↗
-            </figcaption>
-          </figure>
-        </section>
-        <section
-          className="lp-limits lp-wrap"
-          aria-labelledby="lp-limits-title"
-        >
-          <p className="lp-eyebrow">A model you can inspect</p>
-          <h2 id="lp-limits-title">Clear inputs. Honest boundaries.</h2>
-          <div className="lp-limit-columns">
-            <div>
-              <h3>What it calculates</h3>
-              <p>
-                Material coverage from stock, dated receipts and bills of
-                material. Orders reserve by required date, then order ID.
-                Inspect allocations and compare scenarios against the same
-                baseline.
+              <div
+                className="lp-showcase-controls"
+                role="group"
+                aria-label="Product evidence"
+              >
+                <button
+                  aria-pressed={showcase === "allocation"}
+                  onClick={() => setShowcase("allocation")}
+                >
+                  01 <span>Trace a shortage</span>
+                  <ArrowUpRight size={18} />
+                </button>
+                <button
+                  aria-pressed={showcase === "network"}
+                  onClick={() => setShowcase("network")}
+                >
+                  02 <span>See the supply network</span>
+                  <ArrowUpRight size={18} />
+                </button>
+                <button
+                  aria-pressed={showcase === "builder"}
+                  onClick={() => setShowcase("builder")}
+                >
+                  03 <span>Build your network</span>
+                  <ArrowUpRight size={18} />
+                </button>
+              </div>
+              <p className="lp-evidence-note">
+                {showcase === "allocation"
+                  ? "Real reservations. Inspectable quantities. The same deterministic engine behind every scenario."
+                  : showcase === "network"
+                    ? "The actual supplier-to-order map. Select a node in the simulator to inspect its relationships."
+                    : "Connect suppliers, materials and customer orders on an editable canvas. Workspaces save in this browser."}
               </p>
+              <a className="lp-text-link" href="/">
+                Open demo to build a network <ArrowUpRight size={16} />
+              </a>
+              <small>
+                In the simulator, choose <strong>Build a network</strong>.
+              </small>
             </div>
-            <div>
-              <h3>What remains a real-world decision</h3>
-              <p>
-                Supplier confirmation, purchasing, factory capacity, costs and
-                exact shipment timing. Modeled alternatives do not place orders.
-                CSV/JSON imports disclose replaced and retained data.
-              </p>
-            </div>
+            <figure className={`lp-showcase lp-showcase-${showcase}`}>
+              <div className="lp-window-label">
+                <span />
+                <span>
+                  DOMINOOS /{" "}
+                  {showcase === "allocation"
+                    ? "ALLOCATION EVIDENCE"
+                    : showcase === "network"
+                      ? "SUPPLY NETWORK"
+                      : "NETWORK BUILDER"}
+                </span>
+                <a
+                  href={
+                    showcase === "allocation"
+                      ? "/landing/shortage-desktop.png"
+                      : showcase === "network"
+                        ? "/landing/simulator-detail.png"
+                        : "/landing/builder-detail.png"
+                  }
+                  target="_blank"
+                  rel="noreferrer"
+                  aria-label="View product image full size"
+                >
+                  <ArrowUpRight size={16} />
+                </a>
+              </div>
+              <div
+                className="lp-image-well"
+                tabIndex={showcase === "network" ? 0 : undefined}
+                role={showcase === "network" ? "region" : undefined}
+                aria-label={
+                  showcase === "network"
+                    ? "Supply network image; scroll to explore"
+                    : undefined
+                }
+              >
+                <picture>
+                  {showcase === "allocation" && (
+                    <source
+                      media="(max-width: 900px)"
+                      srcSet="/landing/shortage-mobile.png"
+                    />
+                  )}
+                  <img
+                    key={showcase}
+                    src={
+                      showcase === "allocation"
+                        ? "/landing/shortage-desktop.png"
+                        : showcase === "network"
+                          ? "/landing/simulator-detail.png"
+                          : "/landing/builder-detail.png"
+                    }
+                    alt={
+                      showcase === "allocation"
+                        ? "Actual simulator: ORD-102 needs four servo motors; two allocated and two short, with PO-101 arriving after the requirement."
+                        : showcase === "network"
+                          ? "Actual simulator supply network showing the delayed Aster receipt and ORD-102 shortage."
+                          : "Actual editable builder canvas with supplier, motor stock, receipt, product and customer orders."
+                    }
+                    width={showcase === "allocation" ? 686 : 1418}
+                    height={showcase === "allocation" ? 450 : 520}
+                    loading="lazy"
+                  />
+                </picture>
+              </div>
+              <figcaption>
+                Actual application · fictional example · light product interface
+              </figcaption>
+            </figure>
           </div>
         </section>
         <section className="lp-close lp-wrap">
-          <p className="lp-eyebrow">See what breaks before it breaks.</p>
+          <p className="lp-eyebrow">SEE WHAT BREAKS BEFORE IT BREAKS.</p>
           <h2>
-            Find the short order.
+            Change the plan.
             <br />
-            <span>Test a way through.</span>
+            <em>Understand the consequence.</em>
           </h2>
           <DemoLink />
-          <p className="lp-small">
-            Explore a fictional plan before bringing your own.
+          <p className="lp-close-note">
+            Material availability. Clear assumptions. Your next what-if.
           </p>
+          <details className="lp-boundaries">
+            <summary>What the prototype does—and where it stops</summary>
+            <p>
+              Deterministic material allocation and scenario comparisons.
+              Factory capacity, costs, supplier confirmation and exact shipment
+              predictions are outside the model. Simulated recoveries do not
+              place orders.
+            </p>
+            <p>
+              Builder workspaces save in this browser; export JSON for a
+              portable copy. CSV/JSON imports in the original simulator are
+              session-only and clear on refresh. Neither is uploaded to a
+              server. No customer validation or measured savings are claimed.
+            </p>
+          </details>
         </section>
       </main>
       <footer className="lp-footer lp-wrap">
         <a className="lp-logo" href="#top">
           DominoOS
         </a>
-        <span>Unfair Weekend 2026 · Material availability, explained.</span>
+        <span>Material availability, made visible.</span>
         <a href="#top">Back to top ↑</a>
       </footer>
     </div>

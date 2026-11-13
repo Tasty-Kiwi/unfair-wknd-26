@@ -11,7 +11,7 @@
     <script>
       const landingPaint = document.createElement("style");
       landingPaint.textContent =
-        'html[data-landing-theme="dark"] body { background: #0E1519; color: #F1F3EF; } html[data-landing-theme="light"] body { background: #F2F1EC; color: #182227; }';
+        'html[data-landing-theme="dark"] body { background: #0D1422; color: #F1EEE6; } html[data-landing-theme="light"] body { background: #F2F1EC; color: #182227; }';
       document.head.appendChild(landingPaint);
       if (location.pathname.replace(/\/$/, "") === "/landing") {
         let theme = "light";
@@ -21,9 +21,9 @@
         } catch {}
         document.documentElement.dataset.landingTheme = theme;
         document.documentElement.style.backgroundColor =
-          theme === "dark" ? "#0E1519" : "#F2F1EC";
+          theme === "dark" ? "#0D1422" : "#F2F1EC";
         document.querySelector('meta[name="theme-color"]').content =
-          theme === "dark" ? "#0E1519" : "#F2F1EC";
+          theme === "dark" ? "#0D1422" : "#F2F1EC";
       }
     </script>
     <title>DominoOS — material availability what-if</title>

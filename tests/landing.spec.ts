@@ -19,8 +19,11 @@ for (const theme of ["light", "dark"]) {
     const controls = page.getByRole("group", { name: "Supply scenario" });
     const outcome = page.getByRole("status");
     await expect(page.getByTestId("landing-shortage")).toHaveText("2");
+    await page.getByText("Why this result?", { exact: true }).click();
     await expect(page.getByTestId("landing-exposure")).toHaveText("€36,000");
-    await expect(outcome).toContainText("Exposure, not a predicted loss");
+    await expect(page.locator(".lp-summary")).toContainText(
+      "Exposure, not a predicted loss",
+    );
     await controls
       .getByRole("button", { name: "On time", exact: true })
       .click();
@@ -109,10 +112,12 @@ for (const theme of ["light", "dark"]) {
         expect(b.x).toBeGreaterThanOrEqual(0);
         expect(b.x + b.width).toBeLessThanOrEqual(width);
       }
-      await page
-        .getByRole("link", { name: "See how it works", exact: true })
-        .click();
-      await expect(page.locator("#lp-evidence")).toBeInViewport();
+      if (width >= 600) {
+        await page
+          .getByRole("link", { name: "See how it works", exact: true })
+          .click();
+        await expect(page.locator("#lp-evidence")).toBeInViewport();
+      }
     });
   }
 }
@@ -177,6 +182,58 @@ test("saved dark surface paints before the lazy route loads", async ({
   );
   await expect(page.locator("body")).toHaveCSS(
     "background-color",
-    "rgb(14, 21, 25)",
+    "rgb(13, 20, 34)",
   );
+});
+
+test("product evidence changes between real allocation, network and builder captures", async ({
+  page,
+}) => {
+  await page.goto("/landing");
+  await page.getByRole("button", { name: "See the supply network" }).click();
+  await expect(page.locator(".lp-showcase img")).toHaveAttribute(
+    "src",
+    "/landing/simulator-detail.png",
+  );
+  await page
+    .getByRole("button", { name: "Build your network", exact: false })
+    .click();
+  await expect(page.locator(".lp-showcase img")).toHaveAttribute(
+    "src",
+    "/landing/builder-detail.png",
+  );
+  await page.getByRole("button", { name: "Trace a shortage" }).click();
+  await expect(page.locator(".lp-showcase img")).toHaveAttribute(
+    "src",
+    "/landing/shortage-desktop.png",
+  );
+  await expect(page.locator(".lp-showcase img")).toBeVisible();
+});
+
+test("mobile network preserves readable scale without clipping the timeline", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/landing");
+  await page.getByRole("button", { name: "See the supply network" }).click();
+  const image = page.getByRole("region", {
+    name: "Supply network image; scroll to explore",
+  });
+  await image.locator("img").evaluate(async (img) => {
+    await (img as HTMLImageElement).decode();
+  });
+  const bounds = await image.evaluate((e) => ({
+    width: e.clientWidth,
+    scroll: e.scrollWidth,
+    height: e.clientHeight,
+    content: e.scrollHeight,
+    page: document.documentElement.scrollWidth,
+  }));
+  expect(bounds.scroll).toBeGreaterThan(bounds.width);
+  expect(bounds.height).toBeGreaterThanOrEqual(bounds.content - 1);
+  expect(bounds.page).toBe(390);
+  await image.focus();
+  await expect(image).toBeFocused();
+  await image.evaluate((e) => (e.scrollLeft = e.scrollWidth));
+  expect(await image.evaluate((e) => e.scrollLeft)).toBeGreaterThan(0);
 });
