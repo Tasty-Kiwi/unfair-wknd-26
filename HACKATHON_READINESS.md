@@ -4,7 +4,7 @@ Reviewed locally: **13 November 2026**. Team-supplied deadline: **14 November 20
 
 ## Decision and reviewed revision
 
-PR [#3](https://github.com/Tasty-Kiwi/unfair-wknd-26/pull/3) is open and mergeable at `19c03f7790629fea6623e9a2a1bf1f7f7dde3f53`, branch `fix/hackathon-readiness`, targeting `main`. Recheck the head before release. The local documentation follow-up does not change application behavior and is not yet on the remote PR. No push, merge or deployment was performed in this product-review pass.
+PR [#3](https://github.com/Tasty-Kiwi/unfair-wknd-26/pull/3) uses branch `fix/hackathon-readiness`, targeting `main`. Application verification reviewed `19c03f7790629fea6623e9a2a1bf1f7f7dde3f53`; documentation and submission preparation were added in `b52497d42c660f07ba0ea906e62cb5f1a2327ec7`, now included in the remote PR. Both GitHub Actions verification runs passed on `b52497d`. Subsequent synchronization changes only correct documentation status. Recheck the final head, checks and mergeability before release. No merge or deployment has been performed.
 
 Application verification supports a hackathon demonstration and final review of PR #3. No significant observable UI defect required an application change. This is engineering and rendered-interface evidence, not validation by real manufacturing planners.
 
@@ -53,7 +53,7 @@ Spoken durations are targets. A human must rehearse with the actual clicks, reco
 
 ## Remaining team actions
 
-1. Review the local documentation commit. Obtain explicit authorization before pushing or merging; recheck PR head and repository status first.
+1. Review the synchronized PR and its final application CI results. Obtain explicit authorization before merging; recheck PR head and repository status first.
 2. Presenter: rehearse the 30-second pitch and 60-second demo on the presentation machine; test normal zoom, scrolling, display and power. Conduct an unaided outsider session if time permits.
 3. Release owner: coordinate the approved presentation URL/revision with the teammate owning production, then check the complete demonstration and latest import/reset safeguards on that URL.
 4. Prepare an offline fallback before presentation: `npm ci`, `npm run build`, then `npm run preview -- --host 127.0.0.1 --port 5194`. Open the local URL and repeat the demo with the network disconnected. Keep a video backup offline.
