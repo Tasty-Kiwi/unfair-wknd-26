@@ -296,9 +296,13 @@ export default function App() {
   const [selection, setSelection] = useState<Selection | null>(null);
   const [importOpen, setImportOpen] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
+  const [resetOpen, setResetOpen] = useState(false);
+  const [retainedProductBoms, setRetainedProductBoms] = useState(false);
   const [importError, setImportError] = useState("");
   const [importing, setImporting] = useState(false);
-  const [pendingImport, setPendingImport] = useState<PendingImport | null>(null);
+  const [pendingImport, setPendingImport] = useState<PendingImport | null>(
+    null,
+  );
   const [notice, setNotice] = useState("");
   const [controlError, setControlError] = useState("");
   const orderTable = useRef<HTMLElement>(null);
@@ -329,6 +333,8 @@ export default function App() {
     setNotice("");
   };
   const reset = () => {
+    setResetOpen(false);
+    setRetainedProductBoms(false);
     setData(demoData);
     setProvenance(fictionalProvenance());
     setScenario(NORMAL_SCENARIO);
@@ -358,10 +364,7 @@ export default function App() {
       setPendingImport({
         ...parsed,
         fileNames: files.map((file) => file.name),
-        provenance: provenanceAfterImport(
-          provenance,
-          parsed.replacedTables,
-        ),
+        provenance: provenanceAfterImport(provenance, parsed.replacedTables),
       });
     } catch (e) {
       setImportError(
@@ -376,6 +379,8 @@ export default function App() {
     const nextPresets = presetsFor(pendingImport.data);
     setData(pendingImport.data);
     setProvenance(pendingImport.provenance);
+    if (pendingImport.replacedTables.includes("products"))
+      setRetainedProductBoms(pendingImport.retainedProductBoms);
     setScenario(nextPresets[0]);
     setSelection(null);
     setImportOpen(false);
@@ -428,7 +433,14 @@ export default function App() {
             <Upload data-icon="inline-start" />
             Import data
           </Button>
-          <Button variant="outline" size="sm" onClick={reset}>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              if (provenance.kind !== "fictional") setResetOpen(true);
+              else reset();
+            }}
+          >
             <RotateCcw data-icon="inline-start" />
             Reset demo
           </Button>
@@ -473,6 +485,13 @@ export default function App() {
         </p>
       </div>
       <main>
+        {retainedProductBoms && (
+          <p className="notice" role="status">
+            Product names and SKUs are imported; existing BOMs were retained and
+            may include fictional demo values. Import products and BOM together
+            to replace both.
+          </p>
+        )}
         {notice && (
           <div className="notice" role="status">
             <CheckCircle2 size={16} />
@@ -603,9 +622,9 @@ export default function App() {
                   JSON.stringify(
                     {
                       dataset: data.name,
-                      dataProvenance:
-                        provenance,
+                      dataProvenance: provenance,
                       inputs: data,
+                      retainedProductBoms,
                       policy:
                         "Partial component reservations, earliest required date then order ID; material availability only.",
                       scenario,
@@ -787,7 +806,10 @@ export default function App() {
             <DialogTitle>Bring your material plan</DialogTitle>
             <DialogDescription>
               Replace the dataset with JSON, or select spreadsheet CSV tables
-              together. Everything stays in your browser.
+              together. Everything stays in your browser. Data is not saved
+              between sessions: refreshing or closing this page clears your
+              imported plan and scenario changes. Export your report before
+              leaving, and keep your source files to import again.
             </DialogDescription>
           </DialogHeader>
           <div className="import-zone">
@@ -830,6 +852,14 @@ export default function App() {
                   <strong>Replace:</strong>{" "}
                   {pendingImport.replacedTables.map(tableLabel).join(", ")}.
                 </p>
+                {pendingImport.retainedProductBoms && (
+                  <p>
+                    <strong>Existing BOMs retained:</strong> Product names and
+                    SKUs will be imported, but matching product IDs keep their
+                    current bills of materials. These may include fictional demo
+                    values. Import products and BOM together to replace both.
+                  </p>
+                )}
                 <p>
                   <strong>Keep existing:</strong>{" "}
                   {pendingImport.retainedTables.length
@@ -882,7 +912,7 @@ export default function App() {
               </a>
             ))}
           </div>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             <Button
               variant="outline"
               onClick={() =>
@@ -914,6 +944,28 @@ export default function App() {
             >
               Example CSV
             </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+      <Dialog open={resetOpen} onOpenChange={setResetOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Replace your imported plan?</DialogTitle>
+            <DialogDescription>
+              Resetting restores fictional demo data and clears your imported
+              plan and scenario changes. Export your report first if you need
+              the results. Keep your source files to import the plan again.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="import-preview-actions">
+            <Button
+              variant="outline"
+              autoFocus
+              onClick={() => setResetOpen(false)}
+            >
+              Keep my plan
+            </Button>
+            <Button onClick={reset}>Reset to fictional demo</Button>
           </div>
         </DialogContent>
       </Dialog>

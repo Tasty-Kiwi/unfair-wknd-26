@@ -1,5 +1,46 @@
 import { test, expect } from "@playwright/test";
 
+test("mobile product preview discloses retained BOMs and keeps actions usable", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/");
+  await page
+    .getByRole("button", { name: "Import data", exact: true })
+    .last()
+    .click();
+  const dialog = page.getByRole("dialog");
+  await expect(dialog).toContainText("Data is not saved between sessions");
+  await page
+    .locator("#data-upload")
+    .setInputFiles("public/examples/products.csv");
+  await expect(dialog).toContainText("Existing BOMs retained");
+  const choose = dialog.getByRole("button", { name: "Choose different files" });
+  const apply = dialog.getByRole("button", { name: "Import and mix data" });
+  await apply.scrollIntoViewIfNeeded();
+  const first = (await choose.boundingBox())!;
+  const second = (await apply.boundingBox())!;
+  expect(second.y).toBeGreaterThanOrEqual(first.y + first.height);
+  for (const box of [first, second]) {
+    expect(box.x).toBeGreaterThanOrEqual(0);
+    expect(box.x + box.width).toBeLessThanOrEqual(390);
+  }
+  expect(await dialog.evaluate((el) => el.scrollWidth <= el.clientWidth)).toBe(
+    true,
+  );
+  await page.screenshot({ path: ".tmp/import-preview-mobile.png" });
+  await choose.click();
+  await expect(dialog.getByText("Import preview")).not.toBeVisible();
+  await page
+    .locator("#data-upload")
+    .setInputFiles("public/examples/products.csv");
+  await apply.click();
+  await expect(
+    page.getByText(/Product names and SKUs are imported; existing BOMs/),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "Export report" }).click();
+});
+
 test("judge causes a disruption, audits allocation, and resolves it with live inputs", async ({
   page,
 }) => {
@@ -93,6 +134,18 @@ test("bad import preserves baseline; valid CSV replaces deliveries", async ({
     "at risk due to material shortage",
   );
   await page.getByRole("button", { name: "Reset demo" }).click();
+  await expect(page.getByRole("dialog")).toContainText(
+    "Replace your imported plan?",
+  );
+  await page.getByRole("button", { name: "Keep my plan" }).click();
+  await expect(
+    page.getByText("Mixed demo + imported data", { exact: true }),
+  ).toBeVisible();
+  await expect(page.locator(".outcome-banner")).toContainText(
+    "at risk due to material shortage",
+  );
+  await page.getByRole("button", { name: "Reset demo" }).click();
+  await page.getByRole("button", { name: "Reset to fictional demo" }).click();
   await expect(page.locator(".outcome-banner")).toContainText("Every order");
   await expect(
     page.getByText("Fictional demo data", { exact: true }),
@@ -153,10 +206,16 @@ test("complete JSON import becomes fully imported and reset restores provenance"
   ).toBeVisible();
   await expect(page.getByText("ORD-1", { exact: true }).first()).toBeVisible();
   await page.getByRole("button", { name: "Reset demo" }).click();
+  await expect(page.getByRole("dialog")).toContainText(
+    "Replace your imported plan?",
+  );
+  await page.getByRole("button", { name: "Reset to fictional demo" }).click();
   await expect(
     page.getByText("Fictional demo data", { exact: true }),
   ).toBeVisible();
-  await expect(page.getByText("ORD-101", { exact: true }).first()).toBeVisible();
+  await expect(
+    page.getByText("ORD-101", { exact: true }).first(),
+  ).toBeVisible();
 });
 
 test("narrow screen retains disclosure and has no page overflow", async ({

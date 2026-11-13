@@ -325,6 +325,20 @@ describe("spreadsheet table imports", () => {
     );
     expect(result.replacedTables).toHaveLength(7);
     expect(result.retainedTables).toEqual([]);
+    expect(result.retainedProductBoms).toBe(false);
+  });
+  it("discloses retained BOMs only for product imports without a BOM file", () => {
+    const products = file("products", "id,name,sku\nP-1,Updated fan,FAN-2");
+    const current = fixture();
+    const retained = parseImportBundle([products], current);
+    expect(retained.retainedProductBoms).toBe(true);
+    expect(retained.data.products[0].bom).toEqual(current.products[0].bom);
+    const replaced = parseImportBundle(
+      [products, file("bom", "productId,componentId,quantity\nP-1,MTR-01,3")],
+      current,
+    );
+    expect(replaced.retainedProductBoms).toBe(false);
+    expect(replaced.data.products[0].bom[0].quantity).toBe(3);
   });
   it("validates related product, BOM and order files together regardless of file order", () => {
     const data = fixture();

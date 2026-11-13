@@ -699,17 +699,20 @@ export interface ImportResult {
   data: Dataset;
   replacedTables: DatasetTable[];
   retainedTables: DatasetTable[];
+  retainedProductBoms: boolean;
 }
 
 function importResult(
   data: Dataset,
   replacedTables: DatasetTable[],
+  retainedProductBoms = false,
 ): ImportResult {
   const replaced = new Set(replacedTables);
   return {
     data,
     replacedTables,
     retainedTables: DATASET_TABLES.filter((table) => !replaced.has(table)),
+    retainedProductBoms,
   };
 }
 
@@ -728,10 +731,9 @@ export function parseImportBundle(
 ): ImportResult {
   if (files.length === 0) throw new Error("Choose at least one file.");
   if (files.length === 1 && files[0].name.toLowerCase().endsWith(".json")) {
-    return importResult(
-      parseImport(files[0].text, files[0].name, current),
-      [...DATASET_TABLES],
-    );
+    return importResult(parseImport(files[0].text, files[0].name, current), [
+      ...DATASET_TABLES,
+    ]);
   }
   const tables = new Map<
     keyof typeof TABLE_HEADERS,
@@ -827,5 +829,6 @@ export function parseImportBundle(
   return importResult(
     parseDataset(next),
     [...new Set([...tables.keys()].map((table) => csvToDatasetTable[table]))],
+    tables.has("products") && !tables.has("bom"),
   );
 }
