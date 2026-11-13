@@ -110,10 +110,39 @@ describe("cloud client session check", () => {
   });
 });
 
+describe("cloud availability", () => {
+  it.each([true, false])(
+    "accepts the explicit cloudEnabled flag %s",
+    async (cloudEnabled) => {
+      const client = createCloudClient(
+        jsonFetch(200, { ok: true, cloudEnabled }),
+      );
+      await expect(client.health()).resolves.toEqual({
+        ok: true,
+        cloudEnabled,
+      });
+    },
+  );
+
+  it.each([
+    { ok: true },
+    { ok: true, cloudEnabled: "false" },
+    { ok: false, cloudEnabled: true },
+  ])("rejects malformed availability responses %j", async (body) => {
+    await expect(
+      createCloudClient(jsonFetch(200, body)).health(),
+    ).rejects.toMatchObject({ code: "invalid_response" });
+  });
+});
+
 describe("cloud client rate limits", () => {
   it("maps a 429 without a server code to rate_limited", async () => {
     const client = createCloudClient(
-      jsonFetch(429, { message: "Too many requests." }, { "Retry-After": "12" }),
+      jsonFetch(
+        429,
+        { message: "Too many requests." },
+        { "Retry-After": "12" },
+      ),
     );
     await expect(client.me()).rejects.toMatchObject({
       status: 429,
@@ -123,7 +152,9 @@ describe("cloud client rate limits", () => {
   });
 
   it("maps a 429 with a non-JSON body to rate_limited", async () => {
-    const client = createCloudClient(async () => new Response("slow down", { status: 429 }));
+    const client = createCloudClient(
+      async () => new Response("slow down", { status: 429 }),
+    );
     await expect(client.me()).rejects.toMatchObject({
       status: 429,
       code: "rate_limited",
@@ -178,14 +209,11 @@ describe("cloud client rate limits", () => {
       }),
     );
     await expect(
-      client.updateProject(
-        "11111111-1111-4111-8111-111111111111",
-        {
-          name: "Network",
-          workspace: workspaceForUpdate(),
-          expectedVersion: 3,
-        },
-      ),
+      client.updateProject("11111111-1111-4111-8111-111111111111", {
+        name: "Network",
+        workspace: workspaceForUpdate(),
+        expectedVersion: 3,
+      }),
     ).rejects.toMatchObject({
       status: 409,
       code: "version_conflict",

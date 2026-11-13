@@ -40,6 +40,8 @@ async function api(page: Page, state: State) {
       method = request.method();
     const reply = (status: number, json: unknown) =>
       route.fulfill({ status, json });
+    if (path === "/api/health")
+      return reply(200, { ok: true, cloudEnabled: true });
     if (path === "/api/me")
       return reply(
         state.user ? 200 : 401,
@@ -123,7 +125,7 @@ async function openSaved(page: Page) {
     .click();
 }
 
-test("guest editing makes no API calls and survives unavailable cloud", async ({
+test("guest editing only probes public health and survives unavailable cloud", async ({
   page,
 }) => {
   const calls: string[] = [];
@@ -144,11 +146,13 @@ test("guest editing makes no API calls and survives unavailable cloud", async ({
   await expect(builder(page).getByRole("status").first()).toContainText(
     "Saved locally",
   );
-  expect(calls).toHaveLength(0);
-  await builder(page)
-    .getByRole("button", { name: "Sign in with GitHub" })
-    .click();
-  await expect(builder(page)).toContainText("Cloud is unavailable");
+  expect(calls.length).toBeGreaterThan(0);
+  expect(calls.every((url) => new URL(url).pathname === "/api/health")).toBe(
+    true,
+  );
+  await expect(
+    builder(page).getByRole("button", { name: "Sign in with GitHub" }),
+  ).toHaveCount(0);
   await expect(
     builder(page).getByLabel("Network name", { exact: true }),
   ).toHaveValue("Still local");

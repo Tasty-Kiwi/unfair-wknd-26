@@ -47,7 +47,8 @@ export function CloudProjectsDialog({
         <DialogHeader>
           <DialogTitle>My projects</DialogTitle>
           <DialogDescription>
-            {items.length} of {CLOUD_PROJECT_LIMIT} cloud projects
+            {items.length} of {CLOUD_PROJECT_LIMIT} cloud projects. After a
+            refresh, reopen your cloud project here.
           </DialogDescription>
         </DialogHeader>
         {projects.error && (

@@ -207,6 +207,8 @@ export function useBuilderCloud({
   hostRef.current = host;
 
   const [session, setSession] = useState<CloudSession>({ kind: "unknown" });
+  // Fail closed for cloud UI until the public configuration check succeeds.
+  const [cloudAvailable, setCloudAvailable] = useState(false);
   const [binding, setBinding] = useState<CloudBinding | null>(null);
   const bindingRef = useRef<CloudBinding | null>(null);
   const [save, setSave] = useState<CloudSaveState>({ kind: "idle" });
@@ -712,8 +714,8 @@ export function useBuilderCloud({
     leaveCloud("Switched to your device draft.");
   }
 
-  // Bootstrap on builder mount: the OAuth return (builder=1) and the
-  // authError flag are the only reasons to call the API without a user click.
+  // Probe public availability on builder mount. Session/project endpoints are
+  // untouched until cloud is configured; guest editing never waits for this.
   useEffect(() => {
     const url = new URL(window.location.href);
     const authError = url.searchParams.get("authError") === "1";
@@ -734,22 +736,29 @@ export function useBuilderCloud({
       next.searchParams.delete("authError");
       window.history.replaceState(window.history.state, "", next.toString());
     }
-    if (returned) {
-      const token = beginOp("session");
-      if (token) {
-        void (async () => {
-          try {
+    const token = beginOp("availability");
+    if (token) {
+      void (async () => {
+        try {
+          const health = await client.health(token.controller.signal);
+          if (!isCurrent(token)) return;
+          setCloudAvailable(health.cloudEnabled);
+          if (health.cloudEnabled && returned) {
             const user = await ensureUser(token);
             if (!isCurrent(token)) return;
             if (user && user !== "signed-out") {
               setMessage(`Signed in as ${user.name}.`);
             }
-            clearFlags();
-          } finally {
-            endOp(token);
           }
-        })();
-      }
+          if (returned) clearFlags();
+        } catch {
+          if (!isCurrent(token)) return;
+          setCloudAvailable(false);
+          if (returned) clearFlags();
+        } finally {
+          endOp(token);
+        }
+      })();
     }
     return () => invalidate();
     // Runs once per mount. Callbacks read refs, so stale closures are not a risk.
@@ -758,6 +767,7 @@ export function useBuilderCloud({
 
   return {
     draftKey: slotKeyOf(binding),
+    cloudAvailable,
     session,
     binding,
     dirty,

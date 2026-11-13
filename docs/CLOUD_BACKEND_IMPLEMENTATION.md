@@ -75,7 +75,7 @@ Structural `parseWorkspace` validation accepts incomplete drafts; saving never r
 
 The cloud row ID never replaces `document.id`. Opening validates the returned workspace before replacement. The same validated inputs still feed the existing browser simulation.
 
-The UI has GitHub sign-in/out, My projects, Save to cloud, Open and Save as new project. Device autosave retains its existing guest key and 500 ms lifecycle; cloud editing uses owner/project-scoped local slots. Cloud binding/version metadata stays outside the exported workspace. Guests can build, simulate, save locally and import/export without cloud configuration or an API request on initial load.
+The UI has GitHub sign-in/out, My projects, Save to cloud, Open and Save as new project. Device autosave retains its existing guest key and 500 ms lifecycle; cloud editing uses owner/project-scoped local slots. Cloud binding/version metadata stays outside the exported workspace. Guests can build, simulate, save locally and import/export without cloud configuration. The builder probes only public `/api/health` on mount; cloud controls remain hidden until it confirms `cloudEnabled: true`. Disabled, failed or malformed responses keep controls hidden without session/project requests, including on an OAuth-return URL. My Projects explains reopening a cloud project after refresh; no automatic rebinding was added.
 
 Cloud saves acknowledge only the snapshot confirmed by the API; later edits stay dirty. Failed/unknown outcomes preserve the local workspace and show a failure/unconfirmed status. A 409 offers Keep working locally, Save as new project, or Open cloud version after confirmation. There is no force write or automatic merge. Cancel performs no replacement/persistence side effect.
 
@@ -101,13 +101,13 @@ Final local verification:
 
 | Command | Result |
 | --- | --- |
-| npm test | 97 tests, 10 files passed |
+| npm test | 102 tests, 10 files passed |
 | npm run typecheck:worker | Generated binding types and Worker TypeScript passed |
 | npm run typecheck:tests | Browser and Worker test source TypeScript passed |
 | npm run build | TypeScript/Vite passed; existing upstream Zod annotation warnings only |
 | npm run test:worker | 28 tests, 5 files passed |
 | npm run deploy:check | Production-config dry run passed, no DB binding/cloud disabled |
-| npm run test:e2e | 39 Chromium journeys passed |
+| npm run test:e2e | 40 Chromium journeys passed |
 
 CI runs npm ci, unit/Worker/test-source typechecks, build, Worker tests, dry run, and Chromium journeys. Build precedes Worker/browser tests because they serve real dist assets. No checks/tests were removed or weakened.
 
@@ -146,3 +146,11 @@ The checked-in production Worker name remains `domino-os`, compatibility date an
 - Production rollout requires separate authorization and environment configuration.
 
 **Gate A:** GitHub auth implemented; local real-library/D1 session, expiry and logout checks pass; real sign-in user-verified. **Gate B:** project API/owner/CAS/quota/validation pass. **Gate C:** full local built-Worker cross-browser persistence and second-owner denial pass; the two-real-account staging repetition remains open. **Gate D:** complete local suite passes. **Gate E:** changes remain on PR #5, never automatically merged.
+
+## Code review follow-up — cloud-disabled controls
+
+The review of `2fe35ced` correctly found that a disabled production backend still exposed GitHub sign-in. The builder now waits for a validated, three-second-bounded public health probe before rendering cloud controls. This check does not block the editor; failed/malformed probes hide controls. `/api/me` is called on auth return only when availability is confirmed. The prior guest assertion of zero API requests on builder mount is intentionally superseded by health-only probing; landing/simulator initial loads still do not initialize cloud.
+
+`tests/cloud-disabled-journey.spec.ts` serves the actual production configuration and built assets with no D1 or API interception. It verifies `cloudEnabled: false`, no sign-in/My Projects/cloud-save controls, no auth/project requests even with `?builder=1`, working autosave and draft restoration after reload. The unavailable-network UI case and malformed-health unit cases also pass. Enabled-cloud scenarios, including the real local D1 cross-browser journey, remain passing.
+
+Review follow-up checks: 102 unit tests, all 40 browser journeys, all 28 Worker tests, Worker/test-source typechecks, build and deployment dry run passed. The built cloud-disabled and enabled/local-D1 browser journeys were rerun against the final build and both passed; no API/SQL/auth-provider behavior changed here. No staging/production deployment or new timing measurement was made for this UI follow-up. Real two-account staging acceptance and endpoint-level reliability remain unverified; successful sign-in and synthetic local sessions do not close those items. Production cloud activation remains disabled and unapproved.

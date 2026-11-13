@@ -579,41 +579,43 @@ export function BuilderExperience({ onClose }: { onClose: () => void }) {
         </span>
       </nav>
 
-      <section
-        className="flex flex-wrap items-center gap-2 pb-3"
-        aria-label="Cloud"
-      >
-        <AccountControls
-          session={cloud.session}
-          busy={cloud.busy}
-          onSignIn={cloud.actions.signIn}
-          onSignOut={cloud.actions.signOut}
-          onMyProjects={cloud.actions.openProjects}
-          onSaveToCloud={cloud.actions.saveToCloud}
-        />
-        {(cloud.binding ||
-          cloud.session.kind === "signed-in" ||
-          cloud.message ||
-          cloud.conflict) && (
-          <CloudStatus
-            text={describeCloudStatus({
-              session: cloud.session,
-              binding: cloud.binding,
-              dirty: cloud.dirty,
-              save: cloud.save,
-            })}
-            message={cloud.message}
-            conflict={cloud.conflict}
-            onKeepLocal={cloud.actions.keepLocal}
-            onSaveAsNew={() => cloud.actions.openNameDialog("copy")}
-            onOpenRemote={
-              boundProjectId
-                ? () => cloud.actions.openProject(boundProjectId)
-                : undefined
-            }
+      {cloud.cloudAvailable && (
+        <section
+          className="flex flex-wrap items-center gap-2 pb-3"
+          aria-label="Cloud"
+        >
+          <AccountControls
+            session={cloud.session}
+            busy={cloud.busy}
+            onSignIn={cloud.actions.signIn}
+            onSignOut={cloud.actions.signOut}
+            onMyProjects={cloud.actions.openProjects}
+            onSaveToCloud={cloud.actions.saveToCloud}
           />
-        )}
-      </section>
+          {(cloud.binding ||
+            cloud.session.kind === "signed-in" ||
+            cloud.message ||
+            cloud.conflict) && (
+            <CloudStatus
+              text={describeCloudStatus({
+                session: cloud.session,
+                binding: cloud.binding,
+                dirty: cloud.dirty,
+                save: cloud.save,
+              })}
+              message={cloud.message}
+              conflict={cloud.conflict}
+              onKeepLocal={cloud.actions.keepLocal}
+              onSaveAsNew={() => cloud.actions.openNameDialog("copy")}
+              onOpenRemote={
+                boundProjectId
+                  ? () => cloud.actions.openProject(boundProjectId)
+                  : undefined
+              }
+            />
+          )}
+        </section>
+      )}
 
       {error && (
         <Alert variant="destructive">

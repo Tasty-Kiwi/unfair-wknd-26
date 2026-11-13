@@ -105,6 +105,8 @@ For local development, follow [GitHub setup](docs/GITHUB_AUTH_SETUP.md), apply t
 
 The checked-in production and branch-preview configurations keep cloud disabled. Real GitHub sign-in worked in the user's test. The built-Worker browser test now verifies logout, cross-browser save/reopen with scenarios, matching simulation output and second-owner denial against actual local D1. Its sessions are seeded only in the isolated test harness. Repeating the complete journey on staging with two real GitHub accounts remains open. See [implementation evidence](docs/CLOUD_BACKEND_IMPLEMENTATION.md) and [staging verification](docs/STAGING_VERIFICATION.md). Production rollout is not approved.
 
+The builder checks public `/api/health` before showing cloud controls. If cloud is disabled, unreachable or returns an invalid response, guest editing and local saving continue without sign-in or project requests. After a refresh, the device draft opens; reopen a cloud project from My projects.
+
 ## Model and limits
 
 `simulate(dataset, scenario)` validates independent input copies and returns per-order, per-component allocation evidence and aggregate metrics. A scenario overlays receipt dates/quantities and approved alternative supplies; it never mutates the baseline.

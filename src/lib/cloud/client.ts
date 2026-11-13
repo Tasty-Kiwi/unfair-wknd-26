@@ -5,12 +5,14 @@ import {
   isUuid,
   projectNameSchema,
   type CloudProject,
+  type CloudHealthResponse,
   type CloudUser,
   type ProjectMetadata,
 } from "./contracts";
 
 export const CLOUD_REQUEST_TIMEOUT_MS = 15_000;
 export const CLOUD_AUTH_TIMEOUT_MS = 10_000;
+export const CLOUD_HEALTH_TIMEOUT_MS = 3_000;
 export const GITHUB_CALLBACK_URL = "/?builder=1";
 export const GITHUB_ERROR_CALLBACK_URL = "/?builder=1&authError=1";
 
@@ -48,6 +50,7 @@ export class CloudClientError extends Error {
 }
 
 export type CloudClient = {
+  health(signal?: AbortSignal): Promise<CloudHealthResponse>;
   me(signal?: AbortSignal): Promise<CloudUser>;
   startGitHubSignIn(signal?: AbortSignal): Promise<string>;
   signOut(signal?: AbortSignal): Promise<void>;
@@ -348,6 +351,21 @@ export function createCloudClient(
   }
 
   return {
+    async health(signal) {
+      const value = await call("/api/health", {
+        method: "GET",
+        signal,
+        timeoutMs: CLOUD_HEALTH_TIMEOUT_MS,
+      });
+      if (
+        !isRecord(value) ||
+        value.ok !== true ||
+        typeof value.cloudEnabled !== "boolean"
+      ) {
+        throw invalidResponse();
+      }
+      return { ok: true, cloudEnabled: value.cloudEnabled };
+    },
     async me(signal) {
       const body = await call("/api/me", {
         method: "GET",
