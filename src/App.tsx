@@ -639,7 +639,7 @@ export default function App() {
                   );
                   update(next);
                   setNotice(
-                    `${restored.map((order) => order.orderId).join(", ") || "The affected orders"} regained material coverage in this simulation. ${late.map((delivery) => `${delivery.id} remains late (${day(delivery.availableDate)})`).join("; ") || "Receipt timing was restored in the model"}. No purchase or supplier confirmation was made.`,
+                    `${restored.length ? `${restored.map((order) => order.orderId).join(", ")} regained material coverage in this simulation.` : "Recovery applied to this simulation."} ${recovered.summary.missingUnits > 0 ? `${recovered.summary.missingUnits} material unit(s) still missing across ${recovered.summary.atRiskOrders} order(s) at risk.` : "All orders have material coverage."} ${late.map((delivery) => `${delivery.id} remains late (${day(delivery.availableDate)})`).join("; ") || "Receipt dates reflect this scenario"}. No purchase or supplier confirmation was made.`,
                   );
                 }}
               />

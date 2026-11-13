@@ -45,8 +45,12 @@ Team name, member names/emails, pre-existing-work/build-period disclosures and a
 
 ## Verified counts and remaining handoff
 
-Executed `npm test` (102), `npm run typecheck:worker`, `npm run typecheck:tests`, `npm run build`, `npm run test:worker` (44), `npm run test:e2e` (73 Chromium journeys), and `npm run deploy:check`. All passed on the integrated UX result. Initial browser failures were stale refresh expectations, a viewport-import timing check and a contrast assertion sampling a color transition; the corrected tests still assert the underlying persisted behavior. The viewport check waits for stored and rendered floating-point transforms to agree within 0.001 before importing.
+Executed `npm test` (102), `npm run typecheck:worker`, `npm run typecheck:tests`, `npm run build`, `npm run test:worker` (44), `npm run test:e2e` (74 Chromium journeys), and `npm run deploy:check`. All passed on the integrated UX result. Initial browser failures were stale refresh expectations, a viewport-import timing check and a contrast assertion sampling a color transition; the corrected tests still assert the underlying persisted behavior. The viewport check waits for stored and rendered floating-point transforms to agree within 0.001 before importing.
 
 Independent code review found no scoped defects. Claude inspected actual light/dark laptop/mobile screenshots; selected-scenario contrast and truncated receipt labels were corrected. Final production verification follows the authorized merge; do not infer live status from local captures.
 
 A real browser recording with local synthesized narration is being prepared as a reviewable draft, not human narration or an uploaded video. The submission owner must watch the whole export, confirm personal/build-period facts, upload to YouTube/Vimeo and submit. See the authoritative [Devpost package](DEVPOST_READY.md).
+
+### Independent PR correction
+
+GitHub's automated review identified a partial-recovery edge case: the initial notice used a full-coverage fallback even when no order was fully recovered. The notice now names only actually restored orders and always states any remaining shortage. A bundled-data regression reduces PO-101 to one motor, restores timing, and verifies one motor is still missing without a false coverage claim. All 74 browser journeys and the required suite passed after correction.

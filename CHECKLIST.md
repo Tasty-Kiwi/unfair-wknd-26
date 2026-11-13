@@ -92,7 +92,7 @@ Video split: about 20 s problem, 100 s live product, 40 s local builder and evid
 - [x] PRs #8–#11 incorporated, with successful main CI and production builds checked sequentially.
 - [x] Readable builder result names; helpful blank state with strict requested validation; durable builder refresh/history with synchronous draft-save guard.
 - [x] Explicit modeled recovery payoff, JSON report label, laptop spacing and selected-scenario contrast.
-- [x] Integrated local verification: 102 unit, 44 Worker and 73 Chromium journeys; both typechecks/build/dry run passed.
+- [x] Integrated local verification: 102 unit, 44 Worker and 74 Chromium journeys; both typechecks/build/dry run passed.
 - [x] Official requirements consolidated in `docs/DEVPOST_READY.md`; About 122 words.
 - [ ] Final focused UX PR merge and production source/asset verification (pending CI).
 - [ ] Owner-only repository description update and Nedomas invitation (API denied 403).

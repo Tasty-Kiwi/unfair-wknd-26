@@ -99,3 +99,36 @@ for (const theme of ["light", "dark"]) {
     await expect.poll(ratio).toBeGreaterThanOrEqual(4.5);
   });
 }
+
+test("partial recovery reports the remaining shortage without claiming restored coverage", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await page
+    .getByRole("radio", { name: "Supplier disruption", exact: true })
+    .click();
+  await page
+    .getByRole("spinbutton", { name: "Quantity", exact: true })
+    .first()
+    .fill("1");
+  await page
+    .getByRole("spinbutton", { name: "Quantity", exact: true })
+    .first()
+    .press("Tab");
+  await page
+    .locator(".recovery-option")
+    .filter({ hasText: "Restore PO-101 timing" })
+    .getByRole("button", { name: "Apply recovery" })
+    .click();
+  await expect(
+    page.getByText(
+      /1 material unit\(s\) still missing across 1 order\(s\) at risk/,
+    ),
+  ).toBeVisible();
+  await expect(
+    page.getByText(/regained material coverage in this simulation/),
+  ).toHaveCount(0);
+  await expect(page.getByRole("heading", { level: 1 })).toContainText(
+    "1 order at risk",
+  );
+});
