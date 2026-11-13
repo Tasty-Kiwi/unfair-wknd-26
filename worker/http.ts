@@ -3,6 +3,7 @@ import type {
   CloudErrorDetail,
   CloudErrorResponse,
 } from "../src/lib/cloud/contracts";
+import { validateAuthBaseURL } from "./auth-url";
 
 // Bindings may be absent while cloud features are disabled in deployment.
 export type CloudApiEnv = Partial<Env>;
@@ -67,8 +68,8 @@ export function isCloudConfigured(env: CloudApiEnv): boolean {
   }
 
   try {
-    const url = new URL(env.BETTER_AUTH_URL);
-    return url.protocol === "http:" || url.protocol === "https:";
+    validateAuthBaseURL(env.BETTER_AUTH_URL);
+    return true;
   } catch {
     return false;
   }

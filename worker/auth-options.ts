@@ -1,4 +1,5 @@
 import type { BetterAuthOptions } from "better-auth";
+import { validateAuthBaseURL } from "./auth-url";
 
 export type AuthProviderCredentials = {
   githubClientId: string;
@@ -11,14 +12,13 @@ export function authOptions(
   secret: string,
   credentials?: AuthProviderCredentials,
 ): BetterAuthOptions {
-  const parsedBaseURL = new URL(baseURL);
-  const origin = parsedBaseURL.origin;
-  const isHttps = parsedBaseURL.protocol === "https:";
+  const origin = validateAuthBaseURL(baseURL);
+  const isHttps = new URL(origin).protocol === "https:";
   const errorURL = `${origin}/?builder=1&authError=1`;
 
   return {
     appName: "DominoOS",
-    baseURL,
+    baseURL: origin,
     secret,
     trustedOrigins: [origin],
     emailAndPassword: {

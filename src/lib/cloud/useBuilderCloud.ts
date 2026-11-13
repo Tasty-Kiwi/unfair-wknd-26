@@ -479,7 +479,16 @@ export function useBuilderCloud({
         return;
       }
       const cloudJson = canonicalizeCloudWorkspace(project.workspace).json;
-      const draftDiffers = scopedDraftDiffers(user.id, projectId, cloudJson);
+      // The bound project's edits may not be flushed to its slot yet, so compare
+      // the live editor in memory. Other targets keep the stored-draft check.
+      const bound = bindingRef.current;
+      const sameProject =
+        bound !== null &&
+        bound.ownerId === user.id &&
+        bound.projectId === projectId;
+      const draftDiffers = sameProject
+        ? isUnsavedAgainst(captured, cloudJson)
+        : scopedDraftDiffers(user.id, projectId, cloudJson);
       if (
         !hostRef.current.confirm(
           draftDiffers ? UNSAVED_DEVICE_COPY_MESSAGE : undefined,

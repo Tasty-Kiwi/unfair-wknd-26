@@ -141,6 +141,7 @@ export function BuilderExperience({ onClose }: { onClose: () => void }) {
   };
   const cloud = useBuilderCloud({ host: cloudHost, workspace });
   const draftKey = cloud.draftKey;
+  const boundProjectId = cloud.binding?.projectId ?? null;
   const cloudGuard = useRef(cloud.binding);
   cloudGuard.current = cloud.binding;
 
@@ -605,6 +606,11 @@ export function BuilderExperience({ onClose }: { onClose: () => void }) {
             conflict={cloud.conflict}
             onKeepLocal={cloud.actions.keepLocal}
             onSaveAsNew={() => cloud.actions.openNameDialog("copy")}
+            onOpenRemote={
+              boundProjectId
+                ? () => cloud.actions.openProject(boundProjectId)
+                : undefined
+            }
           />
         )}
       </section>

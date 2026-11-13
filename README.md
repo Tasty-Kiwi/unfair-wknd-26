@@ -53,7 +53,7 @@ Choose **Build a network** from the existing simulator. Start blank or open the 
 
 In Simulate, choose **New scenario**, give it a name, change a receipt date or quantity and **Save scenario**. **Select scenario** reopens saved inputs; **Compare with baseline** compares the same network with and without those changes. Selecting an order shows its actual material allocations. Baseline quantities and dates are never changed by scenario controls. A material edit in Build requires explicit **Revalidate scenario** before an older scenario can run; its original overrides are retained.
 
-Builder progress auto-saves in this browser, including incomplete graph fields and named scenarios. Check for **Saved locally**, or use **Save workspace**. After refreshing, choose **Build a network** again to reopen it. **Export workspace JSON** and **Import workspace JSON** use one versioned format (2 MB limit). Storage errors remain visible; local browser storage is not an external backup. Nothing is uploaded.
+Builder progress auto-saves in this browser, including incomplete graph fields and named scenarios. Check for **Saved locally**, or use **Save workspace**. After refreshing, choose **Build a network** again to reopen it. **Export workspace JSON** and **Import workspace JSON** use one versioned format (2 MB limit). Storage errors remain visible; local browser storage is not an external backup. These device actions do not upload data; configured cloud saving is a separate explicit action.
 
 The original **Import data** JSON/CSV path stays separate and preserves its existing behavior. Entering Build and returning with **Back to Simulate** preserves the original in-memory plan. Existing approved-alternative recovery continues there. Authoring alternatives, migrating arbitrary imports into Build and a dedicated mobile editor are deferred; the builder provides laptop editing, keyboard-accessible forms and a basic narrow layout.
 
@@ -63,11 +63,14 @@ The automated acceptance journey creates the motor network from blank using visi
 
 ```sh
 npm test             # Vitest engine + validation regression tests
+npm run typecheck:worker # generate bindings and check Worker source
+npm run typecheck:tests  # check browser/API test source
 npm run build        # strict TypeScript + Vite production build
+npm run test:worker  # production Worker + isolated local D1
 npm run test:e2e     # Playwright, using its installed Chromium browser
 ```
 
-The push/PR GitHub Actions workflow runs `npm ci`, unit tests, production build, a Wrangler dry run, and all browser journeys using installed Playwright Chromium. CI itself needs no Cloudflare token.
+The push/PR GitHub Actions workflow runs `npm ci`, unit tests, Worker/test-source typechecks, production build, Worker/D1 tests, a Wrangler dry run, and all browser journeys using installed Playwright Chromium. CI itself needs no Cloudflare token. Build before running Worker/browser tests because they serve `dist/` assets.
 
 The browser suite starts Vite if needed (or reuses port 5173). It exercises the live 5/6-day threshold, graph inspection, approved recovery, preset comparison, export, invalid JSON rejection, valid CSV import, reset, and 390px layout. Set `DOMINO_BASE_URL=https://domino-os.tasty-kiwi.workers.dev npm run test:e2e` to exercise the public deployment instead of starting Vite. Recovery comparison and atomic multi-table imports are included. Install Playwright Chromium once with `npx playwright install chromium`; the app itself works in modern browsers. Tests produce disposable `test-results/` files.
 
@@ -96,11 +99,11 @@ Use **Import data**. Downloadable example JSON and CSV are available in the impo
 
 Cloud projects use Better Auth **GitHub sign-in**, a same-origin Worker API and D1. Email/password sign-in is disabled. The public demo and guest builder remain available without authentication; local autosave and JSON import/export continue to work.
 
-In the builder, use Sign in with GitHub, My projects, Save to cloud and Open. Cloud saves are explicit and version-checked. A conflict keeps the device copy and offers Save as new project. Each account can keep 20 projects and create at most 5 per minute; a cloud workspace is limited to 1,000,000 UTF-8 bytes.
+In the builder, use Sign in with GitHub, My projects, Save to cloud and Open. Cloud saves are explicit and version-checked. A conflict offers Keep working locally, Save as new project, or Open cloud version after confirmation. Each account can keep 20 projects and create at most 5 per minute; a cloud workspace is limited to 1,000,000 UTF-8 bytes.
 
 For local development, follow [GitHub setup](docs/GITHUB_AUTH_SETUP.md), apply the local migrations, and run `npm run dev` alongside `npm run dev:api`. Credentials belong in ignored `.dev.vars`, never `VITE_` variables. Guest development works without credentials. `npm run auth:generate` writes a candidate schema to ignored `.tmp/auth-schema.sql`; review it and create a new migration rather than overwriting applied migration history.
 
-The checked-in production and branch-preview configurations keep cloud disabled. The separately approved staging deployment is described in [staging verification](docs/STAGING_VERIFICATION.md). Real GitHub sign-in worked in the user's test. Browser logout, authenticated cross-browser saving, second-account privacy and Free-plan CPU reliability remain release checks; this implementation is not production-approved.
+The checked-in production and branch-preview configurations keep cloud disabled. Real GitHub sign-in worked in the user's test. The built-Worker browser test now verifies logout, cross-browser save/reopen with scenarios, matching simulation output and second-owner denial against actual local D1. Its sessions are seeded only in the isolated test harness. Repeating the complete journey on staging with two real GitHub accounts remains open. See [implementation evidence](docs/CLOUD_BACKEND_IMPLEMENTATION.md) and [staging verification](docs/STAGING_VERIFICATION.md). Production rollout is not approved.
 
 ## Model and limits
 

@@ -3,19 +3,22 @@ import { Button } from "@/components/ui/button";
 import type { CloudConflict } from "@/lib/cloud/useBuilderCloud";
 
 // One cloud status line, kept apart from the device save status.
-// A version conflict offers exactly two safe actions and no overwrite.
+// A version conflict offers safe actions only. Open cloud version asks first.
 export function CloudStatus({
   text,
   message,
   conflict,
   onKeepLocal,
   onSaveAsNew,
+  onOpenRemote,
 }: {
   text: string;
   message: string | null;
   conflict: CloudConflict | null;
   onKeepLocal: () => void;
   onSaveAsNew: () => void;
+  // Present only when a cloud binding exists. Goes through the normal Open confirmation.
+  onOpenRemote?: () => void;
 }) {
   return (
     <div className="flex w-full flex-col gap-2">
@@ -36,6 +39,11 @@ export function CloudStatus({
               <Button variant="outline" size="sm" onClick={onKeepLocal}>
                 Keep working locally
               </Button>
+              {onOpenRemote && (
+                <Button variant="outline" size="sm" onClick={onOpenRemote}>
+                  Open cloud version
+                </Button>
+              )}
               <Button variant="outline" size="sm" onClick={onSaveAsNew}>
                 Save as new project
               </Button>

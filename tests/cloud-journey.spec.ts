@@ -474,3 +474,297 @@ test("sign-out ignores a save response that arrives later", async ({
   );
   expect(draft).toBe("Local edit before logout");
 });
+
+// Copy from UNSAVED_DEVICE_COPY_MESSAGE in src/lib/cloud/useBuilderCloud.ts.
+const UNSAVED_COPY =
+  "This project has changes saved only on this device. Opening the cloud version replaces them. Export JSON first if you need them.";
+
+function remoteProject(
+  id: string,
+  value: BuilderWorkspaceV1,
+  owner: string = user.id,
+): CloudProject & { owner: string } {
+  return {
+    id,
+    name: value.document.name,
+    version: 1,
+    createdAt: "2026-11-13T12:00:00Z",
+    updatedAt: "2026-11-13T12:00:00Z",
+    workspace: value,
+    owner,
+  };
+}
+
+// Binds the editor to a remote project, edits it, and forces a version conflict.
+async function bindAndConflict(page: Page, state: State, id: string) {
+  await seed(page, workspace("Guest backup"));
+  await page.goto("/?builder=1");
+  await expect(
+    builder(page).getByRole("button", { name: "My projects", exact: true }),
+  ).toBeVisible();
+  await openSaved(page);
+  await expect(
+    builder(page).getByLabel("Network name", { exact: true }),
+  ).toHaveValue("Remote network");
+  await builder(page)
+    .getByLabel("Network name", { exact: true })
+    .fill("Local conflict edit");
+  state.conflict = true;
+  await builder(page)
+    .getByRole("button", { name: "Save to cloud", exact: true })
+    .click();
+  await expect(builder(page)).toContainText(
+    "The cloud project has a newer version",
+  );
+  expect(state.projects.get(id)!.workspace.document.name).toBe(
+    "Remote network",
+  );
+}
+
+test("conflict: Open cloud version cancelled keeps the local edit untouched", async ({
+  page,
+}) => {
+  let answer: "accept" | "dismiss" = "accept";
+  const prompts: string[] = [];
+  page.on("dialog", (dialog) => {
+    prompts.push(dialog.message());
+    return answer === "accept" ? dialog.accept() : dialog.dismiss();
+  });
+  const id = crypto.randomUUID();
+  const state: State = {
+    user,
+    projects: new Map([[id, remoteProject(id, workspace("Remote network"))]]),
+  };
+  await api(page, state);
+  await bindAndConflict(page, state, id);
+
+  // The cloud copy moves ahead while the device still holds the conflicting edit.
+  const remote = state.projects.get(id)!;
+  remote.workspace = workspace("Cloud version");
+  remote.version = 2;
+
+  answer = "dismiss";
+  await builder(page)
+    .getByRole("button", { name: "Open cloud version", exact: true })
+    .click();
+  await expect.poll(() => prompts.at(-1)).toBe(UNSAVED_COPY);
+  await expect(
+    builder(page).getByLabel("Network name", { exact: true }),
+  ).toHaveValue("Local conflict edit");
+  await expect(builder(page)).toContainText(
+    "The cloud project has a newer version",
+  );
+  expect(remote.workspace.document.name).toBe("Cloud version");
+});
+
+test("conflict: Open cloud version confirmed applies the remote workspace", async ({
+  page,
+}) => {
+  let answer: "accept" | "dismiss" = "accept";
+  const prompts: string[] = [];
+  page.on("dialog", (dialog) => {
+    prompts.push(dialog.message());
+    return answer === "accept" ? dialog.accept() : dialog.dismiss();
+  });
+  const id = crypto.randomUUID();
+  const state: State = {
+    user,
+    projects: new Map([[id, remoteProject(id, workspace("Remote network"))]]),
+  };
+  await api(page, state);
+  await bindAndConflict(page, state, id);
+
+  const remote = state.projects.get(id)!;
+  remote.workspace = workspace("Cloud version");
+  remote.version = 2;
+
+  await builder(page)
+    .getByRole("button", { name: "Open cloud version", exact: true })
+    .click();
+  await expect.poll(() => prompts.at(-1)).toBe(UNSAVED_COPY);
+  await expect(
+    builder(page).getByLabel("Network name", { exact: true }),
+  ).toHaveValue("Cloud version");
+  await expect(builder(page)).not.toContainText(
+    "The cloud project has a newer version",
+  );
+  expect(remote.workspace.document.name).toBe("Cloud version");
+});
+
+test("account switch shows the new owner's projects and never the previous owner's", async ({
+  page,
+}) => {
+  page.on("dialog", (dialog) => dialog.accept());
+  const other = { id: "other-owner", name: "Other owner" };
+  const mine = crypto.randomUUID(),
+    theirs = crypto.randomUUID();
+  const state: State = {
+    user,
+    projects: new Map([
+      [mine, remoteProject(mine, workspace("Alpha network"), user.id)],
+      [theirs, remoteProject(theirs, workspace("Beta network"), other.id)],
+    ]),
+  };
+  await api(page, state);
+  await seed(page, workspace("Device draft"));
+  await page.goto("/?builder=1");
+  await expect(
+    builder(page).getByRole("button", { name: "My projects", exact: true }),
+  ).toBeVisible();
+  await builder(page)
+    .getByRole("button", { name: "My projects", exact: true })
+    .click();
+  const list = page.getByRole("dialog", { name: "My projects" });
+  await expect(list).toContainText("Alpha network");
+  await expect(list).not.toContainText("Beta network");
+  await list.getByRole("button", { name: "Sign out", exact: true }).click();
+  await expect(list).toBeHidden();
+  state.user = other;
+  await page.goto("/?builder=1");
+  await expect(
+    builder(page).getByRole("button", { name: "My projects", exact: true }),
+  ).toBeVisible();
+  await builder(page)
+    .getByRole("button", { name: "My projects", exact: true })
+    .click();
+  const next = page.getByRole("dialog", { name: "My projects" });
+  await expect(next).toContainText("Beta network");
+  await expect(next).not.toContainText("Alpha network");
+  await next.getByRole("button", { name: "Open", exact: true }).click();
+  await expect(
+    builder(page).getByLabel("Network name", { exact: true }),
+  ).toHaveValue("Beta network");
+});
+
+test("mid-session 401 on save asks to sign in again and keeps local work", async ({
+  page,
+}) => {
+  page.on("dialog", (dialog) => dialog.accept());
+  const id = crypto.randomUUID();
+  const state: State = {
+    user,
+    projects: new Map([[id, remoteProject(id, workspace("Remote network"))]]),
+  };
+  await api(page, state);
+  await seed(page, workspace("Guest backup"));
+  await page.goto("/?builder=1");
+  await expect(
+    builder(page).getByRole("button", { name: "My projects", exact: true }),
+  ).toBeVisible();
+  await openSaved(page);
+  await expect(
+    builder(page).getByLabel("Network name", { exact: true }),
+  ).toHaveValue("Remote network");
+  await builder(page)
+    .getByLabel("Network name", { exact: true })
+    .fill("Work before expiry");
+
+  // The server session ends while the page stays open.
+  state.user = null;
+  await builder(page)
+    .getByRole("button", { name: "Save to cloud", exact: true })
+    .click();
+  await expect(builder(page)).toContainText("Sign in again to save");
+  await expect(
+    builder(page).getByLabel("Network name", { exact: true }),
+  ).toHaveValue("Work before expiry");
+  expect(state.projects.get(id)!.workspace.document.name).toBe(
+    "Remote network",
+  );
+});
+
+test("conflict Save as new project preserves both the cloud original and local edits", async ({
+  page,
+}) => {
+  page.on("dialog", (dialog) => dialog.accept());
+  const id = crypto.randomUUID();
+  const state: State = {
+    user,
+    projects: new Map([[id, remoteProject(id, workspace("Remote network"))]]),
+  };
+  await api(page, state);
+  await bindAndConflict(page, state, id);
+  await builder(page)
+    .getByRole("button", { name: "Save as new project", exact: true })
+    .click();
+  const naming = page.getByRole("dialog", {
+    name: "Save as new project",
+    exact: true,
+  });
+  await naming.getByLabel("Project name").fill("Conflict copy");
+  await naming
+    .getByRole("button", { name: "Save as new project", exact: true })
+    .click();
+  await expect(naming).toBeHidden();
+  expect(state.projects.size).toBe(2);
+  expect(state.projects.get(id)!.workspace.document.name).toBe(
+    "Remote network",
+  );
+  const copy = [...state.projects.values()].find((p) => p.id !== id)!;
+  expect(copy.name).toBe("Conflict copy");
+  expect(copy.workspace.document.name).toBe("Local conflict edit");
+  expect(copy.workspace.document.id).toBe(
+    state.projects.get(id)!.workspace.document.id,
+  );
+  await expect(builder(page)).not.toContainText(
+    "The cloud project has a newer version",
+  );
+});
+
+test("an account changed in another tab detaches the old project before saving", async ({
+  page,
+}) => {
+  page.on("dialog", (dialog) => dialog.accept());
+  const other = { id: "switched-owner", name: "Switched owner" };
+  const mine = crypto.randomUUID(),
+    theirs = crypto.randomUUID();
+  const state: State = {
+    user,
+    projects: new Map([
+      [mine, remoteProject(mine, workspace("Remote network"))],
+      [
+        theirs,
+        remoteProject(theirs, workspace("Other account network"), other.id),
+      ],
+    ]),
+  };
+  await api(page, state);
+  await seed(page, workspace("Guest backup"));
+  await page.goto("/?builder=1");
+  await openSaved(page);
+  await expect(page.getByRole("dialog", { name: "My projects" })).toBeHidden();
+  await expect(
+    builder(page).getByLabel("Network name", { exact: true }),
+  ).toHaveValue("Remote network");
+  await builder(page)
+    .getByLabel("Network name", { exact: true })
+    .fill("Private account A edits");
+  // Simulate a cookie/account switch elsewhere while A's editor stays mounted.
+  state.user = other;
+  await builder(page)
+    .getByRole("button", { name: "Save to cloud", exact: true })
+    .click();
+  await expect(builder(page)).toContainText("Your account changed");
+  await expect(
+    builder(page).getByLabel("Network name", { exact: true }),
+  ).toHaveValue("Guest backup");
+  expect(state.projects.get(mine)!.workspace.document.name).toBe(
+    "Remote network",
+  );
+  const accountADraft = await page.evaluate(
+    ({ owner, project }) =>
+      localStorage.getItem(
+        `dominoos.builder.cloud-draft.v1:${encodeURIComponent(owner)}:${project}`,
+      ),
+    { owner: user.id, project: mine },
+  );
+  expect(JSON.parse(accountADraft!).document.name).toBe(
+    "Private account A edits",
+  );
+  await builder(page)
+    .getByRole("button", { name: "My projects", exact: true })
+    .click();
+  const list = page.getByRole("dialog", { name: "My projects" });
+  await expect(list).toContainText("Other account network");
+  await expect(list).not.toContainText("Remote network");
+});

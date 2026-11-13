@@ -131,15 +131,29 @@ function parseMetadata(value: unknown): ProjectMetadata {
   };
 }
 
+// First valid positive number of seconds among Retry-After and X-Retry-After.
+function readRetryAfterSeconds(response: Response): number | undefined {
+  for (const name of ["Retry-After", "X-Retry-After"]) {
+    const raw = response.headers.get(name);
+    if (raw === null) continue;
+    const seconds = Number(raw);
+    if (Number.isFinite(seconds) && seconds > 0) return seconds;
+  }
+  return undefined;
+}
+
 // Maps server error envelopes to safe codes. Server messages are not shown.
+// A 429 without a server code (for example a sign-in limiter) maps to rate_limited.
 async function readFailure(response: Response): Promise<CloudClientError> {
-  let code = "http_error";
+  let code: string | undefined;
   let currentVersion: number | undefined;
   let updatedAt: string | undefined;
   try {
     const body: unknown = await response.json();
     if (isRecord(body) && isRecord(body.error)) {
-      if (typeof body.error.code === "string") code = body.error.code;
+      if (typeof body.error.code === "string" && body.error.code !== "") {
+        code = body.error.code;
+      }
       if (typeof body.error.currentVersion === "number") {
         currentVersion = body.error.currentVersion;
       }
@@ -150,7 +164,9 @@ async function readFailure(response: Response): Promise<CloudClientError> {
   } catch {
     // Non-JSON failures keep the generic code.
   }
-  const retryAfter = Number(response.headers.get("Retry-After"));
+  if (code === undefined) {
+    code = response.status === 429 ? "rate_limited" : "http_error";
+  }
   return new CloudClientError(
     "http",
     code,
@@ -159,8 +175,7 @@ async function readFailure(response: Response): Promise<CloudClientError> {
       status: response.status,
       currentVersion,
       updatedAt,
-      retryAfterSeconds:
-        Number.isFinite(retryAfter) && retryAfter > 0 ? retryAfter : undefined,
+      retryAfterSeconds: readRetryAfterSeconds(response),
     },
   );
 }

@@ -1,25 +1,17 @@
-import { createTestHarness } from "wrangler";
-import { serializeSignedCookie } from "better-call";
 import { canonicalizeCloudWorkspace } from "../src/lib/cloud/contracts";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
-import { createCoreExample } from "../src/lib/builder/factories";
-import type { BuilderWorkspaceV1 } from "../src/lib/builder/types";
-const origin = "http://localhost:5173";
-// Test-only secrets; no deployed identity override or provider credentials.
-const secret = "test-only-session-signing-secret-at-least-32-characters";
-const server = createTestHarness({
-  workers: [
-    {
-      configPath: "./wrangler.local.jsonc",
-      secrets: {
-        BETTER_AUTH_SECRET: secret,
-        GITHUB_CLIENT_ID: "test-client-id",
-        GITHUB_CLIENT_SECRET: "test-client-secret",
-      },
-    },
-  ],
-});
-const worker = server.getWorker<Env>();
+import {
+  TEST_ORIGIN,
+  createCloudProject,
+  createCloudTestHarness,
+  createSampleWorkspace,
+  resetCloudTables,
+  seedSessionCookie,
+  sendWorkerRequest,
+} from "./helpers";
+
+const origin = TEST_ORIGIN;
+const { server, worker } = createCloudTestHarness();
 let db: D1Database;
 beforeAll(async () => {
   await server.listen();
@@ -30,15 +22,7 @@ afterAll(async () => {
   await server.close();
 });
 beforeEach(async () => {
-  for (const table of [
-    "projects",
-    "session",
-    "account",
-    "verification",
-    "user",
-    "rateLimit",
-  ])
-    await db.prepare(`DELETE FROM "${table}"`).run();
+  await resetCloudTables(db);
 });
 function request(
   path: string,
@@ -47,92 +31,25 @@ function request(
   cookie?: string,
   requestOrigin = origin,
 ) {
-  return server.fetch(origin + path, {
+  return sendWorkerRequest(server, path, {
     method,
-    redirect: "manual",
-    headers: {
-      ...(body === undefined ? {} : { "Content-Type": "application/json" }),
-      Origin: requestOrigin,
-      "CF-Connecting-IP": "192.0.2.10",
-      ...(cookie ? { Cookie: cookie } : {}),
-    },
-    body: body === undefined ? undefined : JSON.stringify(body),
+    body,
+    cookie,
+    origin: requestOrigin,
   });
 }
-function cookies(r: Response) {
+function cookies(r: Awaited<ReturnType<typeof request>>) {
   return r.headers
     .getSetCookie()
     .map((v) => v.split(";")[0])
     .join("; ");
 }
-// Seed real local D1 session rows and sign the cookie with Better Auth's cookie
-// library. These tests exercise production session verification and authorization,
-// but do not claim that GitHub issued an OAuth authorization code.
 async function login(email: string) {
-  const id = crypto.randomUUID(),
-    token = crypto.randomUUID(),
-    now = Date.now();
-  await db
-    .prepare(
-      'INSERT INTO "user" (id,name,email,emailVerified,createdAt,updatedAt) VALUES (?, ?, ?, 1, ?, ?)',
-    )
-    .bind(id, "Test User", email, now, now)
-    .run();
-  await db
-    .prepare(
-      "INSERT INTO session (id,expiresAt,token,createdAt,updatedAt,userId) VALUES (?, ?, ?, ?, ?, ?)",
-    )
-    .bind(crypto.randomUUID(), now + 86_400_000, token, now, now, id)
-    .run();
-  return (
-    await serializeSignedCookie("better-auth.session_token", token, secret, {
-      httpOnly: true,
-      sameSite: "lax",
-      path: "/",
-    })
-  ).split(";")[0];
+  return (await seedSessionCookie(db, email)).cookie;
 }
-function workspace(): BuilderWorkspaceV1 {
-  return {
-    format: "dominoos-builder-workspace",
-    version: 1,
-    document: createCoreExample(),
-    scenarios: [
-      {
-        scenario: {
-          id: "saved-delay",
-          name: "Saved draft scenario",
-          deliveryOverrides: [],
-          alternatives: [],
-        },
-        validatedNetworkKey: null,
-        receiptSnapshots: [],
-      },
-    ],
-    selectedScenarioId: "saved-delay",
-    workingScenario: {
-      scenario: {
-        id: "saved-delay",
-        name: "Saved draft scenario",
-        deliveryOverrides: [],
-        alternatives: [],
-      },
-      validatedNetworkKey: null,
-      receiptSnapshots: [],
-    },
-    source: { origin: "fictional", openedFromFile: true },
-  };
-}
-async function create(cookie: string, value = workspace()) {
-  const r = await request(
-    "/api/projects",
-    "POST",
-    { name: "Sample", workspace: value },
-    cookie,
-  );
-  expect(r.status).toBe(201);
-  return ((await r.json()) as { project: { id: string; version: number } })
-    .project;
+const workspace = createSampleWorkspace;
+function create(cookie: string, value = workspace()) {
+  return createCloudProject(server, cookie, { workspace: value });
 }
 describe("real Better Auth and native D1 HTTP", () => {
   it("verifies database sessions, returns no tokens and revokes sessions on signout", async () => {

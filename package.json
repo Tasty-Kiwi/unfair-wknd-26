@@ -17,6 +17,7 @@
     "auth:generate": "auth generate --config scripts/auth-schema.ts --output .tmp/auth-schema.sql --yes",
     "types:worker": "wrangler types --config wrangler.local.jsonc --strict-vars=false --include-main-module=false && wrangler types auth-probe-configuration.d.ts --config wrangler.auth-probe.jsonc --env-interface AuthProbeEnv --include-runtime=false --include-main-module=false",
     "typecheck:worker": "npm run types:worker && tsc -p tsconfig.worker.json",
+    "typecheck:tests": "tsc -p tsconfig.tests.json",
     "test:worker": "vitest run --config vitest.worker.config.ts"
   },
   "dependencies": {

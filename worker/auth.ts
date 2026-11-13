@@ -1,5 +1,6 @@
 import { betterAuth, type BetterAuthOptions } from "better-auth";
 import { authOptions } from "./auth-options";
+import { validateAuthBaseURL } from "./auth-url";
 import type { CloudApiEnv } from "./http";
 
 // Cache only the SDK client/configuration, never identities or session results.
@@ -25,9 +26,8 @@ export function createAuth(env: CloudApiEnv) {
   const githubClientSecret = env.GITHUB_CLIENT_SECRET;
 
   if (!db) throw new Error("DB binding is required for authentication");
-  if (typeof baseURL !== "string" || !/^https?:\/\//.test(baseURL)) {
-    throw new Error("BETTER_AUTH_URL must be an absolute HTTP(S) URL");
-  }
+  if (typeof baseURL !== "string") throw new Error("BETTER_AUTH_URL is required");
+  const canonicalBaseURL = validateAuthBaseURL(baseURL);
   if (typeof secret !== "string" || secret.length < 32) {
     throw new Error("BETTER_AUTH_SECRET must contain at least 32 characters");
   }
@@ -49,7 +49,7 @@ export function createAuth(env: CloudApiEnv) {
   const cached = clients.get(db);
   if (
     cached &&
-    cached.baseURL === baseURL &&
+    cached.baseURL === canonicalBaseURL &&
     cached.secret === secret &&
     cached.githubClientId === githubClientId.trim() &&
     cached.githubClientSecret === githubClientSecret.trim()
@@ -58,14 +58,14 @@ export function createAuth(env: CloudApiEnv) {
   }
 
   const client = betterAuth({
-    ...authOptions(baseURL, secret, {
+    ...authOptions(canonicalBaseURL, secret, {
       githubClientId: githubClientId.trim(),
       githubClientSecret: githubClientSecret.trim(),
     }),
     database: db,
   });
   clients.set(db, {
-    baseURL,
+    baseURL: canonicalBaseURL,
     secret,
     githubClientId: githubClientId.trim(),
     githubClientSecret: githubClientSecret.trim(),

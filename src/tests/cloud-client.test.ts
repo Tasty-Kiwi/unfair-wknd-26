@@ -9,13 +9,27 @@ import {
   type BuilderWorkspaceV1,
 } from "@/lib/builder/types";
 
-function jsonFetch(status: number, body: unknown) {
+function jsonFetch(
+  status: number,
+  body: unknown,
+  headers: Record<string, string> = {},
+) {
   return async () =>
     new Response(JSON.stringify(body), {
       status,
-      headers: { "content-type": "application/json" },
+      headers: { "content-type": "application/json", ...headers },
     });
 }
+
+const workspaceForUpdate = (): BuilderWorkspaceV1 => ({
+  format: BUILDER_WORKSPACE_FORMAT,
+  version: BUILDER_WORKSPACE_VERSION,
+  document: createCoreExample(),
+  scenarios: [],
+  selectedScenarioId: null,
+  workingScenario: null,
+  source: { origin: "fictional", openedFromFile: false },
+});
 
 describe("cloud draft keys", () => {
   it("scopes each draft to one owner and one project", () => {
@@ -93,5 +107,90 @@ describe("cloud client session check", () => {
       }),
     );
     await expect(client.me()).rejects.toMatchObject({ status: 401 });
+  });
+});
+
+describe("cloud client rate limits", () => {
+  it("maps a 429 without a server code to rate_limited", async () => {
+    const client = createCloudClient(
+      jsonFetch(429, { message: "Too many requests." }, { "Retry-After": "12" }),
+    );
+    await expect(client.me()).rejects.toMatchObject({
+      status: 429,
+      code: "rate_limited",
+      retryAfterSeconds: 12,
+    });
+  });
+
+  it("maps a 429 with a non-JSON body to rate_limited", async () => {
+    const client = createCloudClient(async () => new Response("slow down", { status: 429 }));
+    await expect(client.me()).rejects.toMatchObject({
+      status: 429,
+      code: "rate_limited",
+      retryAfterSeconds: undefined,
+    });
+  });
+
+  it("reads X-Retry-After when Retry-After is absent", async () => {
+    const client = createCloudClient(
+      jsonFetch(429, { message: "Slow down." }, { "X-Retry-After": "7" }),
+    );
+    await expect(client.me()).rejects.toMatchObject({
+      code: "rate_limited",
+      retryAfterSeconds: 7,
+    });
+  });
+
+  it("ignores Retry-After values that are not positive seconds", async () => {
+    const client = createCloudClient(
+      jsonFetch(429, {}, { "Retry-After": "Wed, 21 Oct 2026 07:28:00 GMT" }),
+    );
+    await expect(client.me()).rejects.toMatchObject({
+      code: "rate_limited",
+      retryAfterSeconds: undefined,
+    });
+  });
+
+  it("keeps a server code on a 429 instead of replacing it", async () => {
+    const client = createCloudClient(
+      jsonFetch(
+        429,
+        { error: { code: "creation_rate_limited" }, requestId: "r2" },
+        { "Retry-After": "30" },
+      ),
+    );
+    await expect(client.me()).rejects.toMatchObject({
+      code: "creation_rate_limited",
+      retryAfterSeconds: 30,
+    });
+  });
+
+  it("preserves the 409 version fields on update", async () => {
+    const client = createCloudClient(
+      jsonFetch(409, {
+        error: {
+          code: "version_conflict",
+          message: "Changed.",
+          currentVersion: 4,
+          updatedAt: "2026-11-13T12:30:00Z",
+        },
+        requestId: "r3",
+      }),
+    );
+    await expect(
+      client.updateProject(
+        "11111111-1111-4111-8111-111111111111",
+        {
+          name: "Network",
+          workspace: workspaceForUpdate(),
+          expectedVersion: 3,
+        },
+      ),
+    ).rejects.toMatchObject({
+      status: 409,
+      code: "version_conflict",
+      currentVersion: 4,
+      updatedAt: "2026-11-13T12:30:00Z",
+    });
   });
 });

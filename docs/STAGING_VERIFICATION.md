@@ -9,9 +9,9 @@
 - Worker: `domino-os-staging`.
 - D1: `domino-os-staging`, ID `75faa40c-c80c-4fd6-ab27-6dc8f6cc66e4`, EEUR.
 - Migrations applied remotely: `0001_auth.sql`, `0002_projects.sql`.
-- Current Worker version: `f40b12ca-41a9-45c0-94b8-8058ee47d71b`.
+- Current Worker version: `53a398e6-45e7-4156-a148-02d0064c2b41`.
 - Config: `wrangler.staging.jsonc`; minification enabled, version preview URLs disabled, query-string redaction and logs/traces enabled.
-- Exact Better Auth version: 1.7.22. The initial deployment used the then-uncommitted implementation on `plan/cloud-backend`. The current staging deployment was built on `feat/cloud-projects`: implementation commit `7756bc1`, main integration commit `ce8568a` (including PR #6), plus the startup initialization change committed as `7d00402`. These same commits now continue on PR #5's original `plan/cloud-backend` branch at the user's request. Production is unchanged.
+- Exact Better Auth version: 1.7.22. The earlier startup experiment used `feat/cloud-projects` (implementation `7756bc1`, main integration `ce8568a`, startup change `7d00402`). These commits returned to PR #5's original `plan/cloud-backend` branch. The current staging upload was built there after the new three-round implementation discussion and integration of all three agents' changes. Production is unchanged.
 - GitHub Client ID/Secret and generated session secret were uploaded from an ignored, mode-0600 JSON file. Values were not printed or committed.
 
 The first full upload returned Cloudflare HTTP 500/code 10013. A retry encountered a transient local DNS/connectivity failure. A minimal SELECT 1 handler deployed successfully under the same staging name; it exposed no user/project data. The minified full app then deployed and replaced it. This sequence does not establish the exact cause of the initial upload failure.
@@ -37,7 +37,15 @@ Python's default user agent was rejected by Cloudflare with 403/1010 before the 
 
 Production deployment `a5917882-a7d7-4ea1-9418-524455dcad8d`, version `c438a69d-1282-4954-a93f-10c29aee3e60`, was read before and after and remains identical. No production bindings, data, code or billing were changed.
 
-## CPU remains a release concern
+## Current implementation verification
+
+The latest approved staging upload contains canonical auth-origin validation, confirmed Open cloud version recovery and rate-limit feedback. No migration, new remote resource, secret change, production deployment or billing change was needed. Its nine routing/OAuth-start smoke checks passed, including exact callback/state/PKCE/cookie assertions and forged-state rejection. Production deployment/version were compared and unchanged again.
+
+The integrated source passed **97 unit tests, 28 Worker/runtime tests, 39 Chromium journeys, Worker and test-source typechecks, build and deployment dry run**. The new browser journey uses built ASSETS, the production Worker, real isolated local D1 and test-only signed database sessions, without API interception. It proves save, logout/revocation, fresh-browser reopen of the exact workspace/scenarios, matching simulation output, update and second-owner GET/PUT denial. It does not claim two real GitHub accounts were authenticated.
+
+The shared staging browser reached GitHub's login screen and had no authenticated GitHub session. It was closed without requesting credentials or changing account settings. Real sign-in remains user-verified as described below; the full live two-real-account journey remains open. The user's latest instruction excludes further email-login/CPU work; earlier measurements below are retained as historical evidence, not a new release claim. See [implementation evidence](CLOUD_BACKEND_IMPLEMENTATION.md).
+
+## Historical CPU findings
 
 The initial full-app aggregate showed CPU p50 23.030 ms and p95/p99 56.101 ms over eight requests. A later ten-request aggregate had p50 1.960 ms with the same upper tail. These tiny mixed samples include startup and unauthenticated paths; they are not per-endpoint estimates or a complete Free-plan feasibility proof.
 
@@ -63,10 +71,10 @@ On 13 November 2026, the user reported: “When I was testing, GitHub sign-in di
 
 ## Still required
 
-- Browser logout and old-session rejection; real GitHub sign-in is user-verified as recorded above.
-- Authenticated project create/list/open/update with scenarios, then reopen in a fresh browser.
+- Live staging browser logout and old-session rejection; local revocation passes and real GitHub sign-in is user-verified as recorded above.
+- Live staging project create/list/open/update with scenarios, then reopen in a fresh browser; the built-Worker/local-D1 version of this journey passes.
 - Live two-account owner isolation if two real accounts are available.
 - CPU measurements for the real callback and authenticated project paths, including cold requests and a representative size boundary.
-- Resolve or explicitly review the Free-plan CPU tail before any production release.
+- Production rollout remains unapproved. No new performance benchmark is claimed; historical observations above were excluded from the latest implementation task by the user.
 
 Local regression evidence before deployment: 91 unit tests, 12 Worker/runtime tests, 32 Chromium journeys, Worker typecheck/build/dry-runs. The backend initialization optimization was followed by typecheck and the affected 12 runtime tests. Browser API mocks and seeded sessions do not prove real GitHub identity.

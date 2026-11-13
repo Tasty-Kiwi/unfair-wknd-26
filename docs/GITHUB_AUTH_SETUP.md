@@ -50,13 +50,14 @@ Without credentials, `npm run dev` continues to support the guest app. Do not pu
 ```sh
 npm test
 npm run typecheck:worker
+npm run typecheck:tests
 npm run build
 npm run test:worker
 npm run deploy:check
 npm run test:e2e
 ```
 
-The Worker harness uses an isolated local D1 and explicit **test-only** OAuth/session secrets. It does not contact GitHub. Seeded database sessions exercise the real cookie verifier and owner queries. OAuth-start tests inspect the provider URL/state and reject forged callbacks, but do not prove a real code exchange. Browser mocks likewise verify app behavior rather than provider identity.
+The Worker harness uses an isolated local D1 and explicit **test-only** OAuth/session secrets. It does not contact GitHub. Seeded database sessions exercise the real cookie verifier and owner queries. OAuth-start tests inspect the provider URL/state and reject forged callbacks, but do not prove a real code exchange. The browser suite includes UI API mocks and a separate built-Worker journey with real local D1, fresh browser contexts, matching exported workspaces/simulation, logout revocation and second-owner GET/PUT denial. See [implementation evidence](CLOUD_BACKEND_IMPLEMENTATION.md).
 
 ## Approved staging, then production
 
@@ -72,7 +73,6 @@ Production keeps the existing `domino-os` Worker name. Its checked-in config has
 2. User A saves a workspace with nodes, positions, raw incomplete fields and named scenarios. Sign out, then reopen the project in a fresh browser with no shared localStorage.
 3. User B sees only B's projects. Direct GET/PUT of A's known ID returns 404, and A's project remains unchanged.
 4. Two saves from one version yield one success and one 409. Network failure, timeout, rejected size and sign-out during a request preserve local work and cannot apply stale results.
-5. Read actual deployed CPU telemetry on **Workers Free** for OAuth start/callback, session reads and representative project save/load, including the configured size bound. Password hashing is gone; unauthenticated/OAuth-start smoke CPU has been measured, with unresolved cold-request spikes. Real callback and authenticated project CPU remain unmeasured. HTTP 200 and local timing alone do not prove a fit inside 10 ms.
-6. Verify the public landing page, guest builder and deterministic simulator with auth unavailable, then repeat the existing regression suite.
+5. Verify the public landing page, guest builder and deterministic simulator with auth unavailable, then repeat the existing regression suite.
 
-Record Worker version, database/migration state, sample size, CPU units and results. No production deployment or cross-browser completion claim until these checks pass. If Free's CPU budget is exceeded, stop and review without upgrading billing or introducing an auth bypass.
+Record Worker version, database/migration state, the accounts/contexts used and results. The user's latest implementation instruction excludes new email-login and CPU work; historical findings remain in the staging record without a new performance claim. No production deployment or live two-account completion claim until separately authorized and verified.
