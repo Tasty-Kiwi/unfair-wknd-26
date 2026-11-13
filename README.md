@@ -4,7 +4,7 @@
 
 **See what breaks before it breaks.** A manufacturing material-availability simulator built for the Unfair Weekend 2026 hackathon. Change a supplier receipt, trace the affected customer order, and test an approved alternative in under a minute.
 
-Designed for a small manufacturer testing a spreadsheet material plan without a full planning-system rollout. This buyer segment and willingness to pay are hypotheses; no customer validation or measured savings are claimed. See [commercial narrative](docs/PITCH.md) and [human validation playbook](docs/VALIDATION_PLAYBOOK.md).
+Designed for a small manufacturer building a material network or testing a spreadsheet plan without a full planning-system rollout. This buyer segment and willingness to pay are hypotheses; no customer validation or measured savings are claimed. See [commercial narrative](docs/PITCH.md) and [human validation playbook](docs/VALIDATION_PLAYBOOK.md).
 
 The bundled Northstar Precision Assembly manufacturer, suppliers, prices and orders are **fictional**. All calculations run deterministically in TypeScript. No API key, backend, account or external service is required. Fonts are bundled locally.
 
@@ -26,7 +26,7 @@ npm run preview
 
 ## Deploy on Cloudflare Workers
 
-The public link serves Vite static assets with SPA fallback; there is no backend or upload endpoint. Imported plans and scenario changes live only in memory and are cleared on refresh or when the page closes. Export a report before leaving and keep source files for reimport. Resetting an imported plan requires confirmation. Product CSV imports without a BOM retain matching products' existing BOMs; the preview and active plan disclose this. To redeploy from this checkout:
+The public link serves Vite static assets with SPA fallback; there is no backend or upload endpoint. In the original simulator, imported plans and scenario changes live only in memory and are cleared on refresh or when the page closes. Builder workspaces save locally as described below. Export a report before leaving the original simulator and keep source files for reimport. Resetting an imported plan requires confirmation. Product CSV imports without a BOM retain matching products' existing BOMs; the preview and active plan disclose this. To redeploy from this checkout:
 
 ```sh
 npx wrangler login
@@ -46,6 +46,18 @@ npm run deploy
 A second disruption: reset, choose receipt **PO-102** (control board), and shift its control-board receipt to November 25. ORD-103 and ORD-106 become at risk, with eight missing boards. Focus **Control board** in the map or use **Full network**.
 
 See [DEMO_SCRIPT.md](DEMO_SCRIPT.md) for a 60-second spoken walkthrough.
+
+## Build a network
+
+Choose **Build a network** from the existing simulator. Start blank or open the explicitly fictional **Core example**. Add suppliers, components, receipts, products and customer orders, then connect typed handles or use the **Connect** form. Enter initial stock and the quantity required on each component-to-product BOM connection. **Check network** lists missing fields and relationships; **Run simulation** converts the complete graph into the existing validated Dataset and allocation engine.
+
+In Simulate, choose **New scenario**, give it a name, change a receipt date or quantity and **Save scenario**. **Select scenario** reopens saved inputs; **Compare with baseline** compares the same network with and without those changes. Selecting an order shows its actual material allocations. Baseline quantities and dates are never changed by scenario controls. A material edit in Build requires explicit **Revalidate scenario** before an older scenario can run; its original overrides are retained.
+
+Builder progress auto-saves in this browser, including incomplete graph fields and named scenarios. Check for **Saved locally**, or use **Save workspace**. After refreshing, choose **Build a network** again to reopen it. **Export workspace JSON** and **Import workspace JSON** use one versioned format (2 MB limit). Storage errors remain visible; local browser storage is not an external backup. Nothing is uploaded.
+
+The original **Import data** JSON/CSV path stays separate and preserves its existing behavior. Entering Build and returning with **Back to Simulate** preserves the original in-memory plan. Existing approved-alternative recovery continues there. Authoring alternatives, migrating arbitrary imports into Build and a dedicated mobile editor are deferred; the builder provides laptop editing, keyboard-accessible forms and a basic narrow layout.
+
+The automated acceptance journey creates the motor network from blank using visible UI actions, including actual node dragging and a pointer connection. With stock 8, receipt 5 on November 17, BOM 1, and orders 6 on November 20 and 4 on November 22, baseline covers both. A named delay to November 23 leaves the second order short by 2. The test also compares baseline and saves/reloads/exports/reimports the created workspace. See [implementation evidence](docs/BUILDER_IMPLEMENTATION.md).
 
 ## Verification
 
@@ -78,7 +90,7 @@ Use **Import data**. Downloadable example JSON and CSV are available in the impo
 
 - Dates must be real ISO calendar dates, `YYYY-MM-DD`, on or after `asOf`. Counts must be nonnegative integers; BOM and order quantities must be positive. References, duplicate IDs, approval and product scope are checked using Zod plus semantic validation.
 - Each file is limited to 2 MB (one JSON or up to five CSVs). A rejected file leaves the current data and scenario unchanged. Imported plans get illustrative six-day disruption and recovery presets derived from their first receipt; these do not guarantee that a particular imported order will be affected or recovered.
-- State is in browser memory; refresh resets it. Export a report if you need a record. Nothing is uploaded or persisted on a server.
+- This original JSON/CSV import path keeps state in browser memory; refresh resets it. Export a report if you need a record. Builder workspace persistence is separate. Nothing is uploaded or persisted on a server.
 
 ## Model and limits
 
@@ -96,6 +108,8 @@ This prototype models **material availability only**. It excludes factory capaci
 ## Project layout
 
 - `src/lib/`: domain types, pure simulation, Zod/reference validation and CSV parser.
+- `src/lib/builder/`: raw graph types, typed connections, whole-graph compiler, versioned local workspace format and scenario bindings.
+- `src/components/builder/`: controlled React Flow editor, inspector, connection form and Build/Simulate integration.
 - `src/data/demo.ts`: four suppliers, ten components, five products, ten orders, eleven receipts and an approved alternative; three scenario overlays.
 - `src/components/graph/`: typed React Flow nodes, causal shortage paths, focused/full network views.
 - `src/components/scenarios/`: live scenario controls and structured allocation explanations.

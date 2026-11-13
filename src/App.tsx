@@ -52,6 +52,7 @@ import { RecoveryComparison } from "@/components/scenarios/RecoveryComparison";
 import { ScenarioPanel } from "@/components/scenarios/ScenarioPanel";
 import { ImpactPanel } from "@/components/scenarios/ImpactPanel";
 import "@/components/scenarios/panels.css";
+import { BuilderExperience } from "@/components/builder/BuilderExperience";
 
 const money = (n: number) =>
   new Intl.NumberFormat("en-IE", {
@@ -287,6 +288,7 @@ function NodeDetail({
   );
 }
 export default function App() {
+  const [builderOpen, setBuilderOpen] = useState(false);
   const [data, setData] = useState<Dataset>(demoData);
   const [provenance, setProvenance] = useState<DatasetProvenance>(() =>
     fictionalProvenance(),
@@ -405,6 +407,7 @@ export default function App() {
     "Supplier disruption",
     "Approved recovery",
   ];
+  if (builderOpen) return <BuilderExperience onClose={() => setBuilderOpen(false)} />;
   return (
     <div className="app-shell">
       <header className="topbar">
@@ -425,6 +428,7 @@ export default function App() {
           </span>
         </p>
         <div className="top-actions">
+          <Button variant="outline" size="sm" onClick={() => setBuilderOpen(true)}>Build a network</Button>
           <Button variant="ghost" size="sm" onClick={() => setHelpOpen(true)}>
             <CircleHelp data-icon="inline-start" />
             <span className="label-wide">Assumptions</span>
