@@ -4,7 +4,7 @@ Updated 13 November 2026 on `plan/cloud-backend`, existing [PR #5](https://githu
 
 **Implemented locally and deployed only to approved staging.** The user explicitly replaced Better Auth with custom GitHub OAuth. This document reflects that approved deviation; the original three-model history and later implementation rounds remain in [the debate record](CLOUD_BACKEND_DESIGN_DEBATE.md). Exact code, model contributions and verification are in [CLOUD_BACKEND_IMPLEMENTATION.md](CLOUD_BACKEND_IMPLEMENTATION.md).
 
-Acceptance: a user signs in with GitHub, saves a supply-chain workspace, reopens it in a fresh browser, and another user cannot retrieve or change it. The full local Worker/D1 journey passes. The new flow's real-provider/two-real-account staging repetition remains open; the earlier user-confirmed login used the former SDK.
+Acceptance: a user signs in with GitHub, saves a supply-chain workspace, reopens it in a fresh browser, and another user cannot retrieve or change it. The full local Worker/D1 journey passes. The full fresh-browser/two-real-account staging repetition remains open; the earlier user-confirmed login used the former SDK.
 
 ## Repository baseline and invariants
 
@@ -111,11 +111,11 @@ First vertical slice remains sign in → save current graph/scenario → sign ou
 
 ## Tests and stop/go checkpoints
 
-Final local checks: 102 unit tests, 40 Worker tests, 44 browser journeys, Worker/test-source typechecks, build and deployment dry run pass. No simulation or original journey was removed.
+Final local checks: 102 unit tests, 44 Worker tests, 44 browser journeys, Worker/test-source typechecks, build and deployment dry run pass. No simulation or original journey was removed.
 
 New OAuth tests cover successful mocked provider exchange, state/PKCE/browser binding/replay/expiry, malformed/duplicate/forged sessions, server revocation, hostile/oversized/compressed upstream JSON, provider timeout, secure cookies, stable GitHub identity and legacy ownership import/conflicts. Existing project security/CAS/quota/size/round-trip and frontend data-safety cases remain.
 
-- Gate A: custom auth/session/migration verified locally; fresh real GitHub sign-in still required.
+- Gate A: custom auth/session/migration verified locally; real GitHub sign-in/logout/re-sign-in now passed after the Workers redirect-mode fix.
 - Gate B: project owner/CAS/quota/validation tests pass.
 - Gate C: real local Worker/D1 fresh-browser reopen with exact workspace/scenario/simulation and second-owner denial passes; repeat with two real accounts on staging.
 - Gate D: complete local checks pass; hosted checks must match each pushed head.
@@ -124,3 +124,5 @@ New OAuth tests cover successful mocked provider exchange, state/PKCE/browser bi
 Halt rollout for broken ownership/session validation, destructive/ambiguous migration, lost local work, failed required checks or missing live proof. SDK removal is not a measured authenticated-endpoint performance result. Do not invent success, bypass auth or change billing.
 
 P1 after P0: delete, list rename, cloud autosave and richer recovery. Deferred: email/password, teams/roles/sharing, revisions, collaboration, attachments, billing/notifications, additional services, normalized graph storage or simulation changes.
+
+Review follow-up: the custom flow now passed one-account real GitHub sign-in and same-profile staging persistence. Workers-compatible manual redirect handling replaces unsupported error mode, with an actual workerd regression test. Current endpoint CPU samples include requests above 10 ms; retain the production reliability gate. See [staging evidence](STAGING_VERIFICATION.md#real-github-callback-repair-and-live-verification).

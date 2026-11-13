@@ -13,7 +13,7 @@ React/Vite and deterministic simulation stay in the browser. One Cloudflare Work
 1. A same-origin JSON POST to `/api/auth/sign-in/social` starts GitHub authorization. Client-supplied providers, token shortcuts and external callbacks are rejected by the API wrapper.
 2. The Worker generates independent random 32-byte state, browser nonce and PKCE verifier. D1 stores the state/browser hashes and verifier for ten minutes; an HttpOnly cookie binds the attempt to that browser.
 3. GitHub receives only `read:user`, the fixed callback and an S256 challenge. The callback atomically deletes a matching, unexpired state/browser record **before** exchanging the code, making it one-use.
-4. Only fixed GitHub token/profile endpoints are contacted. Redirects are rejected, fetches time out after ten seconds and decoded JSON is limited to 64 KiB. Code, credentials, provider tokens and raw callback errors are never logged or returned. The access token is discarded after fetching the profile.
+4. Only fixed GitHub token/profile endpoints are contacted. Redirects use Workers-compatible manual mode and non-OK responses (including 3xx) are rejected; fetches time out after ten seconds and decoded JSON is limited to 64 KiB. Code, credentials, provider tokens and raw callback errors are never logged or returned. The access token is discarded after fetching the profile.
 5. The stable positive GitHub numeric ID maps to an internal user ID. Login, display name and email are not authorization keys. Existing GitHub mappings keep their original internal owner IDs.
 6. A new opaque 256-bit session cookie lasts one day. D1 stores only its SHA-256 hash and expiry. Every protected request joins that hash with the identity record; there is no in-memory session cache. Logout deletes the row and clears cookies.
 
@@ -98,7 +98,7 @@ Keep the existing GitHub OAuth app/callbacks. The Vite /api proxy targets 8787 w
 | Check | Final local result |
 | --- | --- |
 | npm test | 102 tests / 10 files pass |
-| npm run test:worker | 40 tests / 6 files pass |
+| npm run test:worker | 44 tests / 7 files pass |
 | npm run test:e2e | 44 Chromium journeys pass |
 | Worker and test-source typechecks | Pass |
 | TypeScript/Vite build | Pass; existing upstream annotation warnings only |
@@ -107,14 +107,14 @@ Keep the existing GitHub OAuth app/callbacks. The Vite /api proxy targets 8787 w
 
 New tests mock only external GitHub HTTP while using actual local D1 for code exchange, PKCE/binding/replay/expiry, bad/oversized/compressed responses, timeout, stable identity mapping, Secure cookies, hashed sessions, logout and legacy owner migration/conflicts. Existing auth/owner/CAS/quota/size/framing cases remain.
 
-The built-Worker browser journey uses the actual runtime, real local D1 and opaque test sessions, with no API interception. It saves a UI-created named scenario, checks the SQL row, logs out/rejects the old cookie, reopens the exact workspace in a fresh context with matching simulation output, updates version 2 and denies a second owner's GET/PUT. Other browser tests prove cloud-disabled guest behavior and transient-health retry without reload/data loss. Synthetic sessions/provider HTTP mocks are not live GitHub proof.
+The built-Worker browser journey uses the actual runtime, real local D1 and opaque test sessions, with no API interception. It saves a UI-created named scenario, checks the SQL row, logs out/rejects the old cookie, reopens the exact workspace in a fresh context with matching simulation output, updates version 2 and denies a second owner's GET/PUT. Other browser tests prove cloud-disabled guest behavior and transient-health retry without reload/data loss. Synthetic sessions/provider HTTP mocks are not live GitHub proof. A new test-only workerd entry constructs outbound Requests inside the Worker runtime; the old redirect mode fails its login case and the fix passes. Provider 3xx responses are rejected without forwarding credentials.
 
 ## Deployment and remaining acceptance
 
-Existing approved staging only: `domino-os-staging`, isolated D1 `75faa40c-c80c-4fd6-ab27-6dc8f6cc66e4`. Migration 0003 was applied there after local tests; no old rows/tables were dropped. The custom flow was deployed as version `b9f1793f-e14f-454e-8d37-a93463b01750`. [Staging verification](STAGING_VERIFICATION.md) records current smoke results and production comparison.
+Existing approved staging only: `domino-os-staging`, isolated D1 `75faa40c-c80c-4fd6-ab27-6dc8f6cc66e4`. Migration 0003 was applied there after local tests; no old rows/tables were dropped. The custom flow was deployed as version `5adba668-0dc4-4c2f-880d-f67bffcc67b1`. [Staging verification](STAGING_VERIFICATION.md) records current smoke results and production comparison.
 
 Production `domino-os` and previews retain cloud disabled/no production D1. No new resource, paid upgrade, merge or production activation was made. Legacy signing-secret values, if still stored on an environment, are unused and may be retired separately.
 
-A **fresh real GitHub sign-in on this implementation** and full two-real-account staging save/reopen/logout/privacy journey remain open. The user's earlier successful sign-in tested the previous SDK flow; it does not automatically verify this replacement. No authenticated endpoint timing/reliability result is inferred from dependency removal. Local persistence/privacy acceptance is passing; complete live acceptance is not claimed.
+The review follow-up found and fixed unsupported `redirect: "error"` in provider fetches. Real GitHub sign-in, save/list/open/update, logout, re-sign-in and scenario reopen/simulation now pass in Helium with one account; D1 confirms version 2. The full fresh-browser/two-real-account staging privacy journey remains open. The user's earlier successful sign-in tested the previous SDK flow; it does not automatically verify this replacement. Endpoint CPU samples are now recorded in the staging evidence; some exceed 10 ms, so consistent Free-plan reliability remains unproven. No performance result is inferred merely from dependency removal. Local persistence/privacy acceptance is passing; complete live acceptance is not claimed.
 
 Delete, sharing, cloud autosave, revisions, email/password, teams and advanced account/recovery UI remain deferred.

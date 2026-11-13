@@ -77,4 +77,10 @@ npx wrangler deploy --config wrangler.staging.jsonc
 
 Query-string redaction remains enabled so callback codes/state are not logged. Production `domino-os` and branch previews remain cloud-disabled with no production DB. Do not create production resources, merge the PR or activate production cloud without separate approval.
 
-Live acceptance still requires fresh GitHub sign-in on this custom flow, save/reopen with scenarios in another browser, logout/old-cookie rejection, and GET/PUT denial from a second real GitHub account. Reliability/performance claims require real authenticated endpoint measurements; no new measurement is inferred from the SDK removal. Current deployment evidence is in [STAGING_VERIFICATION.md](STAGING_VERIFICATION.md).
+The remaining live acceptance checks are save/reopen with scenarios in another browser, retained-old-cookie rejection, and GET/PUT denial from a second real GitHub account. Same-profile real GitHub sign-in, persistence and logout now pass as recorded below. Reliability/performance claims require real authenticated endpoint measurements; no new measurement is inferred from the SDK removal. Current deployment evidence is in [STAGING_VERIFICATION.md](STAGING_VERIFICATION.md).
+
+## Review follow-up
+
+The custom flow now passed real GitHub sign-in and same-profile save/list/open/update/logout/re-sign-in in Helium. Provider fetches must use `redirect: "manual"` and reject 3xx explicitly: Workers does not support `redirect: "error"`. The runtime regression test covers this distinction. Fresh-browser and second-real-account privacy checks remain required. See [current staging evidence and CPU samples](STAGING_VERIFICATION.md#real-github-callback-repair-and-live-verification); several samples exceed 10 ms, so production remains disabled.
+
+Keep the current per-IP limits until venue testing demonstrates contention. Ten starts and twenty callbacks per minute are shared by testers behind one public IP; a 429 should be retried after the supplied delay, without bypassing the limiter.

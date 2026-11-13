@@ -49,6 +49,15 @@ const MAX_DISPLAY_NAME_LENGTH = 120;
 const OPAQUE_TOKEN_RE = /^[A-Za-z0-9_-]{43}$/;
 const utf8Encoder = new TextEncoder();
 
+class OAuthProviderError extends Error {
+  constructor(
+    readonly category: string,
+    readonly status?: number,
+  ) {
+    super(category);
+  }
+}
+
 function toBase64Url(bytes: Uint8Array): string {
   let binary = "";
   for (let i = 0; i < bytes.length; i += 1) {
@@ -212,13 +221,13 @@ async function pruneExpiredAuthRows(
 async function readBoundedResponseJson(response: Response): Promise<unknown> {
   if (!response.ok) {
     await response.body?.cancel().catch(() => {});
-    throw new Error("Upstream HTTP error");
+    throw new OAuthProviderError("upstream_http_error", response.status);
   }
 
   const contentType = response.headers.get("Content-Type") ?? "";
   if (!contentType.toLowerCase().includes("application/json")) {
     await response.body?.cancel().catch(() => {});
-    throw new Error("Unexpected upstream Content-Type");
+    throw new OAuthProviderError("upstream_content_type", response.status);
   }
 
   // Fetch may decompress upstream bytes while retaining encoding/length headers.
@@ -242,7 +251,8 @@ async function fetchGitHubJson(
   try {
     const response = await fetcher(url, {
       ...init,
-      redirect: "error",
+      // Workers supports manual/follow only. Reject redirects via response.ok.
+      redirect: "manual",
       signal: controller.signal,
     });
     return await readBoundedResponseJson(response);
@@ -524,6 +534,7 @@ export function createAuth(
       return redirectResponse(AUTH_ERROR_REDIRECT_PATH, clearOauthHeaders);
     }
 
+    let callbackStage = "token_exchange";
     try {
       const tokenBody = new URLSearchParams({
         client_id: githubClientId,
@@ -558,9 +569,21 @@ export function createAuth(
         accessToken.trim().length === 0 ||
         typeof tokenRecord.error === "string"
       ) {
-        throw new Error("Missing GitHub access token");
+        const knownErrors = [
+          "incorrect_client_credentials",
+          "redirect_uri_mismatch",
+          "bad_verification_code",
+          "access_denied",
+        ];
+        throw new OAuthProviderError(
+          typeof tokenRecord.error === "string" &&
+            knownErrors.includes(tokenRecord.error)
+            ? tokenRecord.error
+            : "invalid_token_response",
+        );
       }
 
+      callbackStage = "profile";
       const profilePayload = await fetchGitHubJson(fetcher, GITHUB_USER_URL, {
         method: "GET",
         headers: {
@@ -573,6 +596,7 @@ export function createAuth(
       const profile = parseGitHubProfile(profilePayload);
       const candidateUserId = crypto.randomUUID();
 
+      callbackStage = "identity";
       const identity = await db!
         .prepare(
           `INSERT INTO github_identities (github_id, user_id, name)
@@ -588,6 +612,7 @@ export function createAuth(
         throw new Error("Failed to persist GitHub identity");
       }
 
+      callbackStage = "session";
       const sessionToken = generateOpaqueToken();
       const sessionTokenHash = await sha256Hex(sessionToken);
       const sessionExpiresAt = now + SESSION_TTL_MS;
@@ -616,7 +641,21 @@ export function createAuth(
       );
 
       return redirectResponse(AUTH_SUCCESS_REDIRECT_PATH, headers);
-    } catch {
+    } catch (error) {
+      // Fixed stage labels only: never log provider bodies, tokens, codes or URLs.
+      console.warn(
+        JSON.stringify({
+          event: "oauth_callback_failed",
+          stage: callbackStage,
+          failure:
+            error instanceof OAuthProviderError
+              ? error.category
+              : "unexpected_error",
+          ...(error instanceof OAuthProviderError && error.status
+            ? { upstreamStatus: error.status }
+            : {}),
+        }),
+      );
       return redirectResponse(AUTH_ERROR_REDIRECT_PATH, clearOauthHeaders);
     }
   }

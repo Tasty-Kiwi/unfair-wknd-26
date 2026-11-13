@@ -1,4 +1,12 @@
-import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
+import {
+  afterAll,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+} from "vitest";
 import { readFile } from "node:fs/promises";
 import { createAuth } from "../worker/auth";
 import {
@@ -81,7 +89,7 @@ function provider(
   const fetcher: typeof fetch = async (input, init) => {
     const url = String(input);
     calls.push({ url, init });
-    expect(init?.redirect).toBe("error");
+    expect(init?.redirect).toBe("manual");
     if (url === "https://github.com/login/oauth/access_token") {
       return json({
         access_token: "synthetic-github-access-token",
@@ -281,8 +289,27 @@ describe("custom GitHub OAuth with local D1 and mocked provider HTTP", () => {
         return json({ id: 12345, name: "Missing login" });
       };
       const auth = createAuth(env, { fetcher });
-      const response = await callback(auth, await start(auth));
-      expect(response.status).toBe(302);
+      const warning = vi.spyOn(console, "warn").mockImplementation(() => {});
+      let response: Response;
+      try {
+        response = await callback(auth, await start(auth));
+        expect(warning).toHaveBeenCalledExactlyOnceWith(
+          JSON.stringify({
+            event: "oauth_callback_failed",
+            stage: failure === "token-error" ? "token_exchange" : "profile",
+            failure:
+              failure === "token-error"
+                ? "invalid_token_response"
+                : failure === "profile-error"
+                  ? "upstream_http_error"
+                  : "unexpected_error",
+            ...(failure === "profile-error" ? { upstreamStatus: 503 } : {}),
+          }),
+        );
+      } finally {
+        warning.mockRestore();
+      }
+      expect(response!.status).toBe(302);
       expect(response.headers.get("Location")).toBe("/?builder=1&authError=1");
       expect(await response.text()).toBe("");
       expect(
@@ -290,6 +317,31 @@ describe("custom GitHub OAuth with local D1 and mocked provider HTTP", () => {
           .getSetCookie()
           .some((c) => c.startsWith("domino_session=")),
       ).toBe(false);
+      expect(await sessionCount()).toBe(0);
+    },
+  );
+
+  it.each(["token", "profile"])(
+    "rejects %s redirects without forwarding credentials",
+    async (endpoint) => {
+      const calls: string[] = [];
+      const fetcher: typeof fetch = async (input, init) => {
+        calls.push(String(input));
+        expect(init?.redirect).toBe("manual");
+        if (endpoint === "profile" && calls.length === 1)
+          return json({ access_token: "synthetic-token" });
+        return new Response(null, {
+          status: 302,
+          headers: { Location: "https://untrusted.example/collect" },
+        });
+      };
+      const auth = createAuth(env, { fetcher });
+      const response = await callback(auth, await start(auth));
+      expect(response.headers.get("Location")).toBe("/?builder=1&authError=1");
+      expect(calls).toHaveLength(endpoint === "token" ? 1 : 2);
+      expect(calls.every((url) => !url.includes("untrusted.example"))).toBe(
+        true,
+      );
       expect(await sessionCount()).toBe(0);
     },
   );
