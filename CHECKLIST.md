@@ -36,7 +36,7 @@ The recommended order is **product UX → brand → cloud release → final test
 - [x] Existing keys, workspace format/version, cookies, IDs and OAuth routes preserved; export compatibility and saved work checked.
 - [ ] Approve the existing legacy workers.dev hostname or configure a Needtrace domain; no new domain is claimed. If the origin changes, verify OAuth callback settings.
 
-## 3. Enable and verify cloud capability
+## 3. Cloud capability — deferred, NOT approved for this guest-only release
 
 - [x] Existing staging record proves one real GitHub account/profile sign-in/save/open/update/logout/re-sign-in. Fresh-browser and two-account gates below remain open; not repeated by this integration.
 - [ ] Verify a clean browser profile can reopen the same saved project with nodes, scenarios, and results intact.
@@ -56,11 +56,11 @@ The recommended order is **product UX → brand → cloud release → final test
 - [x] Existing local tests for empty/invalid/large inputs, failed saves and cloud conflicts pass. Live representative reliability remains separate.
 - [x] Theme refresh/cross-route, existing builder refresh,export/import,invalid-import preservation and calculation evidence tests pass.
 - [ ] Confirm the app is stable, the deployed build matches the approved commit, and the public link opens without sign-in.
-- [ ] Freeze features and keep only critical defect fixes until submission.
+- [x] Engineering freeze: no further features/redesign; only reproducible release-blocking fixes.
 
 ## 5. Devpost submission package — last step
 
-- [ ] Prepare the project page: Needtrace, one-sentence tagline, and an About section of 150 words or fewer covering what it does, who it serves, and how it was built.
+- [x] Prepared title/tagline, About under 150 words, stack, differentiators, judge answers, screenshot shortlist and <=3-minute script in docs/SUBMISSION.md, docs/PITCH.md and DEMO_SCRIPT.md. Portal entry is not completed.
 - [ ] Fill in Built with: React, TypeScript, Vite, Tailwind CSS, React Flow, Cloudflare Workers, D1, GitHub OAuth, and other tools actually used.
 - [ ] Add the final production URL under Try it out and test it in an incognito browser.
 - [ ] Make the GitHub repository public or grant GitHub user Nedomas access; permission check currently reports `none`.
@@ -82,7 +82,7 @@ The recommended order is **product UX → brand → cloud release → final test
 | **19:30**          | Aim to submit Devpost with all links verified            |
 | **20:00**          | Official submission deadline                             |
 
-For the video, I would allocate roughly **20 seconds to the problem, 100 seconds to the live product, 40 seconds to scenarios and cloud saving, and 20 seconds to the vision and team**. The product should be visible from the opening seconds.
+For the video, I would allocate roughly **20 seconds to the problem, 100 seconds to the live product, 40 seconds to the local builder and inspectable evidence, and 20 seconds to the vision and team**. The product should be visible from the opening seconds.
 
 The key release rule is simple: **the core demo must remain reliable even if cloud saving cannot meet Workers Free limits**. Production cloud is disabled and not approved. Staging evidence shows some authenticated request CPU samples above the nominal Free allowance; fresh-browser restoration, retained-old-cookie rejection and live second-account isolation also remain open. See [staging verification](docs/STAGING_VERIFICATION.md).
 
@@ -91,3 +91,9 @@ No repository or deployment settings have been changed by this checklist.
 ## Integrated release evidence
 
 See docs/NEEDTRACE_RELEASE.md and HACKATHON_READINESS.md. Local review only: no new production deployment or cloud authorization. Current repository permission check: Nedomas none. Production cloud stays disabled. Video/submission/real-user test remain human tasks.
+
+## Final handoff
+
+PR #7 head a51adb8 remains open/mergeable with passing push/PR CI and branch-preview check. Final local guest acceptance repeated at 1366px and 390px in both themes; no application blocker found. See docs/NEEDTRACE_RELEASE.md for the exact team-authorized merge, automatic production build, source-SHA verification and local fallback procedure. Marketing link is /landing; demo is /; builder is /?builder=1. Do not enable production cloud or change origins/default routing. Final documentation edits remain local/uncommitted; no release action performed.
+
+Final status refresh: PR #7 still a51adb8, open/mergeable, all reported checks successful, no GitHub reviews/threads recorded. Approval and production acceptance remain unchecked. docs/SUBMISSION.md now includes the human owner matrix; docs/NEEDTRACE_RELEASE.md includes the compact public smoke-test card and verified local fallback. No application/config change or new release action.

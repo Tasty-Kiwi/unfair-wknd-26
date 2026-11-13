@@ -1,5 +1,11 @@
 # Needtrace — pitch and commercial hypotheses
 
+## Project title and tagline
+
+**Title:** Needtrace — trace supply changes to customer orders
+
+**Tagline:** See what breaks before it breaks.
+
 ## 30-second pitch
 
 When a supplier delivery slips, which customer orders run short? Needtrace connects stock, bills of material, receipts and orders in one explainable simulation. Change a delivery, trace the shortage to an order, and compare recovery options with allocation evidence. Our fictional demo shows two missing motors and how approved alternative supply restores coverage. It models material availability; supplier confirmation and factory capacity remain outside the calculation.
@@ -46,9 +52,9 @@ Planning systems such as SAP IBP, Kinaxis and o9 already address supply-chain sc
 
 **Does Apply recovery place an order or contact a supplier?** No. It changes the local simulation only. Confirm supply and act through the normal purchasing process.
 
-**Can I use my own data, and is it saved?** CSV supports stock, products, BOMs, receipts and orders; full JSON can replace the catalog as well. Related files are validated together before applying. Omitted tables and matching-product BOMs can be retained, with explicit warnings. State stays in browser memory and is lost on refresh/close. Export the report and keep source files. The report is an audit record, not a one-click project backup.
+**Can I use my own data, and is it saved?** CSV supports stock, products, BOMs, receipts and orders; full JSON can replace the catalog as well. Related files are validated together before applying. Omitted tables and matching-product BOMs can be retained, with explicit warnings. Simulator imports stay in browser memory and are lost on refresh/close. Export the report and keep source files; that report is an audit record, not a one-click project backup. Builder workspaces and named scenarios save in this browser and support a portable workspace JSON export. Production cloud saving is disabled.
 
-**What have you actually tested?** The current local pass executed 60 unit tests and 11 Chromium browser journeys, a production build and downloaded-report assertions. Desktop and mobile were inspected. These are engineering checks, not evidence that real planners find the product intuitive or valuable.
+**What have you actually tested?** The integrated release passed 102 unit tests, 44 Worker tests and 63 Chromium browser journeys, both typechecks, production build and a deployment dry run. GitHub Actions passed on PR #7 head a51adb8. A final local acceptance smoke check repeated the guest demo and examined exported evidence. Desktop and mobile were inspected. These are engineering checks, not evidence that real planners find the product intuitive or valuable.
 
 **What would you validate next?** Observe an unaided user and compare a small anonymized plan with a planner's actual reservation policy. Include data preparation time. Interview a potential budget owner before claiming a viable paid product.
 
