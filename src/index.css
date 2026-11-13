@@ -1097,6 +1097,26 @@ footer button {
   overflow: auto;
   overflow-wrap: anywhere;
 }
+.import-preview {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 16px;
+  border: 1px solid var(--ink);
+  background: var(--sheet);
+}
+.import-preview h3 {
+  margin: 2px 0 8px;
+}
+.import-preview p {
+  font-size: 14px;
+  line-height: 1.55;
+}
+.import-preview-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
 .assumptions {
   display: flex;
   flex-direction: column;

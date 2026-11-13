@@ -64,6 +64,9 @@ test("bad import preserves baseline; valid CSV replaces deliveries", async ({
   });
   await expect(page.getByRole("alert")).toContainText("Import rejected");
   await expect(page.getByRole("dialog")).toBeVisible();
+  await expect(
+    page.getByText("Fictional demo data", { exact: true }),
+  ).toBeVisible();
   await page.locator("#data-upload").setInputFiles({
     name: "deliveries.csv",
     mimeType: "text/csv",
@@ -71,15 +74,89 @@ test("bad import preserves baseline; valid CSV replaces deliveries", async ({
       "id,supplierId,componentId,quantity,availableDate\nPO-101,SUP-01,MTR-01,5,2026-11-23",
     ),
   });
-  await expect(page.getByRole("dialog")).not.toBeVisible();
+  await expect(page.getByText("Import preview")).toBeVisible();
+  await expect(page.getByRole("dialog")).toContainText(
+    "Fictional and imported data will mix",
+  );
+  await expect(page.getByRole("dialog")).toContainText("Replace: deliveries");
+  await expect(page.getByRole("dialog")).toContainText(
+    "Keep existing: suppliers, components, products, inventory, orders, approved alternatives",
+  );
+  await page.getByRole("button", { name: "Import and mix data" }).click();
   await expect(page.locator(".notice")).toContainText(
     "Imported deliveries.csv",
   );
+  await expect(
+    page.getByText("Mixed demo + imported data", { exact: true }),
+  ).toBeVisible();
   await expect(page.locator(".outcome-banner")).toContainText(
     "at risk due to material shortage",
   );
   await page.getByRole("button", { name: "Reset demo" }).click();
   await expect(page.locator(".outcome-banner")).toContainText("Every order");
+  await expect(
+    page.getByText("Fictional demo data", { exact: true }),
+  ).toBeVisible();
+});
+
+test("complete JSON import becomes fully imported and reset restores provenance", async ({
+  page,
+}) => {
+  const dataset = {
+    name: "Imported plan",
+    asOf: "2026-11-12",
+    suppliers: [
+      { id: "SUP-1", name: "Imported supplier", region: "EU", leadTimeDays: 4 },
+    ],
+    components: [
+      { id: "CMP-1", name: "Imported part", unit: "pcs", supplierId: "SUP-1" },
+    ],
+    products: [
+      {
+        id: "PRD-1",
+        name: "Imported product",
+        sku: "IMP-1",
+        bom: [{ componentId: "CMP-1", quantity: 1 }],
+      },
+    ],
+    inventory: [{ componentId: "CMP-1", quantity: 1 }],
+    deliveries: [],
+    orders: [
+      {
+        id: "ORD-1",
+        customer: "Imported customer",
+        productId: "PRD-1",
+        quantity: 1,
+        requiredDate: "2026-11-20",
+        value: 100,
+      },
+    ],
+    alternatives: [],
+  };
+  await page.goto("/");
+  await page
+    .getByRole("button", { name: "Import data", exact: true })
+    .last()
+    .click();
+  await page.locator("#data-upload").setInputFiles({
+    name: "plan.json",
+    mimeType: "application/json",
+    buffer: Buffer.from(JSON.stringify(dataset)),
+  });
+  await expect(page.getByText("Import preview")).toBeVisible();
+  await expect(page.getByRole("dialog")).toContainText(
+    "Nothing — this is a complete dataset replacement",
+  );
+  await page.getByRole("button", { name: "Apply import" }).click();
+  await expect(
+    page.getByText("Fully imported data", { exact: true }),
+  ).toBeVisible();
+  await expect(page.getByText("ORD-1", { exact: true }).first()).toBeVisible();
+  await page.getByRole("button", { name: "Reset demo" }).click();
+  await expect(
+    page.getByText("Fictional demo data", { exact: true }),
+  ).toBeVisible();
+  await expect(page.getByText("ORD-101", { exact: true }).first()).toBeVisible();
 });
 
 test("narrow screen retains disclosure and has no page overflow", async ({
@@ -119,7 +196,7 @@ test("recovery comparison evaluates independent options and applies the selected
     .locator("article")
     .filter({ hasText: "Use Vector Components" });
   await expect(purchase).toContainText("2net units recovered");
-  await purchase.getByRole("button", { name: "Apply what-if" }).click();
+  await purchase.getByRole("button", { name: "Apply recovery" }).click();
   await expect(page.locator(".outcome-banner")).toContainText("Every order");
   await expect(
     page.getByLabel("Available date", { exact: true }).first(),
@@ -128,7 +205,7 @@ test("recovery comparison evaluates independent options and applies the selected
   await comparison
     .locator("article")
     .filter({ hasText: "Restore PO-101 timing" })
-    .getByRole("button", { name: "Apply what-if" })
+    .getByRole("button", { name: "Apply recovery" })
     .click();
   await expect(page.locator(".outcome-banner")).toContainText("Every order");
   await expect(
@@ -165,7 +242,10 @@ test("spreadsheet bundle imports atomically and rejects invalid related tables",
     (name) => `public/examples/${name}.csv`,
   );
   await page.locator("#data-upload").setInputFiles(files);
-  await expect(page.getByRole("dialog")).not.toBeVisible();
+  await expect(page.getByRole("dialog")).toContainText(
+    "Fictional and imported data will mix",
+  );
+  await page.getByRole("button", { name: "Import and mix data" }).click();
   await expect(page.locator(".notice")).toContainText("10 orders");
   await expect(
     page.getByRole("region", { name: "Simulation summary" }),
@@ -276,6 +356,7 @@ test("a receipt dated 2035 keeps the timeline axis bounded and movable", async (
       "id,supplierId,componentId,quantity,availableDate\nPO-101,SUP-01,MTR-01,5,2035-01-10",
     ),
   });
+  await page.getByRole("button", { name: "Import and mix data" }).click();
   await expect(page.locator(".notice")).toContainText(
     "Imported deliveries.csv",
   );

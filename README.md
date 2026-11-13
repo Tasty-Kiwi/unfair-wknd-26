@@ -45,19 +45,19 @@ npm run deploy
 
 A second disruption: reset, choose receipt **PO-102** (control board), and shift its control-board receipt to November 25. ORD-103 and ORD-106 become at risk, with eight missing boards. Focus **Control board** in the map or use **Full network**.
 
-See [DEMO_SCRIPT.md](DEMO_SCRIPT.md) for a 90-second spoken walkthrough.
+See [DEMO_SCRIPT.md](DEMO_SCRIPT.md) for a 60-second spoken walkthrough.
 
 ## Verification
 
 ```sh
 npm test             # Vitest engine + validation regression tests
 npm run build        # strict TypeScript + Vite production build
-npm run test:e2e     # Playwright, using locally installed Google Chrome
+npm run test:e2e     # Playwright, using its installed Chromium browser
 ```
 
 The push/PR GitHub Actions workflow runs `npm ci`, unit tests, production build, a Wrangler dry run, and all browser journeys using installed Playwright Chromium. CI itself needs no Cloudflare token.
 
-The browser suite starts Vite if needed (or reuses port 5173). It exercises the live 5/6-day threshold, graph inspection, approved recovery, preset comparison, export, invalid JSON rejection, valid CSV import, reset, and 390px layout. Set `DOMINO_BASE_URL=https://domino-os.tasty-kiwi.workers.dev npm run test:e2e` to exercise the public deployment instead of starting Vite. Recovery comparison and atomic multi-table imports are included. Google Chrome must be installed locally; the app itself works in modern browsers. Tests produce disposable `test-results/` files.
+The browser suite starts Vite if needed (or reuses port 5173). It exercises the live 5/6-day threshold, graph inspection, approved recovery, preset comparison, export, invalid JSON rejection, valid CSV import, reset, and 390px layout. Set `DOMINO_BASE_URL=https://domino-os.tasty-kiwi.workers.dev npm run test:e2e` to exercise the public deployment instead of starting Vite. Recovery comparison and atomic multi-table imports are included. Install Playwright Chromium once with `npx playwright install chromium`; the app itself works in modern browsers. Tests produce disposable `test-results/` files.
 
 ## Import
 

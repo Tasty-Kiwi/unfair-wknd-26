@@ -4,6 +4,7 @@ import {
   parseDataset,
   parseDeliveryCsv,
   parseImport,
+  parseImportBundle,
   parseImportFiles,
   parseScenario,
 } from "@/lib/validation";
@@ -302,6 +303,29 @@ describe("spreadsheet table imports", () => {
     expect(result.suppliers).toEqual(data.suppliers);
     expect(JSON.stringify(data)).toBe(before);
   });
+  it("reports replaced and retained tables for a partial import", () => {
+    const result = parseImportBundle(
+      [file("inventory", "componentId,quantity\nMTR-01,3")],
+      fixture(),
+    );
+    expect(result.replacedTables).toEqual(["inventory"]);
+    expect(result.retainedTables).toEqual([
+      "suppliers",
+      "components",
+      "products",
+      "deliveries",
+      "orders",
+      "alternatives",
+    ]);
+  });
+  it("reports JSON as a complete table replacement", () => {
+    const result = parseImportBundle(
+      [{ name: "data.json", text: JSON.stringify(fixture()) }],
+      fixture(),
+    );
+    expect(result.replacedTables).toHaveLength(7);
+    expect(result.retainedTables).toEqual([]);
+  });
   it("validates related product, BOM and order files together regardless of file order", () => {
     const data = fixture();
     data.alternatives = [];
@@ -336,6 +360,14 @@ describe("spreadsheet table imports", () => {
       ),
     ).toThrow(/MISSING/);
     expect(JSON.stringify(data)).toBe(before);
+  });
+  it("does not produce an import result when validation fails", () => {
+    expect(() =>
+      parseImportBundle(
+        [file("inventory", "componentId,quantity\nUNKNOWN,1")],
+        fixture(),
+      ),
+    ).toThrow(/UNKNOWN/);
   });
   it("rejects duplicate tables, duplicate headers, invalid counts, dates and ragged rows", () => {
     const valid = file("inventory", "componentId,quantity\nMTR-01,1");
