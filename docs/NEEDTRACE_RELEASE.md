@@ -1,73 +1,68 @@
 # Needtrace release status
 
-Status checked 13 November 2026 against live GitHub and the public deployment. The guest release is merged, built and live. Production cloud saving is deferred and disabled. The remaining work is the human submission tasks in [CHECKLIST.md](../CHECKLIST.md).
+Checked **14 November 2026**. Public production serves `b3ced29` in browser-only guest mode. This final-review branch contains additional changes that have **not** been deployed. Merge and production deployment require explicit approval.
 
-## Product and public entry
+## Authoritative route table
 
-Needtrace is the visible product name. The hostname and Worker identifier keep `domino-os` for compatibility; no Needtrace domain is configured.
+These routes were observed on the public deployment, not inferred only from source:
 
-| Purpose          | URL                                                 |
-| ---------------- | --------------------------------------------------- |
-| Marketing        | https://domino-os.tasty-kiwi.workers.dev/landing    |
-| Interactive demo | https://domino-os.tasty-kiwi.workers.dev/           |
-| Builder          | https://domino-os.tasty-kiwi.workers.dev/?builder=1 |
-| Health           | https://domino-os.tasty-kiwi.workers.dev/api/health |
+| Purpose | Public URL | Persistence |
+| --- | --- | --- |
+| Landing | https://domino-os.tasty-kiwi.workers.dev/ | Theme preference only |
+| Project library | https://domino-os.tasty-kiwi.workers.dev/projects | Projects in this browser |
+| Local project | `/projects/:id` on the same origin | Dataset/scenario or editable workspace autosave |
+| Standalone simulator | https://domino-os.tasty-kiwi.workers.dev/demo | Session-only; export or create an editable copy |
+| Landing alias | https://domino-os.tasty-kiwi.workers.dev/landing | Same landing |
+| Legacy builder | https://domino-os.tasty-kiwi.workers.dev/?builder=1 | Existing device draft |
+| Health | https://domino-os.tasty-kiwi.workers.dev/api/health | Reports `cloudEnabled: false` |
 
-Rebranding is a visible product change, not a storage or cloud migration. Legacy workspace formats, storage keys, IDs, database records and the Worker hostname stay unchanged unless a separately reviewed migration changes them.
+Project IDs belong to local storage. A `/projects/:id` link is not a shared cloud project. **Edit this network** creates a saved local copy of the current simulator dataset/scenario. **Build a network** opens the legacy device draft. No account is required.
 
-## Release record
+The visible product is Needtrace. The Worker and hostname retain `domino-os` for compatibility; no Needtrace domain is configured. Existing workspace versions, storage keys, IDs and import/export formats remain unchanged.
 
-- **Merge:** PR #7 ("Prepare Needtrace guest release with integrated landing, themes and branding") was squash-merged on 13 November 2026 at 21:23 UTC as `91bf9b45c55001e690bb39b2cbdd0c02d9a96b23`, which is the current `main` head. The `integration/needtrace-release` branch has been deleted on the remote.
-- **CI:** the **Verify Needtrace** push run on `91bf9b4` passed ([run 43510209170](https://github.com/Tasty-Kiwi/unfair-wknd-26/actions/runs/43510209170)). It ran `npm ci`, `npm test`, `typecheck:worker`, `typecheck:tests`, `build`, `test:worker`, `deploy:check` and `test:e2e`.
-- **Cloudflare:** the **Workers Builds: domino-os** check on `91bf9b4` completed successfully as a production build (build `d3f5750d-2218-4ff4-85ff-89e4ca816c1d`, version `77fa3eb8-1898-4d3c-881c-c78052cb94be`).
-- **Deployed source:** a local `npm ci && npm run build` of `91bf9b4` produces the same entry bundle the public site serves (`/assets/index-CHpcuUtn.js`), and every built JS/CSS asset returns HTTP 200 from production.
-- **Live behaviour:** `/api/health` returns `{"ok":true,"cloudEnabled":false}`. `/`, `/landing` and `/?builder=1` serve the Needtrace title, description, Open Graph tags and social image.
-- **Production browser tests:** with `DOMINO_BASE_URL` pointed at production, 46 of 46 guest Playwright tests passed in fresh, signed-out contexts (`landing`, `judge-journey`, `builder-journey`, `needtrace-release`, `cloud-disabled-journey`). They covered both themes at 1440/1366/1024/390 px, the landing CTAs, the ten-covered → ORD-102 short two motors → Vector recovery journey, imports, local builder save/restore and export compatibility. The cloud sign-in specs were not run because cloud is disabled in production.
+## Verified production baseline
 
-Not established by this record: an unaided first-time-user result, a real social-platform link unfurl, or a rehearsal on the presentation machine.
+- `main`: `b3ced29ebd3c9f3074867149fb4ba55385e6676a` (**Bring the builder demo and simulator into parity**).
+- GitHub **verify** succeeded at 12:12:10 UTC: [run 43593171052](https://github.com/Tasty-Kiwi/unfair-wknd-26/actions/runs/43593171052).
+- **Workers Builds: domino-os** succeeded at 12:07:30 UTC: build `a00fec02-4f69-4b71-852d-ef26f671f7c7`.
+- All **12 JS/CSS assets** from the clean baseline build were fetched through the public browser and matched SHA-256 byte for byte. [Per-asset evidence](review/production-assets-b3ced29.json).
+- Live browser at 1366×768: ten covered → PO-101 delayed to 23 Nov → ORD-102 short two motors and €36,000 exposed fictional order value → Vector recovery restores coverage while PO-101 stays late. No purchase was placed.
+- Live mobile at 390×844: simulator, library and legacy builder accessible without horizontal page overflow. Automated guest coverage is listed in [final acceptance](FINAL_PRODUCT_ACCEPTANCE.md).
+- The app made no cloud requests during the observed normal guest path. The coordinator separately requested health, which returned `{"ok":true,"cloudEnabled":false}`; this diagnostic is not an app-initiated cloud request.
+- GitHub reported the repository **public**, and a signed-out incognito browser could read the source. The former private-repository/Nedomas invitation blocker is superseded. No visibility or permission change was made in this review.
 
-## Cloud saving — deferred and disabled
+Earlier `91bf9b4` and `8fca52a` test counts, captures and releases are historical. The [existing MP4](release/final/production/needtrace-demo.mp4) comes from `8fca52a` and predates the current UI. It remains a fallback/reference pending human viewing and approval. This review did not record, approve or upload a replacement.
 
-Production keeps `CLOUD_ENABLED=false`, and rollout is **not approved**. Do not present cloud saving as part of the demo. Evidence so far is the staging record in [STAGING_VERIFICATION.md](STAGING_VERIFICATION.md): one real GitHub account completed sign-in, save/list/open/update, logout and re-sign-in in one browser profile against staging D1.
+## Final-review changes versus production
 
-Open gates before any production enablement:
+[The three-round debate](FINAL_PRODUCT_DEBATE.md) authorizes P0/P1 clarity, numeric safety and submission corrections. [Final acceptance](FINAL_PRODUCT_ACCEPTANCE.md) records local results separately from the deployed baseline. A local passing build or PR check is not proof these changes are live.
 
-- Clean-profile restore and retained-old-cookie rejection.
-- Second-account isolation.
-- Workers Free CPU reliability (current samples exceed the nominal allowance).
-- Production D1, secrets and exact `AUTH_URL`.
-- Explicit team approval.
+Cloud saving, GitHub OAuth and D1 remain **indefinitely deferred**, with no default D1 binding or frontend cloud requests. Historical backend/CPU questions in [staging verification](STAGING_VERIFICATION.md) are future reference and are not hackathon release requirements. Do not activate cloud, provision resources or change authentication for submission.
 
-## Remaining human tasks
+## Human submission gates
 
-These are tracked in [CHECKLIST.md](../CHECKLIST.md) and are not claimed here:
+- Observe an unfamiliar person completing the journey without help; record time and misunderstandings. Automated tests do not establish this.
+- Rehearse on the presentation machine and prepare the offline fallback.
+- Watch and approve the complete final video/audio; upload a ≤3-minute Public/Unlisted YouTube or Vimeo video and check signed-out playback. A local MP4 is not a Devpost video URL.
+- Confirm real team/member details and truthful pre-existing-work/build-period disclosures.
+- Confirm the legacy hostname is acceptable; the repository description remains generic and can be updated by its owner.
+- Review the actual Devpost preview, submit before **14 November 2026, 20:00 Europe/Vilnius**, and retain confirmation. No submission is claimed.
 
-- Timed first-time-user test.
-- Repository description and hostname confirmation.
-- Repository access: the repo is private and the `Nedomas` permission check returns `none`.
-- Rehearsal on the presentation machine.
-- Video of at most 3:00, uploaded and checked signed out.
-- Devpost fields, team details, disclosures and final submission.
+## Re-check before submission
 
-## Re-check before submitting
-
-Run this shortly before submission, and again if `main` changes:
-
-1. Confirm `main` is still `91bf9b4`, or that any newer commit has passing CI and a successful **Workers Builds: domino-os** check.
-2. Run `curl --fail -sS https://domino-os.tasty-kiwi.workers.dev/api/health` and confirm the response is `ok: true` and `cloudEnabled: false`. If cloud shows as enabled, stop and contact the Cloudflare teammate. Do not change settings yourself.
-3. In an incognito window, open `/landing`, use both CTAs, toggle the theme and reload, then run the 60-second demo on `/`.
-4. Optional automated check: `DOMINO_BASE_URL=https://domino-os.tasty-kiwi.workers.dev npx playwright test tests/landing.spec.ts tests/judge-journey.spec.ts tests/builder-journey.spec.ts tests/needtrace-release.spec.ts tests/cloud-disabled-journey.spec.ts`.
-
-If any step fails, keep the submission link claim on hold, notify the Cloudflare teammate, and present from the local fallback.
+1. Confirm the selected main commit has passing GitHub and Cloudflare checks. If it changes, repeat production asset and journey checks.
+2. Open landing, library and `/demo` signed out. Verify shortage/recovery, themes and local project reopening.
+3. Confirm health still reports cloud disabled. Contact the release owner if unexpectedly enabled; do not silently change deployment settings.
+4. Check anonymous source access, uploaded video and final Devpost links.
 
 ## Local guest fallback
 
-Prepare this on the presentation computer **before** losing connectivity, from `91bf9b4` or a later verified `main`:
+Prepare from a verified checkout **before** losing connectivity:
 
 ```sh
 npm ci
 npm run build
-npx wrangler dev --config wrangler.jsonc --local --port 5232
+npm run preview -- --host 127.0.0.1 --port 5194
 ```
 
-This is a local process, not a deployment, and it uses the production configuration with cloud disabled. Open `http://127.0.0.1:5232/` for the demo, `/landing` for marketing and `/?builder=1` for the builder. A frontend-only alternative is `npm run preview -- --host 127.0.0.1 --port 5194`. Rehearse on the actual machine, check display, zoom and power, and keep an exported workspace, report and the finished recording offline.
+Open `http://127.0.0.1:5194/` for landing, `/demo` for simulator, `/projects` for local projects and `/?builder=1` for the legacy draft. A production-Worker fallback is `npx wrangler dev --config wrangler.jsonc --local --port 5232`; it uses cloud-disabled defaults and does not deploy. Rehearse display, zoom, power and audio. Keep workspace JSON, report, source files and an approved recording offline.

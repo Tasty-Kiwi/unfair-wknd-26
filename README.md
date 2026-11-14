@@ -4,7 +4,7 @@
 
 A manufacturing material-availability simulator built for the Unfair Weekend 2026 hackathon. Change a supplier receipt, trace the affected customer order, and test an approved alternative in under a minute.
 
-The local app opens with the landing page at `/`, followed by the project library at `/projects`. Open the fictional demo, or choose **New project** to import JSON/CSV or start a blank network. Each local project opens at `/projects/:id` and autosaves separately. `/demo` opens the session-only simulator directly; `/landing` and `/?builder=1` remain compatible entry points. These route changes have not been deployed. The existing public Workers URL still uses the legacy `domino-os` hostname; no Needtrace domain is claimed here. Cloud features are indefinitely deferred; this release is browser-only. Staging and release limits are documented in [staging verification](docs/STAGING_VERIFICATION.md).
+The public app opens with the landing page at `/`, followed by the project library at `/projects`. Open the fictional demo, or choose **New project** to import JSON/CSV or start a blank network. Each local project opens at `/projects/:id` and autosaves separately. `/demo` opens the session-only simulator directly; `/landing` is a landing alias and `/?builder=1` opens the compatible device-draft builder. These routes are live on the [public site](https://domino-os.tasty-kiwi.workers.dev/), verified against `b3ced29` on 14 November. This review branch is not deployed. The public URL keeps the legacy `domino-os` hostname; no Needtrace domain is claimed here. Cloud is indefinitely deferred; this release is browser-only. See [release status](docs/NEEDTRACE_RELEASE.md) and [final acceptance evidence](docs/FINAL_PRODUCT_ACCEPTANCE.md).
 
 Designed for a small manufacturer building a material network or testing a spreadsheet plan without a full planning-system rollout. This buyer segment and willingness to pay are hypotheses; no customer validation or measured savings are claimed. See [commercial narrative](docs/PITCH.md) and [human validation playbook](docs/VALIDATION_PLAYBOOK.md).
 
@@ -39,29 +39,29 @@ npm run deploy
 
 ## Demonstrate
 
-Open `/`, choose **Open projects**, then **Open demo project**. To use your own plan, choose **New project** instead: import one workspace/dataset/report JSON or up to five CSV tables, review the import preview, name the project, and create it. **Start blank** opens a separate network builder. The project library also surfaces an existing device draft without migrating or replacing it. Browser storage is local to this browser and device; export JSON for a portable backup.
+Open `/demo` for the session-only fictional demonstration. From `/`, **Open projects** → **Open demo project** also reaches it. To use your own plan, choose **New project**: import one workspace/dataset/report JSON or up to five CSV tables, review the preview, name the project, and create it. **Start blank** opens a separate network builder. The library also shows an existing device draft without migrating or replacing it. Local projects stay in this browser on this device; export JSON for a portable backup. The demo itself does not autosave; **Edit this network** creates a saved local copy of its active data and scenario.
 
-1. Start on **Normal operations**: 10 customer orders, zero shortages.
-2. Click **Supplier disruption**, or pick **Latest safe** (22 Nov) then **First short** (23 Nov) under _Land on_. You can also drag the PO-101 receipt on the dated timeline under the map. The motor receipt moves from November 17 to November 23. ORD-102 needs four motors on November 22; two remain after ORD-101 reserves six of the eight in stock. The result is one order at risk, two missing motors, and €36,000 of order value exposed.
-3. Click **Add alternative** under **Change the inputs**. Two preapproved motors available November 18 cover ORD-102. Its graph path returns to covered; the delayed original receipt remains delayed.
-4. **Ways to recover** evaluates each candidate independently against the current scenario. Restore the original receipt timing (supplier confirmation required) or use approved alternative supply (additional purchase, unknown costs). Cards show net units recovered, remaining exposed orders and missing units. Applying an option recalculates the same engine; this is not a cost optimizer.
-5. Click any graph node for its relationships, or an order to inspect component allocations. **Scenarios side by side** compares the three fixed scenarios; **Export report** downloads the current inputs and results. **Reset demo** restores all original data.
+1. Start with **Normal operations**: 10 customer orders, zero shortages.
+2. Click **Supplier disruption**, or pick **Latest safe** (22 Nov) then **First short** (23 Nov) under _Land on_. You can also drag PO-101 on the dated timeline. The motor receipt moves from November 17 to November 23. ORD-102 needs four motors on November 22; two remain after ORD-101 reserves six of the eight in stock. The result is one order at risk, two missing motors, and €36,000 of fictional order value exposed.
+3. Under **Ways to recover**, compare restoring PO-101 timing with using Vector Components. Each option is calculated independently against the current scenario. Supplier confirmation, price and freight remain assumptions; this is not a cost optimizer.
+4. Apply **Use Vector Components**. Two approved motors available November 18 cover ORD-102. The original receipt remains delayed. No purchase is placed or supplier contacted.
+5. Click a graph node for its relationships, or an order to inspect component allocations. **Scenarios side by side** compares three fixed scenarios; **Export report** downloads current inputs and results. **Reset demo** restores all original data.
 
-A second disruption: reset, choose receipt **PO-102** (control board), and shift its control-board receipt to November 25. ORD-103 and ORD-106 become at risk, with eight missing boards. Focus **Control board** in the map or use **Full network**.
+A second disruption: reset, choose receipt **PO-102** (control board), and shift its receipt to November 25. ORD-103 and ORD-106 become at risk, with eight missing boards. Select **Control board** above the map or use **Full network**.
 
-See [DEMO_SCRIPT.md](DEMO_SCRIPT.md) for a 60-second spoken walkthrough.
+See [DEMO_SCRIPT.md](DEMO_SCRIPT.md) for the 60-second spoken walkthrough.
 
 ## Build a network
 
-Choose **Edit this network** in the simulator to create a local editable project with the active dataset and scenario, or choose **Build a network** to open the existing device draft. In the editor's File menu, **Northstar demo** opens the complete fictional demo, including its approved alternative and saved baseline, disruption, and recovery scenarios. **Core example** remains available as a smaller motor example for learning the connection tools.
+Choose **Edit this network** in the simulator to create a local editable project from the active dataset and scenario, or choose **Build a network** to open the existing device draft. In the editor's File menu, **Northstar demo** opens the complete fictional demo, including its approved alternative and saved baseline, disruption and recovery scenarios. **Core example** is a smaller motor example for learning the connection tools.
 
-Add suppliers, components, receipts, products, and customer orders, then connect their typed handles or use the connection form. Enter initial stock and the quantity required on each component-to-product BOM connection. **Check network** lists missing fields and relationships; **Run simulation** uses the same validated dataset and allocation engine as the simulator.
+Add suppliers, components, receipts, products and customer orders, then connect their typed handles or use the connection form. Enter initial stock and the quantity required on each component-to-product BOM connection. **Check network** lists missing fields and relationships; **Run simulation** uses the same validated dataset and allocation engine as the simulator.
 
-Use **Alternatives** to add or edit supplier, component, approved product scope, quantity, availability date and approval. Alternative IDs remain stable. In Simulate, create and save named scenarios, change receipt dates and quantities, compare saved scenarios with the baseline, and apply approved recovery. Material edits require explicit **Revalidate scenario** before older scenarios can run; invalid alternative uses remain visible for review and removal.
+Use the alternative catalog to edit supplier, component, approved product scope, quantity, availability date and approval. Alternative IDs remain stable. Simulate, save named scenarios, change receipt dates and quantities, compare against baseline, and apply approved recovery. Material edits require explicit **Revalidate scenario** before older scenarios can run; invalid alternative uses remain visible for review or removal.
 
-Builder progress autosaves locally, including incomplete graph fields and named scenarios. Check for **Saved on this device**, or use **Save workspace**. **Export workspace JSON** preserves the versioned editable graph. **Export dataset JSON** and **Export scenario report** provide simulator-compatible data and results. **Import workspace JSON** also accepts dataset JSON, scenario reports, and up to five CSV tables (2 MB per file). CSV replacements retain the active valid network’s other tables; incomplete drafts use Northstar as the disclosed base. Imports preserve source provenance, including retained product BOMs. Existing v1 workspace files and storage keys remain compatible. These local actions do not upload data.
+Builder progress autosaves locally, including incomplete fields and named scenarios. Check the device-save indicator or use **Save workspace**. **Export workspace JSON** preserves the versioned editable graph; **Export dataset JSON** and **Export scenario report** provide simulator-compatible data and results. **Import workspace JSON** also accepts dataset JSON, scenario reports and up to five CSV tables (2 MB per file). CSV replacements retain the active valid network's other tables; incomplete drafts use Northstar as a disclosed base. Imports preserve provenance, including retained product BOMs. Existing v1 workspace files and storage keys remain compatible. These local actions do not upload data.
 
-The acceptance journeys cover a motor network built from blank with actual dragging and pointer connections, Northstar conversion and recovery, stale-scenario review, autosave/reload, JSON round-trips, CSV provenance, and narrow layouts in both themes. See [implementation evidence](docs/BUILDER_IMPLEMENTATION.md) and [demo/editor parity](docs/DEMO_EDITOR_PARITY.md).
+Acceptance journeys cover a motor network built from blank with pointer connections, Northstar conversion and recovery, stale-scenario review, autosave/reload, JSON round-trips, CSV provenance and narrow layouts in both themes. See [implementation evidence](docs/BUILDER_IMPLEMENTATION.md) and [demo/editor parity](docs/DEMO_EDITOR_PARITY.md).
 
 ## Verification
 
@@ -72,6 +72,7 @@ npm run typecheck:tests  # check browser/API test source
 npm run build        # strict TypeScript + Vite production build
 npm run test:worker  # production Worker + isolated local D1
 npm run test:e2e     # Playwright, using its installed Chromium browser
+npm run deploy:check # validate deployment assets without publishing
 ```
 
 The push/PR GitHub Actions workflow runs `npm ci`, unit tests, Worker/test-source typechecks, production build, Worker/D1 tests, a Wrangler dry run, and all browser journeys using installed Playwright Chromium. CI itself needs no Cloudflare token. Build before running Worker/browser tests because they serve `dist/` assets.
@@ -117,12 +118,12 @@ Previous staging deployment/acceptance evidence is in [staging verification](doc
 
 1. Orders allocate by **earliest required date, then code-point order ID**.
 2. Each BOM line demands `order quantity × per-product quantity`.
-3. On-hand stock is available at `asOf`. Dated receipts and alternatives are consumed by availability date, then source ID/type. A receipt on an order's required date is eligible.
+3. On-hand stock is available at `asOf`. Dated receipts and alternatives are consumed by availability date, then source ID/type. A receipt on the order's required date is eligible.
 4. Source balances are shared across all orders: a unit cannot be allocated twice. Alternatives are limited by catalog quantity, earliest available date, explicit approval and approved product IDs.
-5. **Partial kits retain reserved materials.** A short line marks the whole order **At risk due to material shortage**; allocations on other lines remain held. This policy can strand materials and is not an optimizer. It does not maximize throughput, order count or order value.
-6. Orders at risk and missing units come from uncovered BOM demand. Affected products/components are distinct IDs. Order value at material risk sums the full values of distinct short orders; it is exposure, not lost revenue, profit or guaranteed savings.
+5. **Partial kits retain reserved materials.** A short line marks the whole order **at risk due to material shortage**; allocations on other lines remain held. This policy can strand materials. It does not maximize throughput, order count or order value.
+6. Orders at risk and missing units come from uncovered BOM demand. Affected products/components count distinct IDs. Order value at material risk sums the full values of distinct short orders: exposure, not lost revenue, profit or guaranteed savings.
 
-This prototype models **material availability only**. It excludes factory capacity, machine and labor schedules, production durations, transport/inspection buffers, expiry, multi-level BOMs and exact shipment/completion forecasts. Incoming dates are assumed usable material availability dates. The approved catalog is an input assumption, not an external qualification check.
+This prototype models **material availability only**. It excludes factory capacity, machine/labor schedules, production durations, transport/inspection buffers, expiry, multi-level BOMs and exact shipment/completion forecasts. Incoming dates are assumed usable-material availability dates. The approved catalog is an input assumption, not an external qualification check.
 
 ## Project layout
 

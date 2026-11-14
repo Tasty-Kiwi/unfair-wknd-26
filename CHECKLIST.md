@@ -4,12 +4,12 @@ Deadline: **14 November 2026, 20:00 Europe/Vilnius**.
 
 Order: product UX → brand → browser-only scope → final QA → Devpost package (last). Mark an item done only with evidence. Release evidence and the local fallback live in [docs/NEEDTRACE_RELEASE.md](docs/NEEDTRACE_RELEASE.md).
 
-**Release status (checked 13 November 2026):** PR #7 is merged into `main` as `91bf9b45c55001e690bb39b2cbdd0c02d9a96b23`. Post-merge CI passed, the Cloudflare production build of that commit succeeded, and the public URL serves that build in guest mode with cloud saving disabled. Cloud saving is **indefinitely deferred and disabled**; the release is browser-only.
+**Current release status (14 November 2026):** `main` is `b3ced29`; GitHub verify and Cloudflare Workers Builds passed. All 12 built JS/CSS assets match the live deployment. Landing `/`, project library `/projects`, session-only simulator `/demo`, and compatible `/?builder=1` draft builder are live. The repository is public and readable signed out. This final-review branch is **not deployed**; see [current acceptance evidence](docs/FINAL_PRODUCT_ACCEPTANCE.md). Earlier commit/count records below are historical and do not establish this branch's checks. Cloud remains indefinitely deferred and disabled.
 
 ## 1. Frontend and UX
 
 - [x] First screen names manufacturers, supply changes and customer-order impact; inspected in both themes.
-- [x] Local UX update (14 November): landing (`/`) → projects (`/projects`) → demo or New project (JSON/CSV import or blank) → project. Verified project isolation, autosave/reopen, legacy drafts, import validation, and keyboard/modal layout at 1440 and 390 px in both themes; 88 browser tests pass. This update has not been deployed.
+- [x] Local UX update (14 November): landing (`/`) → projects (`/projects`) → demo or New project (JSON/CSV import or blank) → project. Verified project isolation, autosave/reopen, legacy drafts, import validation, and keyboard/modal layout at 1440 and 390 px in both themes; 88 browser tests pass. These routes are deployed in `b3ced29`; final-review polish remains undeployed.
 - [x] Three presets, allocation evidence and recovery verified: ten covered → two motors short → coverage restored.
 - [x] Typed node/relationship colours and dark tokens integrated; zoom and selection inspected.
 - [x] Validation, Edit item and Connect paths retained and regression-tested; phone guidance added.
@@ -37,7 +37,7 @@ Reconsidering cloud requires a new explicit scope decision and approval. Retaine
 
 Historical staging results and unfinished acceptance checks remain in [staging verification](docs/STAGING_VERIFICATION.md). They are future reference only. Existing remote staging resources have not been disabled or deleted by this local change; changing those requires a separate explicit deployment/resource request.
 
-## 4. Final QA and release freeze
+## 4. Historical QA and release freeze (13 November baseline)
 
 - [x] Post-merge CI on `91bf9b4` passed: `npm ci`, unit tests, both typechecks, build, Worker tests, `deploy:check` and Playwright e2e ([run 43510209170](https://github.com/Tasty-Kiwi/unfair-wknd-26/actions/runs/43510209170)).
 - [x] Deployed build matches the merged commit: Cloudflare **Workers Builds: domino-os** production build succeeded on `91bf9b4` (version `77fa3eb8-1898-4d3c-881c-c78052cb94be`). A local build of `91bf9b4` produces the same `index-CHpcuUtn.js` bundle the public site serves, and all built JS/CSS assets return HTTP 200.
@@ -50,10 +50,10 @@ Historical staging results and unfinished acceptance checks remain in [staging v
 
 Use [docs/DEVPOST_READY.md](docs/DEVPOST_READY.md) as the single source for official requirements, submission copy, links and human-owned fields. The video plan is in [docs/VIDEO_PRODUCTION.md](docs/VIDEO_PRODUCTION.md); [docs/PITCH.md](docs/PITCH.md) and [DEMO_SCRIPT.md](DEMO_SCRIPT.md) are supporting presenter notes. Nothing has been entered in the portal.
 
-- [ ] **Repository access:** repo may remain private if GitHub user `Nedomas` is invited. Current permission is `none`; repository description/invite attempts returned 403 (admin rights required). Ask a repository administrator to grant Read access and verify.
+- [x] **Repository access:** public repository confirmed by GitHub and a signed-out browser on 14 November. Historical invitation errors are superseded; if visibility changes to private, verify Nedomas access again.
 - [ ] **Video:** record and edit a demo of at most 3:00 that opens on the working product.
 - [ ] **Upload:** post it to YouTube or Vimeo as Public or Unlisted and check playback while signed out.
-- [ ] **Try it out:** enter `https://domino-os.tasty-kiwi.workers.dev/landing` (demo: `/`) and open it in an incognito window.
+- [ ] **Try it out:** enter `https://domino-os.tasty-kiwi.workers.dev/` (direct demo: `/demo`) and open it in an incognito window.
 - [ ] **Built with:** React, TypeScript, Vite, Tailwind CSS, React Flow, Cloudflare Workers hosting, plus any other tools actually used. Describe D1/GitHub OAuth only as retained, deferred backend work; they are not part of the browser-only demo.
 - [ ] **Team:** the team name and every member's full name and email.
 - [ ] **Disclosures:** truthfully disclose pre-existing work; do not state “None” without team confirmation.
@@ -74,29 +74,29 @@ Video split: about 20 s problem, 100 s live product, 40 s local builder and evid
 
 **Release rule:** the guest demo must stay reliable without cloud. If the public URL fails, present from the tested local fallback.
 
-## Final execution — 14 November
+## Historical execution — earlier 14 November release
 
 - [x] Reviewed and merged PRs #8–#11 sequentially; main CI and Cloudflare builds passed after each. Merged remote task branches deleted after incorporation checks.
 - [x] Official event rules consolidated in `docs/DEVPOST_READY.md`; About is under 150 words; no fabricated team details or pre-existing-work attestation.
 - [x] Focused UX fixes implemented and independently code/visually reviewed: names, blank-state validation, durable builder navigation/save guard, recovery payoff, laptop space and JSON export clarity.
 - [x] Full integrated checks executed; details and safe guest fallback in `docs/archive/historical-releases/FINAL_RELEASE_EXECUTION.md`.
-- [ ] Repository owner: invite Nedomas with Read access and verify status. Agent admin requests denied (403); permission still `none`.
-- [ ] Repository owner: update description; visibility remains private.
+- [x] Source-access gate superseded: repository is public and readable signed out (14 November); no invitation or visibility change performed by this review.
+- [ ] Repository owner: update generic repository description. Visibility is public, verified 14 November.
 - [ ] Team: confirm team details and pre-existing-work/build-period disclosures; review video, upload to YouTube/Vimeo, submit before deadline and retain confirmation.
 - [ ] Cloud: indefinitely deferred; keep all default client/backend paths disabled. No cloud work is required for submission.
 
-## Final guest UX execution — 14 November
+## Historical guest UX execution — earlier 14 November release
 
 - [x] PRs #8–#11 incorporated, with successful main CI and production builds checked sequentially.
 - [x] Readable builder result names; helpful blank state with strict requested validation; durable builder refresh/history with synchronous draft-save guard.
 - [x] Explicit modeled recovery payoff, JSON report label, laptop spacing and selected-scenario contrast.
 - [x] Integrated local verification: 102 unit, 44 Worker and 74 Chromium journeys; both typechecks/build/dry run passed.
 - [x] Official requirements consolidated in `docs/DEVPOST_READY.md`; About 122 words.
-- [ ] Final focused UX PR merge and production source/asset verification (pending CI).
-- [ ] Owner-only repository description update and Nedomas invitation (API denied 403).
+- [x] Historical focused UX PR #12 merged and verified; current production has advanced to `b3ced29`. This review branch still needs approval before merge/deployment.
+- [ ] Owner-only repository description update. Nedomas invitation is unnecessary while the verified source remains public.
 - [ ] Actual team/member and pre-existing-work facts, watched/uploaded video, and Devpost submission.
 
-## Production acceptance — final guest release
+## Historical production acceptance — PR #12
 
 - [x] PR #12 merged as `8fca52a7e51bfcd52af2abc9344fc990c946fa4b`; final PR and main Actions plus Cloudflare builds passed. Automated review's partial-recovery finding corrected and resolved before merge.
 - [x] Seven production JS/CSS assets byte-match the verified build. Public `/api/health`: `ok: true`, `cloudEnabled: false`.
@@ -104,5 +104,15 @@ Video split: about 20 s problem, 100 s live product, 40 s local builder and evid
 - [x] Actual production light/dark 1366×768 and 390×844 screenshots captured in `docs/release/final/production/`.
 - [x] Real production browser video with synthesized narration produced: [production demo MP4](docs/release/final/production/needtrace-demo.mp4) (147 seconds, H.264/AAC), plus captions. This is a reviewable draft.
 - [ ] Presenter: watch and approve the complete video/audio, upload to YouTube/Vimeo, and check signed-out access.
-- [ ] Repository owner: grant Nedomas Read access and update description; neither admin action succeeded (403).
+- [ ] Repository owner: update description. Earlier failed invitation action is superseded by verified public source access.
 - [ ] Team/submission owner: supply real team data and truthful pre-existing-work disclosures; complete Devpost, submit and save confirmation.
+
+## Final product panel — 14 November
+
+- [x] Exact GPT-6.1 Terra and Claude Sonnet 5.5 completed independent, adversarial and synthesis rounds; [real responses and decision](docs/FINAL_PRODUCT_DEBATE.md).
+- [x] Existing production checked directly: 12 matching JS/CSS assets, guest disruption/recovery, cloud-disabled health and anonymous public source access.
+- [x] Final branch implementation and coordinator diff review complete; 147 unit, 51 Worker, 112 full browser and 28 built-asset checks pass, plus both typechecks/build/dry run. 1366×768 journey verified; [acceptance record](docs/FINAL_PRODUCT_ACCEPTANCE.md). PR/CI state is reported at handoff.
+- [ ] Explicit approval to merge and deploy the review changes; no production deployment is part of this task.
+- [ ] Human unaided test and presentation-machine rehearsal.
+- [ ] Human final video/audio review, approval, YouTube/Vimeo upload and signed-out playback check. Existing 147-second recording predates current UI and remains a fallback/reference.
+- [ ] Real team/member facts, truthful pre-existing-work/build-period disclosures, final Devpost review/submission and confirmation before 20:00.
