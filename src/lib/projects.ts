@@ -1,6 +1,12 @@
 import { z } from "zod";
-import { demoData } from "@/data/demo";
+import {
+  demoData,
+  DISRUPTION_SCENARIO,
+  NORMAL_SCENARIO,
+  RECOVERY_SCENARIO,
+} from "@/data/demo";
 import { createBlankDocument } from "./builder/factories";
+import { datasetToWorkspace } from "./builder/workspaceFromDataset";
 import {
   loadWorkspace,
   parseWorkspaceJson,
@@ -16,6 +22,7 @@ import {
   type Scenario,
 } from "./types";
 import { parseDataset, parseImportBundle, parseScenario } from "./validation";
+import { presetsFor } from "./scenarioPresets";
 
 const PROJECT_PREFIX = "needtrace.project.v1:";
 const metadata = z.object({
@@ -53,6 +60,49 @@ export type ProjectSummary = {
 export type ProjectImport =
   | { kind: "workspace"; workspace: BuilderWorkspaceV1 }
   | { kind: "dataset"; state: DatasetProjectState; replacedTables: string[] };
+
+/** Stable ID of the persisted Northstar demo workspace opened at `/demo`. */
+export const NORTHSTAR_DEMO_ID = "5b7a2c64-3d1e-4f8a-9c20-7e1d4a6b9f03";
+
+/** The canonical editable Northstar network: all data, the approved alternative and three saved scenarios. */
+export function northstarDemoWorkspace(): BuilderWorkspaceV1 {
+  return datasetToWorkspace(demoData, {
+    documentId: "doc-northstar-demo",
+    scenario: NORMAL_SCENARIO,
+    scenarios: [NORMAL_SCENARIO, DISRUPTION_SCENARIO, RECOVERY_SCENARIO],
+    origin: "fictional",
+  });
+}
+
+/**
+ * Creates the Northstar demo project only where it is missing. Existing
+ * workspace or metadata entries are never replaced, so edits and unreadable
+ * data survive re-opening `/demo`.
+ */
+export function ensureNorthstarDemoProject(storage: Storage = localStorage) {
+  const workspaceKey = projectWorkspaceKey(NORTHSTAR_DEMO_ID);
+  if (storage.getItem(workspaceKey) === null) {
+    const saved = saveWorkspace(
+      northstarDemoWorkspace(),
+      storage,
+      workspaceKey,
+    );
+    if (!saved.ok) throw new Error(saved.error);
+  }
+  const metaKey = PROJECT_PREFIX + NORTHSTAR_DEMO_ID;
+  if (storage.getItem(metaKey) === null) {
+    storage.setItem(
+      metaKey,
+      JSON.stringify({
+        version: 1,
+        id: NORTHSTAR_DEMO_ID,
+        name: demoData.name,
+        createdAt: new Date().toISOString(),
+        kind: "workspace",
+      }),
+    );
+  }
+}
 
 export const projectWorkspaceKey = (id: string) =>
   id === "device-draft"
@@ -96,6 +146,33 @@ export function readProject(
     ...project,
     state: { ...stored, data, scenario: parseScenario(data, stored.scenario) },
   };
+}
+
+/** Upgrade a dataset project in place, retaining its address and original source payload. */
+export function makeProjectEditable(
+  id: string,
+  storage: Storage = localStorage,
+) {
+  const project = readProject(id, storage);
+  if (project.kind !== "dataset") return;
+  const state = project.state!;
+  const workspace = datasetToWorkspace(state.data, {
+    scenario: state.scenario,
+    scenarios: presetsFor(state.data).filter(
+      (preset) => preset.id !== state.scenario.id,
+    ),
+    origin: state.provenance.kind,
+  });
+  workspace.document.name = project.name;
+  workspace.source.provenance = state.provenance;
+  workspace.source.retainedProductBoms = state.retainedProductBoms;
+  const saved = saveWorkspace(workspace, storage, projectWorkspaceKey(id));
+  if (!saved.ok) throw new Error(saved.error);
+  const original = JSON.parse(storage.getItem(PROJECT_PREFIX + id)!);
+  storage.setItem(
+    PROJECT_PREFIX + id,
+    JSON.stringify({ ...original, kind: "workspace" }),
+  );
 }
 
 export function listProjects(storage: Storage = localStorage): {

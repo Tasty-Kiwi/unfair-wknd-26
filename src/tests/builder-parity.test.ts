@@ -4,7 +4,7 @@ import {
   deleteAlternative,
   updateAlternative,
 } from "@/lib/builder/alternatives";
-import { compileGraph } from "@/lib/builder/compiler";
+import { compileGraph, computeNetworkKey } from "@/lib/builder/compiler";
 import { createCoreExample } from "@/lib/builder/factories";
 import { isScenarioCurrent, revalidateScenario } from "@/lib/builder/scenarios";
 import { parseWorkspace } from "@/lib/builder/schema";
@@ -203,6 +203,111 @@ describe("Northstar demo as an editable workspace", () => {
       origin: "fictional",
       openedFromFile: false,
     });
+  });
+});
+
+describe("multi-supplier component parity", () => {
+  it("retains the v1 material key for unchanged single-supplier networks", () => {
+    const key = computeNetworkKey("legacy-document", demoData);
+    const savedMaterial = JSON.parse(key.slice("nk1:".length));
+    expect(savedMaterial.components).toEqual(
+      [...demoData.components]
+        .sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0))
+        .map(({ id, supplierId }) => ({ id, supplierId })),
+    );
+    const explicitLists = {
+      ...demoData,
+      components: demoData.components.map((component) => ({
+        ...component,
+        supplierIds: [component.supplierId],
+      })),
+    };
+    expect(computeNetworkKey("legacy-document", explicitLists)).toBe(key);
+  });
+  it("accepts a redundant one-supplier association without changing legacy shape", () => {
+    const data: Dataset = {
+      ...demoData,
+      components: demoData.components.map((component) =>
+        component.id === "MTR-01"
+          ? { ...component, supplierIds: [component.supplierId] }
+          : component,
+      ),
+    };
+    const workspace = datasetToWorkspace(data, {
+      scenario: NORMAL_SCENARIO,
+      origin: "fictional",
+    });
+    const result = compileGraph(workspace.document);
+    expect(result.ok).toBe(true);
+    if (result.ok)
+      expect(
+        result.dataset.components.find(
+          (component) => component.id === "MTR-01",
+        ),
+      ).toEqual(
+        demoData.components.find((component) => component.id === "MTR-01"),
+      );
+  });
+
+  it("round-trips both associations, keeps the primary, and allocates each receipt once", () => {
+    const data: Dataset = {
+      ...demoData,
+      inventory: demoData.inventory.map((row) =>
+        row.componentId === "MTR-01" ? { ...row, quantity: 0 } : row,
+      ),
+      components: demoData.components.map((component) =>
+        component.id === "MTR-01"
+          ? { ...component, supplierIds: ["SUP-01", "SUP-02"] }
+          : component,
+      ),
+      deliveries: [
+        ...demoData.deliveries,
+        {
+          id: "PO-112",
+          supplierId: "SUP-02",
+          componentId: "MTR-01",
+          quantity: 3,
+          availableDate: "2026-11-17",
+        },
+      ],
+      products: [
+        {
+          ...demoData.products[1],
+          bom: [{ componentId: "MTR-01", quantity: 1 }],
+        },
+      ],
+      orders: [{ ...demoData.orders[1], quantity: 8 }],
+    };
+    const workspace = datasetToWorkspace(data, {
+      scenario: NORMAL_SCENARIO,
+      origin: "imported",
+    });
+    const restored = parseWorkspaceJson(serializeWorkspace(workspace));
+    const result = compileGraph(restored.document);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    const motor = result.dataset.components.find(
+      (component) => component.id === "MTR-01",
+    )!;
+    expect(motor.supplierId).toBe("SUP-01");
+    expect(motor.supplierIds).toEqual(["SUP-01", "SUP-02"]);
+    expect(parseDataset(result.dataset)).toEqual(result.dataset);
+    const line = simulate(result.dataset, NORMAL_SCENARIO).orders[0].lines[0];
+    expect(line.allocated).toBe(8);
+    expect(
+      line.allocations
+        .filter((allocation) => allocation.sourceType === "delivery")
+        .map((allocation) => [allocation.sourceId, allocation.quantity]),
+    ).toEqual([
+      ["PO-101", 5],
+      ["PO-112", 3],
+    ]);
+    expect(
+      line.allocations.reduce(
+        (sum, allocation) => sum + allocation.quantity,
+        0,
+      ),
+    ).toBe(8);
   });
 });
 

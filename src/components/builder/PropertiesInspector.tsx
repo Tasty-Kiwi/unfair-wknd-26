@@ -173,6 +173,68 @@ function NodeInspector({
         />
       ))}
 
+      {node.kind === "component" &&
+        (() => {
+          const linkedSuppliers = document.edges
+            .filter(
+              (edge) => edge.kind === "primarySupplier" && edge.target === key,
+            )
+            .map((edge) =>
+              document.nodes.find(
+                (candidate) => nodeKey(candidate) === edge.source,
+              ),
+            )
+            .filter(
+              (
+                candidate,
+              ): candidate is Extract<BuilderNode, { kind: "supplier" }> =>
+                candidate?.kind === "supplier",
+            );
+          const primary =
+            node.fields.primarySupplierId ?? linkedSuppliers[0]?.id ?? "";
+          const id = `primary-supplier-${node.id}`;
+          return (
+            <div className="builder-field" data-field="primarySupplierId">
+              <label htmlFor={id}>Primary supplier</label>
+              <select
+                id={id}
+                value={primary}
+                aria-invalid={
+                  nodeIssues.some(
+                    (issue) => issue.field === "primarySupplier",
+                  ) || undefined
+                }
+                onChange={(event) =>
+                  onChange(
+                    updateNodeField(
+                      document,
+                      key,
+                      "primarySupplierId",
+                      event.target.value,
+                    ),
+                  )
+                }
+              >
+                <option value="" disabled>
+                  Select a linked supplier
+                </option>
+                {linkedSuppliers.map((supplier) => (
+                  <option key={supplier.id} value={supplier.id}>
+                    {supplier.fields.name || supplier.id}
+                  </option>
+                ))}
+              </select>
+              {nodeIssues
+                .filter((issue) => issue.field === "primarySupplier")
+                .map((issue, index) => (
+                  <p key={index} role="alert" className="builder-field__error">
+                    {issue.message}
+                  </p>
+                ))}
+            </div>
+          );
+        })()}
+
       {nodeIssues.some((issue) => !issue.field) && (
         <IssueList issues={nodeIssues.filter((issue) => !issue.field)} />
       )}

@@ -12,7 +12,10 @@ export async function openOrderBook(page: Page) {
 /** Builder workspace file actions live in the toolbar's File menu. */
 export async function fileAction(scope: Scope, name: string) {
   await scope.getByRole("button", { name: "File", exact: true }).click();
-  await scope.getByRole("button", { name, exact: true }).click();
+  await scope
+    .getByLabel("Workspace actions", { exact: true })
+    .getByRole("button", { name, exact: true })
+    .click();
 }
 
 /**

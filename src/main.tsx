@@ -21,7 +21,12 @@ try {
 } catch {
   /* Guest routes remain usable when session storage is unavailable. */
 }
-const App = React.lazy(() => import("./App"));
+const BuilderExperience = React.lazy(() =>
+  import("./components/builder/BuilderExperience").then((module) => ({
+    default: module.BuilderExperience,
+  })),
+);
+const DemoPage = React.lazy(() => import("./components/projects/DemoPage"));
 const LandingPage = React.lazy(() => import("./landing/LandingPage"));
 const ProjectsPage = React.lazy(
   () => import("./components/projects/ProjectsPage"),
@@ -33,10 +38,16 @@ const path = window.location.pathname.replace(/\/$/, "");
 const legacyBuilder =
   new URLSearchParams(window.location.search).get("builder") === "1";
 const projectMatch = path.match(/^\/projects\/([^/]+)$/);
+// `?builder=1` is the blank device-draft builder (unchanged storage and cleanup).
 const surface = projectMatch ? (
   <ProjectPage id={projectMatch[1]} />
-) : legacyBuilder || path === "/demo" ? (
-  <App />
+) : legacyBuilder ? (
+  <BuilderExperience
+    onClose={() => window.location.assign("/projects")}
+    closeLabel="Projects"
+  />
+) : path === "/demo" ? (
+  <DemoPage />
 ) : path === "/projects" ? (
   <ProjectsPage />
 ) : (
@@ -44,8 +55,6 @@ const surface = projectMatch ? (
 );
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
-    <React.Suspense fallback={<LoadingScreen />}>
-      {surface}
-    </React.Suspense>
+    <React.Suspense fallback={<LoadingScreen />}>{surface}</React.Suspense>
   </React.StrictMode>,
 );

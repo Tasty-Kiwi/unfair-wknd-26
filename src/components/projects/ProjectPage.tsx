@@ -1,24 +1,29 @@
 import { useState } from "react";
-import App from "@/App";
 import { BuilderExperience } from "@/components/builder/BuilderExperience";
 import { Button } from "@/components/ui/button";
 import {
   projectWorkspaceKey,
   readProject,
-  saveDatasetProject,
+  makeProjectEditable,
+  NORTHSTAR_DEMO_ID,
 } from "@/lib/projects";
 import "./projects.css";
 
 export default function ProjectPage({ id }: { id: string }) {
   const [initial] = useState(() => {
     try {
+      const project = id === "device-draft" ? null : readProject(id);
+      if (project?.kind === "dataset") makeProjectEditable(id);
       return {
-        project: id === "device-draft" ? null : readProject(id),
+        initialView:
+          project?.kind === "dataset"
+            ? ("simulate" as const)
+            : ("build" as const),
         error: "",
       };
     } catch (error) {
       return {
-        project: null,
+        initialView: "build" as const,
         error:
           error instanceof Error
             ? error.message
@@ -36,17 +41,11 @@ export default function ProjectPage({ id }: { id: string }) {
         </Button>
       </main>
     );
-  if (initial.project?.kind === "dataset")
-    return (
-      <App
-        projectName={initial.project.name}
-        initialProject={initial.project.state}
-        onProjectChange={(state) => saveDatasetProject(id, state)}
-      />
-    );
   return (
     <BuilderExperience
       storageKey={projectWorkspaceKey(id)}
+      initialView={initial.initialView}
+      demoProject={id === NORTHSTAR_DEMO_ID}
       closeLabel="Projects"
       onClose={() => window.location.assign("/projects")}
     />

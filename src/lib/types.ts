@@ -9,6 +9,8 @@ export interface Component {
   name: string;
   unit: string;
   supplierId: string;
+  /** All associated suppliers, including supplierId, which remains the stable primary. */
+  supplierIds?: string[];
 }
 export interface BomLine {
   componentId: string;

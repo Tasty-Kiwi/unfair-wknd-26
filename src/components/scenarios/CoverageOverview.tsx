@@ -11,12 +11,14 @@ export function CoverageOverview({
   recoveredId,
   recovery,
   onTestDelay,
+  preferNames = false,
 }: {
   data: Dataset;
   result: SimulationResult;
   recoveredId?: string;
   recovery: boolean;
   onTestDelay: () => void;
+  preferNames?: boolean;
 }) {
   const late = result.deliveries.filter((receipt) => {
     const baseline = data.deliveries.find((item) => item.id === receipt.id);
@@ -80,6 +82,7 @@ export function CoverageOverview({
           data={data}
           result={result}
           selectedOrderId={recoveredId}
+          preferNames={preferNames}
         />
       </details>
     </div>

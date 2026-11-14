@@ -138,19 +138,7 @@ export function canConnect(
     return { ok: false, message: "This relationship already exists." };
   }
 
-  if (candidate.kind === "primarySupplier") {
-    const hasPrimary = doc.edges.some(
-      (edge) =>
-        edge.kind === "primarySupplier" && edge.target === candidate.target,
-    );
-    if (hasPrimary) {
-      return {
-        ok: false,
-        message:
-          "Component already has a primary supplier. Remove the existing link first.",
-      };
-    }
-  } else if (candidate.kind === "receiptSupplier") {
+  if (candidate.kind === "receiptSupplier") {
     const hasSupplier = doc.edges.some(
       (edge) =>
         edge.kind === "receiptSupplier" && edge.target === candidate.target,
@@ -207,6 +195,33 @@ export function connectNodes(
   }
 
   const id = generateEdgeId();
+  const currentPrimary =
+    candidate.kind === "primarySupplier"
+      ? doc.edges
+          .find(
+            (edge) =>
+              edge.kind === "primarySupplier" &&
+              edge.target === candidate.target,
+          )
+          ?.source.slice("supplier:".length)
+      : undefined;
+  const nextNodes =
+    candidate.kind === "primarySupplier"
+      ? doc.nodes.map((node) =>
+          node.kind === "component" && nodeKey(node) === candidate.target
+            ? {
+                ...node,
+                fields: {
+                  ...node.fields,
+                  primarySupplierId:
+                    node.fields.primarySupplierId ??
+                    currentPrimary ??
+                    candidate.source.slice("supplier:".length),
+                },
+              }
+            : node,
+        )
+      : doc.nodes;
   const newEdge: BuilderEdge =
     candidate.kind === "bom"
       ? {
@@ -228,6 +243,7 @@ export function connectNodes(
     document: {
       ...doc,
       revision: doc.revision + 1,
+      nodes: nextNodes,
       edges: [...doc.edges, newEdge],
     },
   };

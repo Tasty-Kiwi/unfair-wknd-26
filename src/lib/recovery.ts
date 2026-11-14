@@ -42,11 +42,14 @@ export function compareRecoveries(
         ...structuredClone(scenario),
         id: "custom",
         name: `Restore ${baseline.id} timing`,
-        deliveryOverrides: scenario.deliveryOverrides.map((item) =>
-          item.deliveryId === baseline.id
-            ? { ...item, availableDate: baseline.availableDate }
-            : { ...item },
-        ),
+        // Restoring the planned date with the planned quantity is the plan itself,
+        // so the override is dropped rather than kept as a no-op (as the receipt
+        // date control does). Otherwise the scenario would never match the plan.
+        deliveryOverrides: scenario.deliveryOverrides.flatMap((item) => {
+          if (item.deliveryId !== baseline.id) return [{ ...item }];
+          if (item.quantity === baseline.quantity) return [];
+          return [{ ...item, availableDate: baseline.availableDate }];
+        }),
       },
     });
   }
@@ -86,6 +89,10 @@ export function compareRecoveries(
       },
     });
   }
+  // An option that recovers no units does not help this shortage, even if its
+  // supply is approved for a product on order: eligibility is never offered as
+  // recovery. Dropping such options is the only filter; every remaining figure is
+  // the simulation's own result.
   return options
     .map((option) => {
       const result = simulate(data, option.scenario);
@@ -96,6 +103,7 @@ export function compareRecoveries(
           current.summary.missingUnits - result.summary.missingUnits,
       };
     })
+    .filter((option) => option.unitsRecovered > 0)
     .sort(
       (a, b) =>
         b.unitsRecovered - a.unitsRecovered ||

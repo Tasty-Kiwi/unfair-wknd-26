@@ -134,10 +134,23 @@ function GraphInner({
   const narrow = useNarrow();
   const [full, setFull] = useState(false);
   const theme = useTheme();
-  const [componentFocus, setComponentFocus] = useState("MTR-01");
+  const firstReceipt = [...data.deliveries].sort(
+    (a, b) =>
+      a.availableDate.localeCompare(b.availableDate) ||
+      (a.id < b.id ? -1 : a.id > b.id ? 1 : 0),
+  )[0];
+  const defaultFocus =
+    firstReceipt?.componentId ??
+    data.components.find((component) =>
+      result.orders.some((order) =>
+        order.lines.some((line) => line.componentId === component.id),
+      ),
+    )?.id ??
+    data.components[0]?.id;
+  const [componentFocus, setComponentFocus] = useState(defaultFocus);
   const focused = data.components.some((c) => c.id === componentFocus)
     ? componentFocus
-    : data.components[0]?.id;
+    : defaultFocus;
   const { nodes, edges } = useMemo(() => {
     const riskLines = result.orders.flatMap((o) =>
       o.lines.filter((l) => l.shortage > 0),
@@ -157,7 +170,9 @@ function GraphInner({
     const productIds = new Set(products.map((p) => p.id));
     const suppliers = data.suppliers.filter(
       (s) =>
-        components.some((c) => c.supplierId === s.id) ||
+        components.some((c) =>
+          (c.supplierIds ?? [c.supplierId]).includes(s.id),
+        ) ||
         result.deliveries.some(
           (d) => d.supplierId === s.id && componentIds.has(d.componentId),
         ) ||
@@ -231,7 +246,9 @@ function GraphInner({
     };
     suppliers.forEach((s, i) => {
       const impacted = components.some(
-        (c) => c.supplierId === s.id && riskComponents.has(c.id),
+        (c) =>
+          (c.supplierIds ?? [c.supplierId]).includes(s.id) &&
+          riskComponents.has(c.id),
       );
       // Only say "Late" when a receipt from this supplier actually lands after
       // its planned date. A shortage can also come from quantity or demand.
@@ -308,7 +325,7 @@ function GraphInner({
         "Short",
       );
       const sources = new Set([
-        c.supplierId,
+        ...(c.supplierIds ?? [c.supplierId]),
         ...result.deliveries
           .filter((d) => d.componentId === c.id)
           .map((d) => d.supplierId),

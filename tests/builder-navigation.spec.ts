@@ -14,10 +14,8 @@ test("builder URL opens directly and survives refresh", async ({ page }) => {
 test("browser back and forward restore simulator and builder without losing the draft", async ({
   page,
 }) => {
-  await page.goto("/demo");
-  await page
-    .getByRole("button", { name: "Build a network", exact: true })
-    .click();
+  await page.goto("/projects");
+  await page.goto("/?builder=1");
   await expect(builder(page)).toBeVisible();
   await builder(page)
     .getByLabel("Network name", { exact: true })
@@ -25,7 +23,7 @@ test("browser back and forward restore simulator and builder without losing the 
 
   await page.goBack();
   await expect(
-    page.getByRole("button", { name: "Build a network", exact: true }),
+    page.getByRole("button", { name: "New project", exact: true }).first(),
   ).toBeVisible();
   await page.goForward();
   await expect(builder(page)).toBeVisible();
@@ -37,18 +35,16 @@ test("browser back and forward restore simulator and builder without losing the 
 test("closing builder removes query and browser history reopens it", async ({
   page,
 }) => {
-  await page.goto("/demo");
-  await page
-    .getByRole("button", { name: "Build a network", exact: true })
-    .click();
+  await page.goto("/projects");
+  await page.goto("/?builder=1");
   await expect(page).toHaveURL(/builder=1/);
-  await builder(page).getByRole("button", { name: "Back to demo" }).click();
+  await builder(page).getByRole("button", { name: "Projects" }).click();
   await expect(page).not.toHaveURL(/builder=1/);
   await page.goBack();
   await expect(builder(page)).toBeVisible();
   await page.goForward();
   await expect(
-    page.getByRole("button", { name: "Build a network", exact: true }),
+    page.getByRole("button", { name: "New project", exact: true }).first(),
   ).toBeVisible();
 });
 
@@ -62,26 +58,22 @@ test("OAuth error cleanup keeps durable builder query", async ({ page }) => {
 test("device draft persists across closing and reopening builder", async ({
   page,
 }) => {
-  await page.goto("/demo");
-  await page
-    .getByRole("button", { name: "Build a network", exact: true })
-    .click();
+  await page.goto("/projects");
+  await page.goto("/?builder=1");
   await builder(page)
     .getByLabel("Network name", { exact: true })
     .fill("Saved device draft");
   await expect(
     builder(page).getByRole("status", { name: "Saved locally", exact: true }),
   ).toBeVisible();
-  await builder(page).getByRole("button", { name: "Back to demo" }).click();
-  await page
-    .getByRole("button", { name: "Build a network", exact: true })
-    .click();
+  await builder(page).getByRole("button", { name: "Projects" }).click();
+  await page.goto("/?builder=1");
   await expect(
     builder(page).getByLabel("Network name", { exact: true }),
   ).toHaveValue("Saved device draft");
 });
 
-test("failed local save cancels history exit and preserves the editable draft", async ({
+test("failed local save cancels exit and preserves the editable draft", async ({
   page,
 }) => {
   await page.addInitScript(() => {
@@ -92,14 +84,14 @@ test("failed local save cancels history exit and preserves the editable draft", 
       return save.call(this, key, value);
     };
   });
-  await page.goto("/demo");
-  await page
-    .getByRole("button", { name: "Build a network", exact: true })
-    .click();
+  await page.goto("/projects");
+  await page.goto("/?builder=1");
   await builder(page)
     .getByLabel("Network name", { exact: true })
     .fill("Keep this unsaved draft");
-  await page.goBack();
+  await builder(page)
+    .getByRole("button", { name: "Projects", exact: true })
+    .click();
   await expect(builder(page)).toBeVisible();
   await expect(page).toHaveURL(/builder=1/);
   await expect(

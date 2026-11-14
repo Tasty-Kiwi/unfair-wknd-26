@@ -1,5 +1,9 @@
 import { test, expect } from "@playwright/test";
 
+test.beforeEach(async ({ page }) => {
+  page.on("dialog", (dialog) => dialog.accept());
+});
+
 test("builder palette explains items on hover and keyboard focus", async ({
   page,
 }) => {
@@ -37,8 +41,9 @@ for (const theme of ["light", "dark"]) {
     const picker = page.getByLabel("Inspect allocation", { exact: true });
     await picker.selectOption("ORD-102");
     await expect(page.locator(".impact-panel__subtitle")).toContainText(
-      "ORD-102",
+      "Helix Automation",
     );
+    await expect(page.locator(".impact-detail__meta")).toContainText("ORD-102");
     await page.getByText("Inspect allocations", { exact: true }).click();
     await page.getByText("Inspect allocations", { exact: true }).click();
     await expect(picker).toHaveValue("ORD-102");
@@ -92,7 +97,11 @@ for (const width of [1366, 390]) {
     await expect(
       page.getByText("Your network is still in progress", { exact: true }),
     ).toBeVisible();
-    await expect(page.getByRole("alert")).toContainText("Use Next repair");
+    await expect(
+      page
+        .getByRole("alert")
+        .filter({ hasText: "Your network is still in progress" }),
+    ).toContainText("Use Next repair");
     await page
       .getByRole("button", { name: "Check network", exact: true })
       .click();

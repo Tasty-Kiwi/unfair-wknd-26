@@ -2,6 +2,7 @@ import { test, expect, type Page } from "@playwright/test";
 import { readFile } from "node:fs/promises";
 import { demoData } from "../src/data/demo";
 import { fileAction } from "./ui-helpers";
+import { NORTHSTAR_DEMO_ID } from "../src/lib/projects";
 
 /** Every cloud-only request the guest journey must never make. */
 function watchCloudRequests(page: Page) {
@@ -70,14 +71,18 @@ test("hostile numeric import is rejected readably and leaves the active network,
   await expect(banner).toContainText("2 component units");
 
   // Saved project: the same file is refused and the persisted draft survives a reload.
-  await page.getByRole("button", { name: "Edit this network" }).click();
-  await expect(page).toHaveURL(/\/projects\/[a-f0-9-]+$/);
+  await page.getByRole("button", { name: "Build", exact: true }).click();
+  await expect(page).toHaveURL(/\/demo$/);
+  await expect(
+    page.getByText("Saved on this device", { exact: true }),
+  ).toBeVisible();
+  await page.goto(`/projects/${NORTHSTAR_DEMO_ID}`);
   const projectUrl = page.url();
   const name = page.getByLabel("Network name", { exact: true });
   await expect(name).toHaveValue(demoData.name);
   await page.getByRole("button", { name: "Simulate", exact: true }).click();
   const scenarioSelect = page.getByLabel("Select scenario", { exact: true });
-  await expect(scenarioSelect).toHaveValue(/^scenario:editable-/);
+  await expect(scenarioSelect).toHaveValue("scenario:motor-delay");
   const summary = page.getByRole("region", { name: SUMMARY });
   await expect(summary).toContainText("1 order at risk");
   page.on("dialog", (dialog) => dialog.accept());
@@ -91,7 +96,7 @@ test("hostile numeric import is rejected readably and leaves the active network,
   await page.reload();
   await expect(page).toHaveURL(projectUrl);
   await page.getByRole("button", { name: "Simulate", exact: true }).click();
-  await expect(scenarioSelect).toHaveValue(/^scenario:editable-/);
+  await expect(scenarioSelect).toHaveValue("scenario:motor-delay");
   await expect(summary).toContainText("1 order at risk");
   await expect(summary).toContainText("2 component units missing");
 
@@ -105,7 +110,7 @@ test("hostile numeric import is rejected readably and leaves the active network,
   expect(cloud).toEqual([]);
 });
 
-test("guest journey at 1366x768: shortage, evidence, recovery, saved copy, export and import", async ({
+test("guest journey at 1366x768: shortage, evidence, recovery, editable project, export and import", async ({
   page,
 }) => {
   await page.setViewportSize({ width: 1366, height: 768 });
@@ -176,8 +181,12 @@ test("guest journey at 1366x768: shortage, evidence, recovery, saved copy, expor
   ).toHaveValue("2026-11-23");
 
   // Edit this network: a saved local copy that survives reload and library navigation.
-  await page.getByRole("button", { name: "Edit this network" }).click();
-  await expect(page).toHaveURL(/\/projects\/[a-f0-9-]+$/);
+  await page.getByRole("button", { name: "Build", exact: true }).click();
+  await expect(page).toHaveURL(/\/demo$/);
+  await expect(
+    page.getByText("Saved on this device", { exact: true }),
+  ).toBeVisible();
+  await page.goto(`/projects/${NORTHSTAR_DEMO_ID}`);
   const projectUrl = page.url();
   const name = page.getByLabel("Network name", { exact: true });
   await expect(name).toHaveValue(demoData.name);
@@ -238,22 +247,23 @@ test("guest journey at 1366x768: shortage, evidence, recovery, saved copy, expor
     "Normal supply",
     "Motor receipt delayed",
     "Motor delay with approved substitute",
-    "Vector Components recovery",
   ])
     await expect(scenarios.locator("option", { hasText: label })).toHaveCount(
       1,
     );
   await expect(
-    scenarios.locator("option", { hasText: "Vector Components recovery" }),
+    scenarios.locator("option", {
+      hasText: "Motor delay with approved substitute",
+    }),
   ).toHaveJSProperty("selected", true);
   const names = workspace.scenarios.map(
     (record: { scenario: { name: string } }) => record.scenario.name,
   );
-  expect(names).toContain("Vector Components recovery");
+  expect(names).toContain("Motor delay with approved substitute");
   expect(workspace.selectedScenarioId).toBe(
     workspace.scenarios.find(
       (record: { scenario: { name: string } }) =>
-        record.scenario.name === "Vector Components recovery",
+        record.scenario.name === "Motor delay with approved substitute",
     ).scenario.id,
   );
 

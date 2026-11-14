@@ -113,7 +113,7 @@
   min-width: 0;
   max-width: 280px;
 }
-.builder-bar__title h1 {
+.builder-bar__title :is(h1, h2) {
   font-size: 16px;
   line-height: 1.2;
   white-space: nowrap;

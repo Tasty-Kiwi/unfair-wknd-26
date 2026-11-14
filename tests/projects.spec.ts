@@ -54,7 +54,7 @@ test("landing to projects to demo and back, with isolated blank projects and ref
     .getByRole("radio", { name: "Supplier disruption", exact: true })
     .click();
   await expect(page.locator(".outcome-banner")).toContainText("2");
-  await page.getByRole("link", { name: "Projects", exact: true }).click();
+  await page.getByRole("button", { name: "Projects", exact: true }).click();
   await blank(page, "Line A");
   const firstUrl = page.url();
   await page.getByLabel("Network name", { exact: true }).fill("Line A revised");
@@ -92,17 +92,18 @@ test("JSON dataset import saves scenario changes and rejects a later invalid imp
   await modal
     .getByRole("button", { name: "Create project", exact: true })
     .click();
-  await expect(page.locator(".dataset-line")).toContainText(
+  await expect(page.locator(".builder-experience__source")).toContainText(
     "Fully imported data",
   );
   await page
     .getByRole("radio", { name: "Supplier disruption", exact: true })
     .click();
   await page.reload();
+  await page.getByRole("button", { name: "Simulate", exact: true }).click();
   await expect(
     page.getByRole("radio", { name: "Supplier disruption", exact: true }),
   ).toHaveAttribute("data-state", "on");
-  await page.getByRole("link", { name: "Projects", exact: true }).click();
+  await page.getByRole("button", { name: "Projects", exact: true }).click();
   const another = await openNew(page);
   await another.getByLabel("Project files", { exact: true }).setInputFiles({
     name: "bad.json",
@@ -136,11 +137,13 @@ test("CSV preview identifies retained demo data before creating a persistent pla
   await modal
     .getByRole("button", { name: "Create project", exact: true })
     .click();
-  await expect(page.locator(".dataset-line")).toContainText(
+  await expect(page.locator(".builder-experience__source")).toContainText(
     "Mixed demo + imported data",
   );
   await page.reload();
-  await expect(page.locator(".dataset-line")).toContainText("CSV plan");
+  await expect(page.getByLabel("Network name", { exact: true })).toHaveValue(
+    "CSV plan",
+  );
 });
 
 test("legacy draft is discoverable without migration, workspace JSON opens in builder", async ({

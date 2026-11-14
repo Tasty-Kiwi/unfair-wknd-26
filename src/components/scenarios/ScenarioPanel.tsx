@@ -10,7 +10,7 @@ import { isIsoDate, parseScenario } from "@/lib/validation";
 import {
   addDays,
   dayDiff,
-  receiptExposure,
+  receiptImpact,
   shiftRange,
   shortDate,
   tippingPoints,
@@ -88,8 +88,11 @@ export function ScenarioPanel({
   const selected =
     receipts.find((r) => r.delivery.id === deliveryId) ?? receipts[0];
   const selectedDelivery = selected?.delivery;
-  const exposure = useMemo(
-    () => (selectedDelivery ? receiptExposure(data, selectedDelivery.id) : 0),
+  const impact = useMemo(
+    () =>
+      selectedDelivery
+        ? receiptImpact(data, selectedDelivery.id)
+        : { value: 0, units: 0 },
     [data, selectedDelivery],
   );
   const money = (n: number) =>
@@ -98,6 +101,14 @@ export function ScenarioPanel({
       currency: "EUR",
       maximumFractionDigits: 0,
     }).format(n);
+  const unitWord = selected?.component?.unit ?? "units";
+  // With zero-value orders, value exposure is 0 while units still go missing.
+  const impactSentence =
+    impact.value > 0
+      ? `On the unchanged plan, ${money(impact.value)} more order value becomes at risk if it never arrives.`
+      : impact.units > 0
+        ? `On the unchanged plan, ${impact.units} more ${unitWord} would go missing if it never arrives, and no order value is at risk.`
+        : "On the unchanged plan, no additional order value becomes at risk if it never arrives. Orders already at risk can still lose units; see Allocation evidence.";
 
   return (
     <section className="scenario-panel" aria-labelledby={`${baseId}-title`}>
@@ -134,10 +145,7 @@ export function ScenarioPanel({
               {selected.supplier?.name ?? selectedDelivery.supplierId} ·{" "}
               {selectedDelivery.quantity} {selected.component?.unit ?? "units"}{" "}
               planned {shortDate(selectedDelivery.availableDate)}.{" "}
-              {exposure > 0
-                ? `On the unchanged plan, ${money(exposure)} more order value becomes at risk if it never arrives.`
-                : "On the unchanged plan, no additional order value becomes at risk if it never arrives. Orders already at risk can still lose units; see Allocation evidence."}{" "}
-              Listed by planned date.
+              {impactSentence} Listed by planned date.
             </p>
           </div>
         ) : (

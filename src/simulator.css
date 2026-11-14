@@ -260,7 +260,7 @@
 }
 
 /* ---------- Work area ---------- */
-.sim main.sim-work {
+.sim .sim-work {
   flex: 1;
   display: grid;
   grid-template-columns: minmax(0, 1fr) 400px;
@@ -691,7 +691,7 @@
   }
 }
 @media (max-width: 1280px) and (min-width: 1100px) {
-  .sim main.sim-work {
+  .sim .sim-work {
     grid-template-columns: minmax(0, 1fr) 360px;
   }
   .cause-chain strong {
@@ -763,7 +763,7 @@
   .cause-chain strong {
     font-size: 20px;
   }
-  .sim main.sim-work {
+  .sim .sim-work {
     display: flex;
     flex-direction: column;
   }

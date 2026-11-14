@@ -137,10 +137,7 @@ test("guest editing only probes public health and survives unavailable cloud", a
       json: { error: { code: "cloud_unavailable" } },
     });
   });
-  await page.goto("/demo");
-  await page
-    .getByRole("button", { name: "Build a network", exact: true })
-    .click();
+  await page.goto("/?builder=1");
   await builder(page)
     .getByLabel("Network name", { exact: true })
     .fill("Still local");
@@ -192,10 +189,7 @@ test("failed public health retries in place and keeps the edited guest draft", a
   await api(page, state);
   const plan: HealthPlan = { status: "fail", calls: 0 };
   await scriptHealth(page, plan);
-  await page.goto("/demo");
-  await page
-    .getByRole("button", { name: "Build a network", exact: true })
-    .click();
+  await page.goto("/?builder=1");
   await expect(retryButton(page)).toBeVisible();
   await expect(
     builder(page).getByRole("button", { name: "Sign in with GitHub" }),
@@ -246,10 +240,7 @@ test("malformed public health offers retry instead of hiding cloud silently", as
   await api(page, state);
   const plan: HealthPlan = { status: "malformed", calls: 0 };
   await scriptHealth(page, plan);
-  await page.goto("/demo");
-  await page
-    .getByRole("button", { name: "Build a network", exact: true })
-    .click();
+  await page.goto("/?builder=1");
   await expect(retryButton(page)).toBeVisible();
   const callsBeforeRetry = plan.calls;
   plan.status = "ok";
@@ -267,10 +258,7 @@ test("explicitly disabled cloud stays hidden with no retry and guest editing wor
   await api(page, state);
   const plan: HealthPlan = { status: "disabled", calls: 0 };
   await scriptHealth(page, plan);
-  await page.goto("/demo");
-  await page
-    .getByRole("button", { name: "Build a network", exact: true })
-    .click();
+  await page.goto("/?builder=1");
   await builder(page)
     .getByLabel("Network name", { exact: true })
     .fill("Local only");
@@ -318,10 +306,7 @@ test("GitHub navigation flushes the device draft first", async ({ page }) => {
       body: "<title>GitHub test destination</title>",
     }),
   );
-  await page.goto("/demo");
-  await page
-    .getByRole("button", { name: "Build a network", exact: true })
-    .click();
+  await page.goto("/?builder=1");
   await builder(page)
     .getByLabel("Network name", { exact: true })
     .fill("Before GitHub");

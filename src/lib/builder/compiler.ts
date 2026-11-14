@@ -67,6 +67,9 @@ export function computeNetworkKey(
       .map((c) => ({
         id: c.id,
         supplierId: c.supplierId,
+        ...((c.supplierIds?.length ?? 0) > 1
+          ? { supplierIds: [...c.supplierIds!].sort(compareCodePoint) }
+          : {}),
       })),
     inventory: [...dataset.inventory]
       .sort((a, b) => compareCodePoint(a.componentId, b.componentId))
@@ -453,21 +456,25 @@ export function compileGraph(doc: BuilderDocument): CompileGraphResult {
           field: "primarySupplier",
           message: "Component must be connected to a primary supplier.",
         });
-      } else if (primaryEdges.length > 1) {
-        for (const extra of primaryEdges.slice(1)) {
-          issues.push({
-            nodeKey: key,
-            edgeId: extra.id,
-            field: "primarySupplier",
-            message: "Component can only have one primary supplier.",
-          });
-        }
       }
-
-      const supplierNode =
-        primaryEdges.length === 1
-          ? nodeByKey.get(primaryEdges[0].source)
-          : undefined;
+      const rawPrimary = node.fields.primarySupplierId;
+      const primaryEdge = rawPrimary
+        ? primaryEdges.find((edge) => edge.source === `supplier:${rawPrimary}`)
+        : primaryEdges[0];
+      if (rawPrimary && !primaryEdge)
+        issues.push({
+          nodeKey: key,
+          field: "primarySupplier",
+          message: `Primary supplier "${rawPrimary}" must remain connected.`,
+        });
+      const supplierNode = primaryEdge
+        ? nodeByKey.get(primaryEdge.source)
+        : undefined;
+      const supplierIds = [
+        ...new Set(
+          primaryEdges.map((edge) => edge.source.slice("supplier:".length)),
+        ),
+      ];
 
       if (
         hasNonWhitespace(node.fields.name) &&
@@ -480,6 +487,7 @@ export function compileGraph(doc: BuilderDocument): CompileGraphResult {
           name: node.fields.name.trim(),
           unit: node.fields.unit.trim(),
           supplierId: supplierNode.id,
+          ...(supplierIds.length > 1 ? { supplierIds } : {}),
         });
         if (stockQty !== null) {
           inventory.push({

@@ -10,7 +10,10 @@ import {
 import type { BuilderWorkspaceV1 } from "@/lib/builder/types";
 import {
   createProject,
+  ensureNorthstarDemoProject,
   listProjects,
+  makeProjectEditable,
+  NORTHSTAR_DEMO_ID,
   prepareProjectImport,
   projectWorkspaceKey,
   readProject,
@@ -49,6 +52,94 @@ const example = (): BuilderWorkspaceV1 => ({
 });
 
 describe("local projects", () => {
+  it("upgrades dataset projects in place with their scenario and provenance intact", () => {
+    const storage = memoryStorage();
+    const imported = prepareProjectImport([
+      { name: "plan.json", text: JSON.stringify(demoData) },
+    ]);
+    if (imported.kind !== "dataset") throw new Error("Expected dataset import");
+    imported.state.scenario = {
+      ...imported.state.scenario,
+      deliveryOverrides: [
+        { deliveryId: "PO-101", quantity: 5, availableDate: "2026-11-23" },
+      ],
+    };
+    const project = createProject("My material plan", imported, storage);
+    makeProjectEditable(project.id, storage);
+    const upgraded = readProject(project.id, storage);
+    expect(upgraded.kind).toBe("workspace");
+    expect(upgraded.id).toBe(project.id);
+    const workspace = loadWorkspace(
+      storage,
+      projectWorkspaceKey(project.id),
+    ).workspace!;
+    expect(workspace.document.name).toBe("My material plan");
+    expect(workspace.workingScenario!.scenario).toEqual(
+      imported.state.scenario,
+    );
+    expect(workspace.source.provenance).toEqual(imported.state.provenance);
+    const original = JSON.parse(
+      storage.getItem(`needtrace.project.v1:${project.id}`)!,
+    );
+    expect(original.state).toEqual(imported.state);
+    const saved = storage.getItem(projectWorkspaceKey(project.id));
+    makeProjectEditable(project.id, storage);
+    expect(storage.getItem(projectWorkspaceKey(project.id))).toBe(saved);
+  });
+
+  it("keeps the original dataset project when its editable upgrade cannot be saved", () => {
+    const storage = memoryStorage();
+    const imported = prepareProjectImport([
+      { name: "plan.json", text: JSON.stringify(demoData) },
+    ]);
+    const project = createProject("Kept plan", imported, storage);
+    const original = storage.getItem(`needtrace.project.v1:${project.id}`);
+    const blocked = {
+      ...storage,
+      setItem(key: string, value: string) {
+        if (key === projectWorkspaceKey(project.id))
+          throw new Error("Storage full");
+        storage.setItem(key, value);
+      },
+    };
+    expect(() => makeProjectEditable(project.id, blocked)).toThrow();
+    expect(storage.getItem(`needtrace.project.v1:${project.id}`)).toBe(
+      original,
+    );
+    expect(readProject(project.id, storage).kind).toBe("dataset");
+  });
+  it("opens the complete editable demo without replacing its edits or another device draft", () => {
+    const storage = memoryStorage();
+    saveWorkspace(example(), storage);
+    const deviceDraft = storage.getItem(WORKSPACE_STORAGE_KEY);
+    ensureNorthstarDemoProject(storage);
+    const key = projectWorkspaceKey(NORTHSTAR_DEMO_ID);
+    const workspace = loadWorkspace(storage, key).workspace!;
+    expect(workspace.document.nodes).toHaveLength(40);
+    expect(workspace.document.alternatives).toEqual(demoData.alternatives);
+    expect(workspace.scenarios).toHaveLength(3);
+    workspace.document.name = "My edited Northstar";
+    saveWorkspace(workspace, storage, key);
+    const edited = storage.getItem(key);
+    ensureNorthstarDemoProject(storage);
+    expect(storage.getItem(key)).toBe(edited);
+    expect(storage.getItem(WORKSPACE_STORAGE_KEY)).toBe(deviceDraft);
+    expect(
+      listProjects(storage).projects.some(
+        (project) => project.name === "My edited Northstar",
+      ),
+    ).toBe(true);
+  });
+
+  it("keeps an unreadable demo workspace available for recovery instead of reseeding it", () => {
+    const storage = memoryStorage();
+    const key = projectWorkspaceKey(NORTHSTAR_DEMO_ID);
+    storage.setItem(key, "broken saved data");
+    ensureNorthstarDemoProject(storage);
+    expect(storage.getItem(key)).toBe("broken saved data");
+    expect(loadWorkspace(storage, key).error).toBeTruthy();
+  });
+
   it("reimports exported scenario reports with source data and scenario intact", () => {
     const original = prepareProjectImport([
       { name: "dataset.json", text: JSON.stringify(demoData) },
@@ -197,13 +288,16 @@ describe("local projects", () => {
     const data = structuredClone(demoData);
     data.name = "Custom factory";
     data.suppliers[0].name = "Custom supplier";
-    const imported = prepareProjectImport([
-      { name: "inventory.csv", text: "componentId,quantity\nMTR-01,12" },
-    ], { data, provenance: fictionalProvenance() });
+    const imported = prepareProjectImport(
+      [{ name: "inventory.csv", text: "componentId,quantity\nMTR-01,12" }],
+      { data, provenance: fictionalProvenance() },
+    );
     if (imported.kind !== "dataset") throw new Error("Expected dataset");
     expect(imported.state.data.suppliers).toEqual(data.suppliers);
     expect(imported.state.data.name).toBe(data.name);
-    expect(imported.state.data.inventory).toEqual([{ componentId: "MTR-01", quantity: 12 }]);
+    expect(imported.state.data.inventory).toEqual([
+      { componentId: "MTR-01", quantity: 12 },
+    ]);
     expect(data.inventory).toEqual(demoData.inventory);
   });
   it("leaves unreadable drafts untouched and rolls back a failed new workspace write", () => {

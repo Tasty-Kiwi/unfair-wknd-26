@@ -37,6 +37,8 @@ export type ComponentFields = {
   name: string;
   unit: string;
   initialStock: string | null;
+  /** Persisted primary association; absent in legacy v1 workspaces. */
+  primarySupplierId?: string;
 };
 
 export type ReceiptFields = {

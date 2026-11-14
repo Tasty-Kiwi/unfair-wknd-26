@@ -68,6 +68,7 @@ const componentSchema = z.object({
   name: nonBlank("Component name"),
   unit: nonBlank("Component unit"),
   supplierId: nonBlank("Component supplierId"),
+  supplierIds: z.array(nonBlank("Component supplierIds entry")).optional(),
 });
 
 const bomLineSchema = z.object({
@@ -299,6 +300,26 @@ function checkDataset(data: Dataset): string[] {
       supplierIds,
       "suppliers",
     );
+    const associations = component.supplierIds ?? [component.supplierId];
+    const seen = new Set<string>();
+    associations.forEach((id) => {
+      if (seen.has(id))
+        problems.push(
+          `components[${i}].supplierIds: supplier "${id}" is listed more than once.`,
+        );
+      seen.add(id);
+      requireRef(
+        problems,
+        `components[${i}].supplierIds`,
+        id,
+        supplierIds,
+        "suppliers",
+      );
+    });
+    if (!associations.includes(component.supplierId))
+      problems.push(
+        `components[${i}].supplierIds must include primary supplierId "${component.supplierId}".`,
+      );
   });
 
   data.products.forEach((product, i) => {

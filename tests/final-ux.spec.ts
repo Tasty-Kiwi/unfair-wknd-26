@@ -1,4 +1,8 @@
 import { test, expect } from "@playwright/test";
+
+test.beforeEach(async ({ page }) => {
+  page.on("dialog", (dialog) => dialog.accept());
+});
 import { openOrderBook } from "./ui-helpers";
 
 test("blank builder offers a starting point before requested validation", async ({
@@ -15,7 +19,6 @@ test("blank builder offers a starting point before requested validation", async 
   await expect(
     page.getByText("Your network is still in progress", { exact: true }),
   ).toBeVisible();
-  page.on("dialog", (d) => d.accept());
   await page.getByRole("button", { name: "Core example", exact: true }).click();
   await page
     .getByRole("button", { name: "Run simulation", exact: true })
@@ -73,42 +76,48 @@ for (const theme of ["light", "dark"]) {
       theme,
     );
     await page.goto("/demo");
-    await expect(page.locator(".topbar")).toBeVisible();
+    await expect(page.locator(".builder-bar")).toBeVisible();
     await page.evaluate(() => document.fonts.ready);
     for (const width of [2000, 1440, 1366, 1200, 1100, 1024, 720, 390, 320]) {
       await page.setViewportSize({ width, height: 900 });
-      const collisions = await page.locator(".topbar").evaluate((header) => {
-        const items = Array.from(
-          header.querySelectorAll(
-            ".wordmark, .scenario-switch button, .dataset-line > span, .top-actions > [data-slot='button']",
-          ),
-        )
-          .map((element) => ({
-            label:
-              element.textContent?.trim() || element.getAttribute("aria-label"),
-            rect: element.getBoundingClientRect(),
-          }))
-          .filter(({ rect }) => rect.width > 1 && rect.height > 1);
-        const bounds = header.getBoundingClientRect();
-        const problems: string[] = [];
-        for (let i = 0; i < items.length; i++) {
-          const a = items[i];
-          if (a.rect.left < bounds.left - 1 || a.rect.right > bounds.right + 1)
-            problems.push(`${a.label} outside header`);
-          for (const b of items.slice(i + 1)) {
+      const collisions = await page
+        .locator(".builder-bar")
+        .evaluate((header) => {
+          const items = Array.from(
+            header.querySelectorAll(
+              ".builder-bar__mark, .builder-bar__title, .builder-bar__modes, .builder-bar > [data-slot='button'], .builder-bar > .toolbar-popover",
+            ),
+          )
+            .map((element) => ({
+              label:
+                element.textContent?.trim() ||
+                element.getAttribute("aria-label"),
+              rect: element.getBoundingClientRect(),
+            }))
+            .filter(({ rect }) => rect.width > 1 && rect.height > 1);
+          const bounds = header.getBoundingClientRect();
+          const problems: string[] = [];
+          for (let i = 0; i < items.length; i++) {
+            const a = items[i];
             if (
-              Math.min(a.rect.right, b.rect.right) -
-                Math.max(a.rect.left, b.rect.left) >
-                1 &&
-              Math.min(a.rect.bottom, b.rect.bottom) -
-                Math.max(a.rect.top, b.rect.top) >
-                1
+              a.rect.left < bounds.left - 1 ||
+              a.rect.right > bounds.right + 1
             )
-              problems.push(`${a.label} overlaps ${b.label}`);
+              problems.push(`${a.label} outside header`);
+            for (const b of items.slice(i + 1)) {
+              if (
+                Math.min(a.rect.right, b.rect.right) -
+                  Math.max(a.rect.left, b.rect.left) >
+                  1 &&
+                Math.min(a.rect.bottom, b.rect.bottom) -
+                  Math.max(a.rect.top, b.rect.top) >
+                  1
+              )
+                problems.push(`${a.label} overlaps ${b.label}`);
+            }
           }
-        }
-        return problems;
-      });
+          return problems;
+        });
       expect(collisions, `${theme} header at ${width}px`).toEqual([]);
     }
     await page

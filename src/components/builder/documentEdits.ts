@@ -40,7 +40,7 @@ export const KIND_LABELS: Record<NodeKind, string> = {
 };
 
 export const RELATIONSHIP_LABELS: Record<RelationshipKind, string> = {
-  primarySupplier: "Primary supplier",
+  primarySupplier: "Component supplier",
   receiptSupplier: "Receipt supplier",
   receiptComponent: "Receipt for component",
   bom: "Bill of materials",
@@ -169,7 +169,12 @@ export function updateNodeField(
   const nodes = doc.nodes.map((node): BuilderNode => {
     if (nodeKey(node) !== key) return node;
     const fields = node.fields as Record<string, unknown>;
-    if (!(field in fields) || fields[field] === value) return node;
+    if (
+      !(field in fields) &&
+      !(node.kind === "component" && field === "primarySupplierId")
+    )
+      return node;
+    if (fields[field] === value) return node;
     changed = true;
     return {
       ...node,

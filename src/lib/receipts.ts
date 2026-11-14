@@ -6,12 +6,24 @@ import type { Dataset, Delivery, Scenario } from "@/lib/types";
 export const MAX_SHIFT_DAYS = 12;
 export const MIN_SHIFT_DAYS = -5;
 const DAY_MS = 86_400_000;
+const FIRST_ISO_DATE = "0001-01-01";
+const LAST_ISO_DATE = "9999-12-31";
 
 const toMs = (iso: string) => Date.parse(`${iso}T00:00:00Z`);
 export const dayDiff = (from: string, to: string) =>
   Math.round((toMs(to) - toMs(from)) / DAY_MS);
-export const addDays = (iso: string, n: number) =>
-  new Date(toMs(iso) + n * DAY_MS).toISOString().slice(0, 10);
+/**
+ * Calendar arithmetic in YYYY-MM-DD. Results past the representable range clamp
+ * to the first or last date instead of producing a non-ISO string (toISOString
+ * writes "+010000-01-01" for year 10000), which would fail validation later.
+ */
+export const addDays = (iso: string, n: number) => {
+  const date = new Date(toMs(iso) + n * DAY_MS);
+  const year = date.getUTCFullYear();
+  if (year > 9999) return LAST_ISO_DATE;
+  if (year < 1) return FIRST_ISO_DATE;
+  return date.toISOString().slice(0, 10);
+};
 export const shortDate = (iso: string) =>
   new Intl.DateTimeFormat("en-GB", {
     day: "numeric",
@@ -94,17 +106,66 @@ const PLAN: Scenario = {
 };
 
 /**
- * Order value that depends on a receipt: the extra value at risk on the
- * unmodified plan if this receipt never arrived. Independent of the current
- * scenario, so a list sorted or labelled by it stays put while the user edits.
+ * What a receipt is worth on the unmodified plan if it never arrived: the extra
+ * order value and extra component units that become at risk. Independent of the
+ * current scenario, so a list sorted or labelled by it stays put while the user
+ * edits. Value is zero when the affected orders carry no value, so units are
+ * reported separately.
  */
-export function receiptExposure(data: Dataset, deliveryId: string): number {
-  const base = simulate(data, PLAN).summary.atRiskValue;
+export function receiptImpact(
+  data: Dataset,
+  deliveryId: string,
+): { value: number; units: number } {
+  const base = simulate(data, PLAN).summary;
   const without = simulate(
     { ...data, deliveries: data.deliveries.filter((d) => d.id !== deliveryId) },
     PLAN,
-  ).summary.atRiskValue;
-  return Math.max(0, without - base);
+  ).summary;
+  return {
+    value: Math.max(0, without.atRiskValue - base.atRiskValue),
+    units: Math.max(0, without.missingUnits - base.missingUnits),
+  };
+}
+
+/** Order value that depends on a receipt; see {@link receiptImpact}. */
+export function receiptExposure(data: Dataset, deliveryId: string): number {
+  return receiptImpact(data, deliveryId).value;
+}
+
+/** Component units that depend on a receipt; see {@link receiptImpact}. */
+export function receiptUnitExposure(data: Dataset, deliveryId: string): number {
+  return receiptImpact(data, deliveryId).units;
+}
+
+/**
+ * The receipt that lands first among those given, by date then ID. Use this for
+ * "next receipt" wording: a line's late receipts come in dataset order, which is
+ * not landing order.
+ */
+export function nextReceipt(deliveries: Delivery[]): Delivery | undefined {
+  return [...deliveries].sort(
+    (a, b) =>
+      a.availableDate.localeCompare(b.availableDate) ||
+      (a.id < b.id ? -1 : a.id > b.id ? 1 : 0),
+  )[0];
+}
+
+/**
+ * The receipt to blame for a late line: a receipt that was moved later than its
+ * planned date is preferred over one that was already late on the plan; within
+ * each group the earliest landing wins.
+ */
+export function causeReceipt(
+  data: Dataset,
+  late: Delivery[],
+): Delivery | undefined {
+  const moved = late.filter((delivery) => {
+    const planned = data.deliveries.find((d) => d.id === delivery.id);
+    return (
+      planned !== undefined && delivery.availableDate > planned.availableDate
+    );
+  });
+  return nextReceipt(moved.length ? moved : late);
 }
 
 export interface TippingPoints {

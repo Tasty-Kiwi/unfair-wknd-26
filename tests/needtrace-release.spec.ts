@@ -36,7 +36,7 @@ for (const theme of ["light", "dark"] as const)
       await page
         .getByRole("button", { name: "Import data", exact: true })
         .click();
-      await expect(page.getByRole("dialog")).toContainText("not saved");
+      await expect(page.getByRole("dialog")).toContainText("autosaves");
       await expect(page.getByRole("dialog")).toBeVisible();
       await page.keyboard.press("Escape");
       await page.goto("/?builder=1");

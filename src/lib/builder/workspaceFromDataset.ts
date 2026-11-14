@@ -78,11 +78,18 @@ function canonicalDataset(data: Dataset): Dataset {
       name: s.name.trim(),
       region: s.region.trim(),
     })),
-    components: byId(data.components).map((c) => ({
-      ...c,
-      name: c.name.trim(),
-      unit: c.unit.trim(),
-    })),
+    components: byId(data.components).map((c) => {
+      const { supplierIds: _supplierIds, ...legacy } = c;
+      const associations = c.supplierIds ?? [c.supplierId];
+      return {
+        ...legacy,
+        ...(associations.length > 1
+          ? { supplierIds: [...associations].sort(compareCodePoint) }
+          : {}),
+        name: c.name.trim(),
+        unit: c.unit.trim(),
+      };
+    }),
     products: byId(data.products).map((p) => ({
       ...p,
       name: p.name.trim(),
@@ -202,6 +209,9 @@ export function datasetToWorkspace(
         name: c.name,
         unit: c.unit,
         initialStock: quantity === undefined ? null : String(quantity),
+        ...((c.supplierIds ?? [c.supplierId]).length > 1
+          ? { primarySupplierId: c.supplierId }
+          : {}),
       },
     });
   }
@@ -229,6 +239,9 @@ export function datasetToWorkspace(
 
   for (const c of data.components) {
     link("primarySupplier", `supplier:${c.supplierId}`, `component:${c.id}`);
+    for (const supplierId of c.supplierIds ?? [])
+      if (supplierId !== c.supplierId)
+        link("primarySupplier", `supplier:${supplierId}`, `component:${c.id}`);
   }
   for (const d of data.deliveries) {
     link("receiptSupplier", `supplier:${d.supplierId}`, `receipt:${d.id}`);

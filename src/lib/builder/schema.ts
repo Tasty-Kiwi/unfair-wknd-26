@@ -44,6 +44,7 @@ const componentNodeSchema = z.object({
     name: z.string(),
     unit: z.string(),
     initialStock: z.string().nullable(),
+    primarySupplierId: z.string().optional(),
   }),
 });
 

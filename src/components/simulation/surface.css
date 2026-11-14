@@ -1,0 +1,26 @@
+/* Shared simulation surface. Owners render the `.sim` root; this file keeps the
+   embedded builder page flowing (not a fixed one-screen layout) and styles the
+   scenario switch that owners place above the outcome banner. */
+.sim-scenario-switch {
+  display: grid;
+  gap: 12px;
+  padding: 12px 18px 0;
+}
+.sim-scenario-switch .scenario-switch {
+  justify-self: start;
+}
+
+.builder-experience .sim {
+  min-height: 0;
+  height: auto;
+  overflow: visible;
+}
+@media (min-width: 1100px) and (min-height: 640px) {
+  .builder-experience .sim {
+    height: auto;
+    overflow: visible;
+  }
+  .builder-experience .sim .sim-stage {
+    overflow: visible;
+  }
+}

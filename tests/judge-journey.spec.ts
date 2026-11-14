@@ -1,4 +1,8 @@
 import { test, expect } from "@playwright/test";
+
+test.beforeEach(async ({ page }) => {
+  page.on("dialog", (dialog) => dialog.accept());
+});
 import { openOrderBook } from "./ui-helpers";
 
 test("mobile product preview discloses retained BOMs and keeps actions usable", async ({
@@ -11,7 +15,9 @@ test("mobile product preview discloses retained BOMs and keeps actions usable", 
     .last()
     .click();
   const dialog = page.getByRole("dialog");
-  await expect(dialog).toContainText("Data is not saved between sessions");
+  await expect(dialog).toContainText(
+    "This network autosaves its changes on this device",
+  );
   await page
     .locator("#data-upload")
     .setInputFiles("public/examples/products.csv");
@@ -84,6 +90,7 @@ test("judge causes a disruption, audits allocation, and resolves it with live in
     "needtrace-scenario-report.json",
   );
   await page.getByRole("button", { name: "Reset demo" }).click();
+  await page.getByRole("button", { name: "Reset to fictional demo" }).click();
   await page.getByRole("radio", { name: /Supplier disruption/ }).click();
   await expect(summary).toContainText("at risk due to material shortage");
   await page.getByRole("radio", { name: /Approved recovery/ }).click();
@@ -207,7 +214,7 @@ test("complete JSON import becomes fully imported and reset restores provenance"
   await expect(
     page.getByText("Fully imported data", { exact: true }),
   ).toBeVisible();
-  await expect(page.getByText("ORD-1", { exact: true }).first()).toBeVisible();
+  await expect(page.locator('[data-id="order:ORD-1"]')).toContainText("ORD-1");
   await page.getByRole("button", { name: "Reset demo" }).click();
   await expect(page.getByRole("dialog")).toContainText(
     "Replace your imported plan?",
@@ -216,9 +223,7 @@ test("complete JSON import becomes fully imported and reset restores provenance"
   await expect(
     page.getByText("Fictional demo data", { exact: true }),
   ).toBeVisible();
-  await expect(
-    page.getByText("ORD-101", { exact: true }).first(),
-  ).toBeVisible();
+  await expect(page.locator('[data-id="order:ORD-101"]')).toBeVisible();
 });
 
 test("narrow screen retains disclosure and has no page overflow", async ({

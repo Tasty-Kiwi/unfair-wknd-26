@@ -174,7 +174,7 @@ describe("builder connections", () => {
     });
     expect(dupBom.ok).toBe(false);
 
-    // Second parent on component / receipt / order
+    // Components allow additional suppliers; receipts and orders retain one parent.
     const sup2 = createNode("supplier");
     const comp2 = createNode("component");
     const prod2 = createNode("product");
@@ -189,7 +189,7 @@ describe("builder connections", () => {
         source: nodeKey(sup2),
         target: nodeKey(comp),
       }).ok,
-    ).toBe(false);
+    ).toBe(true);
 
     expect(
       canConnect(extended, {
@@ -217,6 +217,43 @@ describe("builder connections", () => {
 
     expect(doc.revision).toBe(revBefore);
     expect(doc.edges.length).toBe(edgesBefore);
+  });
+
+  it("keeps a legacy Core example primary stable when another supplier is added", () => {
+    const doc = createCoreExample();
+    const comp = doc.nodes.find((node) => node.kind === "component")!;
+    const original = doc.edges.find(
+      (edge) =>
+        edge.kind === "primarySupplier" && edge.target === nodeKey(comp),
+    )!;
+    const secondary = createNode("supplier");
+    if (secondary.kind === "supplier")
+      secondary.fields.name = "Second supplier";
+    const withSecondary = { ...doc, nodes: [...doc.nodes, secondary] };
+    const connected = connectNodes(withSecondary, {
+      kind: "primarySupplier",
+      source: nodeKey(secondary),
+      target: nodeKey(comp),
+    });
+    expect(connected.ok).toBe(true);
+    if (!connected.ok) return;
+    const compiled = compileGraph(connected.document);
+    expect(compiled.ok).toBe(true);
+    if (compiled.ok)
+      expect(compiled.dataset.components[0].supplierId).toBe(
+        original.source.slice("supplier:".length),
+      );
+    const withoutPrimary = deleteEdge(connected.document, original.id);
+    const invalid = compileGraph(withoutPrimary);
+    expect(invalid.ok).toBe(false);
+    if (!invalid.ok)
+      expect(
+        invalid.issues.some(
+          (issue) =>
+            issue.nodeKey === nodeKey(comp) &&
+            issue.field === "primarySupplier",
+        ),
+      ).toBe(true);
   });
 
   it("defaults new BOM quantity to empty string (compile blocker) and bumps revision on connect/delete", () => {

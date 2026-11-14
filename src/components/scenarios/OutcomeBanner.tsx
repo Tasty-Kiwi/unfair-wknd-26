@@ -1,5 +1,6 @@
 import { ArrowRight, Check } from "lucide-react";
 import type { Dataset, Scenario, SimulationResult } from "@/lib/types";
+import { causeReceipt } from "@/lib/receipts";
 
 const money = (n: number) =>
   new Intl.NumberFormat("en-IE", {
@@ -107,7 +108,8 @@ export function OutcomeBanner({
   const line = order.lines.find((l) => l.shortage > 0)!;
   const component = data.components.find((c) => c.id === line.componentId);
   const customer = data.orders.find((o) => o.id === order.orderId)?.customer;
-  const late = line.lateDeliveries[0];
+  // Blame the receipt that was moved, not whichever late receipt is listed first.
+  const late = causeReceipt(data, line.lateDeliveries);
   const planned = late
     ? data.deliveries.find((d) => d.id === late.id)
     : undefined;

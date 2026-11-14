@@ -1,5 +1,6 @@
 import { useId } from "react";
 import type { Dataset, OrderResult, SimulationResult } from "@/lib/types";
+import { nextReceipt } from "@/lib/receipts";
 
 const day = (iso: string) =>
   new Intl.DateTimeFormat("en-GB", {
@@ -49,7 +50,8 @@ export function ShortageExplanation({
     .filter((o) => o.qty > 0);
   const reserved = earlier.reduce((n, o) => n + o.qty, 0);
   const available = reserved + line.allocated;
-  const late = line.lateDeliveries[0];
+  // The receipt that lands next, by date: lateDeliveries follow dataset order.
+  const late = nextReceipt(line.lateDeliveries);
   const supplier = late
     ? data.suppliers.find((s) => s.id === late.supplierId)?.name
     : undefined;

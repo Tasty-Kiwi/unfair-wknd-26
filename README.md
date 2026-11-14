@@ -4,7 +4,7 @@
 
 A manufacturing material-availability simulator built for the Unfair Weekend 2026 hackathon. Change a supplier receipt, trace the affected customer order, and test an approved alternative in under a minute.
 
-The public app opens with the landing page at `/`, followed by the project library at `/projects`. Open the fictional demo, or choose **New project** to import JSON/CSV or start a blank network. Each local project opens at `/projects/:id` and autosaves separately. `/demo` opens the session-only simulator directly; `/landing` is a landing alias and `/?builder=1` opens the compatible device-draft builder. These routes are live on the [public site](https://domino-os.tasty-kiwi.workers.dev/), verified against `b3ced29` on 14 November. This review branch is not deployed. The public URL keeps the legacy `domino-os` hostname; no Needtrace domain is claimed here. Cloud is indefinitely deferred; this release is browser-only. See [release status](docs/NEEDTRACE_RELEASE.md) and [final acceptance evidence](docs/FINAL_PRODUCT_ACCEPTANCE.md).
+The app opens with the landing page at `/`, followed by the project library at `/projects`. Open the fictional demo, or choose **New project** to import JSON/CSV or start a blank network. Each local project opens at `/projects/:id` and autosaves separately. `/demo` opens the editable Northstar project in Simulate view; `/landing` is a landing alias and `/?builder=1` opens the compatible device-draft builder. The [public site](https://domino-os.tasty-kiwi.workers.dev/) was verified against `b3ced29` on 14 November. The editable-demo changes described here are local and have not been deployed. The public URL keeps the legacy `domino-os` hostname; no Needtrace domain is claimed here. Cloud is indefinitely deferred; this release is browser-only. See [release status](docs/NEEDTRACE_RELEASE.md) and [final acceptance evidence](docs/FINAL_PRODUCT_ACCEPTANCE.md).
 
 Designed for a small manufacturer building a material network or testing a spreadsheet plan without a full planning-system rollout. This buyer segment and willingness to pay are hypotheses; no customer validation or measured savings are claimed. See [commercial narrative](docs/PITCH.md) and [human validation playbook](docs/VALIDATION_PLAYBOOK.md).
 
@@ -28,7 +28,7 @@ npm run preview
 
 ## Deploy on Cloudflare Workers
 
-The production public link currently serves the guest app with cloud features disabled. The retained optional backend is disabled by default; an older staging deployment is historical evidence, not a demo dependency. New projects save locally, including dataset imports and scenario changes. The standalone `/demo` simulator remains session-only: export a report before leaving it and keep source files for reimport. Resetting an imported plan requires confirmation. Product CSV imports without a BOM retain matching products' existing BOMs; the preview and active plan disclose this. To redeploy from this checkout:
+The production public link currently serves the guest app with cloud features disabled. The retained optional backend is disabled by default; an older staging deployment is historical evidence, not a demo dependency. New projects save locally, including dataset imports and scenario changes. In this checkout, `/demo` is an editable project with local autosave. Export workspace JSON for a portable backup. Resetting an imported plan requires confirmation. Product CSV imports without a BOM retain matching products' existing BOMs; the preview and active plan disclose this. To redeploy from this checkout:
 
 ```sh
 npx wrangler login
@@ -39,13 +39,13 @@ npm run deploy
 
 ## Demonstrate
 
-Open `/demo` for the session-only fictional demonstration. From `/`, **Open projects** → **Open demo project** also reaches it. To use your own plan, choose **New project**: import one workspace/dataset/report JSON or up to five CSV tables, review the preview, name the project, and create it. **Start blank** opens a separate network builder. The library also shows an existing device draft without migrating or replacing it. Local projects stay in this browser on this device; export JSON for a portable backup. The demo itself does not autosave; **Edit this network** creates a saved local copy of its active data and scenario.
+Open `/demo` for the editable fictional demonstration. Its previous edits and imports are restored; use **Reset demo** and confirm **Reset to fictional demo** before a fresh rehearsal. From `/`, **Open projects** → **Open demo project** also reaches it. To use your own plan, choose **New project**: import one workspace/dataset/report JSON or up to five CSV tables, review the preview, name the project, and create it. **Start blank** opens a separate network builder. The library also shows an existing device draft without migrating or replacing it. Local projects stay in this browser on this device; export JSON for a portable backup. The demo uses its own saved workspace. **Build** edits the same graph; **Simulate** returns to the same rich simulation surface. If device storage is unavailable, the demo remains usable with an explicit save warning and JSON export.
 
 1. Start with **Normal operations**: 10 customer orders, zero shortages.
 2. Click **Supplier disruption**, or pick **Latest safe** (22 Nov) then **First short** (23 Nov) under _Land on_. You can also drag PO-101 on the dated timeline. The motor receipt moves from November 17 to November 23. ORD-102 needs four motors on November 22; two remain after ORD-101 reserves six of the eight in stock. The result is one order at risk, two missing motors, and €36,000 of fictional order value exposed.
 3. Under **Ways to recover**, compare restoring PO-101 timing with using Vector Components. Each option is calculated independently against the current scenario. Supplier confirmation, price and freight remain assumptions; this is not a cost optimizer.
 4. Apply **Use Vector Components**. Two approved motors available November 18 cover ORD-102. The original receipt remains delayed. No purchase is placed or supplier contacted.
-5. Click a graph node for its relationships, or an order to inspect component allocations. **Scenarios side by side** compares three fixed scenarios; **Export report** downloads current inputs and results. **Reset demo** restores all original data.
+5. Click a graph node for its relationships, or an order to inspect component allocations. **Scenarios side by side** compares three fixed scenarios; **Export report** downloads current inputs and results. **Reset demo** asks before restoring the original data and saved scenarios.
 
 A second disruption: reset, choose receipt **PO-102** (control board), and shift its receipt to November 25. ORD-103 and ORD-106 become at risk, with eight missing boards. Select **Control board** above the map or use **Full network**.
 
@@ -53,9 +53,9 @@ See [DEMO_SCRIPT.md](DEMO_SCRIPT.md) for the 60-second spoken walkthrough.
 
 ## Build a network
 
-Choose **Edit this network** in the simulator to create a local editable project from the active dataset and scenario, or choose **Build a network** to open the existing device draft. In the editor's File menu, **Northstar demo** opens the complete fictional demo, including its approved alternative and saved baseline, disruption and recovery scenarios. **Core example** is a smaller motor example for learning the connection tools.
+Choose **Build** in the demo or any project to edit its network in place, then **Simulate** to inspect it. Dataset projects also open in this editor: existing dataset projects are converted in place, retaining their address, active scenario, provenance and original dataset payload. `/?builder=1` still opens the separate legacy device draft. In the editor's File menu, **Northstar demo** opens the complete fictional demo, including its approved alternative and saved baseline, disruption and recovery scenarios. **Core example** is a smaller motor example for learning the connection tools.
 
-Add suppliers, components, receipts, products and customer orders, then connect their typed handles or use the connection form. Enter initial stock and the quantity required on each component-to-product BOM connection. **Check network** lists missing fields and relationships; **Run simulation** uses the same validated dataset and allocation engine as the simulator.
+Add suppliers, components, receipts, products and customer orders, then connect their typed handles or use the connection form. A component can connect to multiple suppliers; its inspector selects the primary. Supplier associations add no units: opening stock, explicit receipts and approved alternatives provide the supply. Each receipt still has exactly one supplier and one component. Enter initial stock and the quantity required on each component-to-product BOM connection. **Check network** lists missing fields and relationships; **Run simulation** uses the same validated dataset and allocation engine as the simulator.
 
 Use the alternative catalog to edit supplier, component, approved product scope, quantity, availability date and approval. Alternative IDs remain stable. Simulate, save named scenarios, change receipt dates and quantities, compare against baseline, and apply approved recovery. Material edits require explicit **Revalidate scenario** before older scenarios can run; invalid alternative uses remain visible for review or removal.
 
@@ -98,7 +98,7 @@ Use **Import data**. Downloadable example JSON and CSV are available in the impo
 
 - Dates must be real ISO calendar dates, `YYYY-MM-DD`, on or after `asOf`. Counts must be nonnegative integers; BOM and order quantities must be positive. References, duplicate IDs, approval and product scope are checked using Zod plus semantic validation.
 - Each file is limited to 2 MB (one JSON or up to five CSVs). A rejected file leaves the current data and scenario unchanged. Imported plans get illustrative six-day disruption and recovery presets derived from their first receipt; these do not guarantee that a particular imported order will be affected or recovered.
-- JSON/CSV projects created from `/projects` save their dataset and scenario locally across refreshes. The standalone `/demo` import path remains in memory; refresh resets it. Export a report for a portable record; report JSON can be imported as a new project. These actions stay on this device and do not upload data.
+- JSON/CSV projects created from `/projects` save their dataset and scenario locally across refreshes. The `/demo` import path saves in its own editable workspace too; refresh restores it. Export a report for a portable record; report JSON can be imported as a new project. These actions stay on this device and do not upload data.
 
 ## Cloud backend — indefinitely deferred
 

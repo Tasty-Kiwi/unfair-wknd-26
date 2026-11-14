@@ -6,10 +6,7 @@ const builderFor = (page: Page) =>
   page.getByRole("main", { name: "Supply chain builder" });
 
 async function openBuilder(page: Page) {
-  await page.goto("/demo");
-  await page
-    .getByRole("button", { name: "Build a network", exact: true })
-    .click();
+  await page.goto("/?builder=1");
   const builder = builderFor(page);
   await expect(builder).toBeVisible();
   return builder;
@@ -195,6 +192,9 @@ test("blank graph -> named motor disruption -> baseline comparison -> reload and
   const ids = await buildMotor(page, builder);
   await page.screenshot({ path: ".tmp/builder-laptop.png", fullPage: true });
   const scenarioValue = await motorScenario(builder);
+  await builder
+    .getByRole("button", { name: "Full allocation evidence" })
+    .click();
 
   const evidence = builder.getByRole("region", {
     name: "Order allocation evidence",
@@ -208,7 +208,7 @@ test("blank graph -> named motor disruption -> baseline comparison -> reload and
     .getByRole("button", { name: "Compare with baseline", exact: true })
     .click();
   const rows = builder
-    .getByRole("region", { name: "Baseline comparison" })
+    .getByRole("region", { name: "Scenarios side by side" })
     .locator("tbody tr");
   await expect(rows.nth(0).locator("td").nth(1)).toHaveText("0");
   await expect(rows.nth(1).locator("td").nth(1)).toHaveText("2");
@@ -418,11 +418,9 @@ test("legacy imported plan and disruption survive entering and returning from Bu
     .click();
   const summary = page.getByRole("region", { name: "Simulation summary" });
   const before = (await summary.textContent())!;
-  await page
-    .getByRole("button", { name: "Build a network", exact: true })
-    .click();
+  await page.getByRole("button", { name: "Build", exact: true }).click();
   await builderFor(page)
-    .getByRole("button", { name: "Back to demo", exact: true })
+    .getByRole("button", { name: "Simulate", exact: true })
     .click();
   await expect(summary).toHaveText(before);
   await expect(

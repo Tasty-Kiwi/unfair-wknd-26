@@ -3,13 +3,22 @@ import {
   ArrowLeft,
   Check,
   CircleAlert,
+  CircleHelp,
   Download,
   LoaderCircle,
+  RotateCcw,
   Save,
   Upload,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { AccountControls } from "@/components/account/AccountControls";
 import { CloudStatus } from "@/components/cloud/CloudStatus";
 import { CloudProjectsDialog } from "@/components/cloud/CloudProjectsDialog";
@@ -26,12 +35,33 @@ import {
 import { BuildWorkspace } from "./BuildWorkspace";
 import { AlternativeCatalogEditor } from "./AlternativeCatalogEditor";
 import { datasetToWorkspace } from "@/lib/builder/workspaceFromDataset";
-import { demoData, NORMAL_SCENARIO, DISRUPTION_SCENARIO, RECOVERY_SCENARIO } from "@/data/demo";
+import {
+  demoData,
+  NORMAL_SCENARIO,
+  DISRUPTION_SCENARIO,
+  RECOVERY_SCENARIO,
+} from "@/data/demo";
 import { prepareProjectImport } from "@/lib/projects";
 import { presetsFor } from "@/lib/scenarioPresets";
-import { fictionalProvenance, provenanceAfterImport } from "@/lib/provenance";
-import { RecoveryComparison } from "@/components/scenarios/RecoveryComparison";
+import {
+  fictionalProvenance,
+  provenanceAfterImport,
+  provenanceLabel,
+} from "@/lib/provenance";
 import { NamedScenarios } from "@/components/scenarios/NamedScenarios";
+import {
+  SimulationSurface,
+  type ComparisonRow,
+} from "@/components/simulation/SimulationSurface";
+import {
+  ImportDataDialog,
+  type PendingImport,
+} from "@/components/simulation/ImportDataDialog";
+import {
+  scenarioReport,
+  scenarioInputsKey,
+} from "@/components/simulation/format";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import {
   createBlankDocument,
   createCoreExample,
@@ -57,15 +87,18 @@ import type {
 } from "@/lib/builder/types";
 import { parseScenario } from "@/lib/validation";
 import { simulate } from "@/lib/simulation";
-import { withReceiptDate } from "@/lib/receipts";
-import { SupplyGraph, type Selection } from "@/components/graph/SupplyGraph";
-import { ScenarioPanel } from "@/components/scenarios/ScenarioPanel";
-import { ImpactPanel } from "@/components/scenarios/ImpactPanel";
 import { DATASET_TABLES, type Scenario } from "@/lib/types";
 import { ThemeToggle } from "@/components/theme/ThemeToggle";
 import { ToolbarPopover } from "./ToolbarPopover";
 import "./experience.css";
 import "./workspace.css";
+
+/** Saved Northstar scenarios offered as the simulator's fixed presets, in guest-journey order. */
+const NORTHSTAR_PRESETS = [
+  { id: "normal", label: "Normal operations" },
+  { id: "motor-delay", label: "Supplier disruption" },
+  { id: "recovery", label: "Approved recovery" },
+];
 
 const BASELINE: Scenario = {
   id: "builder-baseline",
@@ -73,12 +106,6 @@ const BASELINE: Scenario = {
   deliveryOverrides: [],
   alternatives: [],
 };
-const money = (value: number) =>
-  new Intl.NumberFormat("en-IE", {
-    style: "currency",
-    currency: "EUR",
-    maximumFractionDigits: 0,
-  }).format(value);
 const message = (error: unknown) =>
   error instanceof Error ? error.message : "Unable to complete this action.";
 const clone = <T,>(value: T): T => structuredClone(value);
@@ -103,28 +130,40 @@ export function BuilderExperience({
   registerNavigationGuard,
   storageKey = WORKSPACE_STORAGE_KEY,
   closeLabel = "Back to demo",
+  initialView = "build",
+  fallbackWorkspace,
+  initialSaveError,
+  demoProject = false,
 }: {
   onClose: () => void;
   registerNavigationGuard?: (guard: () => boolean) => () => void;
   storageKey?: string;
   closeLabel?: string;
+  initialView?: "build" | "simulate";
+  fallbackWorkspace?: BuilderWorkspaceV1;
+  initialSaveError?: string;
+  demoProject?: boolean;
 }) {
   const [initial] = useState(() => loadWorkspace(undefined, storageKey));
   const [workspace, setWorkspace] = useState<BuilderWorkspaceV1>(
-    () => initial.workspace ?? blank(),
+    () => initial.workspace ?? fallbackWorkspace ?? blank(),
   );
   const latest = useRef(workspace);
   const lastSaved = useRef<BuilderWorkspaceV1 | null>(initial.workspace);
-  const [allowSave, setAllowSave] = useState(!initial.error);
+  const [allowSave, setAllowSave] = useState(
+    !initial.error && !initialSaveError,
+  );
   const [saveStatus, setSaveStatus] = useState(
     initial.workspace ? "Restored locally" : "Not saved locally",
   );
-  const [error, setError] = useState(initial.error ?? "");
+  const [error, setError] = useState(initial.error ?? initialSaveError ?? "");
   const [notice, setNotice] = useState("");
   const [validationRequested, setValidationRequested] = useState(false);
-  const [view, setView] = useState<"build" | "simulate">("build");
-  const [selection, setSelection] = useState<Selection | null>(null);
-  const [compare, setCompare] = useState(false);
+  const [view, setView] = useState<"build" | "simulate">(initialView);
+  const [assumptionsOpen, setAssumptionsOpen] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
+  const [resetOpen, setResetOpen] = useState(false);
+  const [comparisonRequest, setComparisonRequest] = useState(0);
   const [canvasSession, setCanvasSession] = useState(0);
   const [importing, setImporting] = useState(false);
   const importInput = useRef<HTMLInputElement>(null);
@@ -176,6 +215,8 @@ export function BuilderExperience({
     guestDraftKey: storageKey,
   });
   const draftKey = cloud.draftKey;
+  const draftKeyRef = useRef(draftKey);
+  draftKeyRef.current = draftKey;
   const boundProjectId = cloud.binding?.projectId ?? null;
   const cloudGuard = useRef(cloud.binding);
   cloudGuard.current = cloud.binding;
@@ -239,6 +280,18 @@ export function BuilderExperience({
 
   useEffect(() => {
     const guard = (event: BeforeUnloadEvent) => {
+      if (latest.current !== lastSaved.current && allowSaveRef.current) {
+        const saved = saveWorkspace(
+          latest.current,
+          undefined,
+          draftKeyRef.current,
+        );
+        if (saved.ok) lastSaved.current = latest.current;
+        else {
+          setSaveStatus("Changes not saved");
+          setError(saved.error);
+        }
+      }
       if (latest.current === lastSaved.current && !hasCloudChanges()) return;
       event.preventDefault();
       event.returnValue = "";
@@ -277,7 +330,6 @@ export function BuilderExperience({
 
   function updateDocument(document: BuilderDocument) {
     change((previous) => ({ ...previous, document }));
-    setSelection(null);
     setError("");
   }
 
@@ -307,21 +359,75 @@ export function BuilderExperience({
     }
   }
 
-  function updateScenario(next: Scenario) {
-    if (!compiled.ok || !record || !current) return;
+  /** Validates a scenario change against the current network. With no saved or working scenario, a change creates one. */
+  function updateScenario(next: Scenario): boolean {
+    if (!compiled.ok) return false;
+    const matching =
+      next.id === "custom"
+        ? workspace.scenarios.find(
+            (item) =>
+              isScenarioCurrent(item, compiled.networkKey) &&
+              scenarioInputsKey(item.scenario) === scenarioInputsKey(next),
+          )
+        : undefined;
+    if (matching) {
+      change((previous) => ({
+        ...previous,
+        selectedScenarioId: matching.scenario.id,
+        workingScenario: clone(matching),
+      }));
+      setError("");
+      return true;
+    }
+    if (!record) {
+      try {
+        const created = revalidateScenario(
+          compiled.dataset,
+          compiled.networkKey,
+          {
+            scenario: {
+              ...next,
+              id: crypto.randomUUID(),
+              name: next.id === BASELINE.id ? "New scenario" : next.name,
+            },
+            validatedNetworkKey: null,
+          },
+        );
+        change((previous) => ({
+          ...previous,
+          selectedScenarioId: null,
+          workingScenario: created,
+        }));
+        setError("");
+        return true;
+      } catch (caught) {
+        setError(message(caught));
+        return false;
+      }
+    }
+    if (!current) return false;
     try {
       const validated = revalidateScenario(
         compiled.dataset,
         compiled.networkKey,
-        { ...record, scenario: next },
+        {
+          ...record,
+          scenario: {
+            ...next,
+            id: record.scenario.id,
+            name: record.scenario.name,
+          },
+        },
       );
       change((previous) => ({
         ...previous,
         workingScenario: validated,
       }));
       setError("");
+      return true;
     } catch (caught) {
       setError(message(caught));
+      return false;
     }
   }
 
@@ -364,6 +470,10 @@ export function BuilderExperience({
   function canSwitchScenario() {
     return (
       !scenarioDirty ||
+      workspace.scenarios.some(
+        (item) =>
+          scenarioInputsKey(item.scenario) === scenarioInputsKey(scenario),
+      ) ||
       window.confirm(
         "Discard unsaved scenario changes? Cancel to keep editing, then Save scenario to keep them.",
       )
@@ -441,8 +551,6 @@ export function BuilderExperience({
     setSaveAllowed(allow);
     setCanvasSession((session) => session + 1);
     setView("build");
-    setSelection(null);
-    setCompare(false);
     setError(note);
   }
 
@@ -461,6 +569,7 @@ export function BuilderExperience({
   function saveLocal() {
     if (
       !allowSave &&
+      initial.error &&
       !window.confirm(
         "Replace the unreadable saved workspace with this draft? Export any data you need first.",
       )
@@ -505,8 +614,9 @@ export function BuilderExperience({
   }, [registerNavigationGuard, workspace, allowSave, draftKey]);
 
   // New blank, example and import all come through here. They detach any cloud binding.
-  function replace(next: BuilderWorkspaceV1) {
-    if (replaceNeedsConfirm() && !window.confirm(REPLACE_MESSAGE)) return false;
+  function replace(next: BuilderWorkspaceV1, confirmed = false) {
+    if (!confirmed && replaceNeedsConfirm() && !window.confirm(REPLACE_MESSAGE))
+      return false;
     if (!cloud.detachForReplace()) return false;
     adopt(next, true);
     return true;
@@ -521,35 +631,96 @@ export function BuilderExperience({
   }
 
   function loadDemoExample() {
-    return replace(datasetToWorkspace(demoData, {
-      scenarios: [NORMAL_SCENARIO, DISRUPTION_SCENARIO, RECOVERY_SCENARIO],
-      scenario: NORMAL_SCENARIO,
-      origin: "fictional",
-    }));
+    return replace(
+      datasetToWorkspace(demoData, {
+        scenarios: [NORMAL_SCENARIO, DISRUPTION_SCENARIO, RECOVERY_SCENARIO],
+        scenario: NORMAL_SCENARIO,
+        origin: "fictional",
+      }),
+    );
+  }
+
+  /** Applies a reviewed import preview to the editor. Replacement still confirms first when work would be lost. */
+  function applyImportedDataset(pending: PendingImport) {
+    try {
+      const presets = presetsFor(pending.data);
+      const next = datasetToWorkspace(pending.data, {
+        scenario: { ...presets[0], id: `editable-${crypto.randomUUID()}` },
+        scenarios: presets,
+        origin: pending.provenance.kind,
+      });
+      next.source.provenance = pending.provenance;
+      next.source.retainedProductBoms = pending.replacedTables.includes(
+        "products",
+      )
+        ? pending.retainedProductBoms
+        : (workspace.source.retainedProductBoms ?? false);
+      if (
+        replace(
+          { ...next, source: { ...next.source, openedFromFile: true } },
+          true,
+        )
+      ) {
+        setView("simulate");
+        setNotice(
+          `Imported ${pending.fileNames.join(", ")}. ${pending.provenance.kind === "mixed" ? "Mixed demo and imported data" : "Imported data"} is active with ${pending.data.orders.length} orders.`,
+        );
+      }
+    } catch (caught) {
+      setError(message(caught));
+    }
   }
 
   function exportSimulation(kind: "dataset" | "report") {
     if (!compiled.ok) return;
     try {
       if (kind === "report" && !assessment?.result)
-        throw new Error("Run and revalidate the scenario before exporting a report.");
-      const value = kind === "dataset" ? compiled.dataset : {
-        inputs: compiled.dataset,
-        scenario: assessment!.scenario,
-        result: assessment!.result,
-        application: "Needtrace",
-        dataset: compiled.dataset.name,
-        policy: "Partial component reservations, earliest required date then order ID; material availability only.",
-        comparison: workspace.scenarios
-          .filter((item) => isScenarioCurrent(item, compiled.networkKey))
-          .map((item) => simulate(compiled.dataset, item.scenario)),
-        dataProvenance: sourceProvenance(),
-        retainedProductBoms: workspace.source.retainedProductBoms ?? false,
-      };
-      const url = URL.createObjectURL(new Blob([JSON.stringify(value, null, 2)], { type: "application/json" }));
+        throw new Error(
+          "Run and revalidate the scenario before exporting a report.",
+        );
+      const value =
+        kind === "dataset"
+          ? compiled.dataset
+          : scenarioReport({
+              data: compiled.dataset,
+              provenance: sourceProvenance(),
+              retainedProductBoms:
+                workspace.source.retainedProductBoms ?? false,
+              scenario: assessment!.scenario!,
+              result: assessment!.result!,
+              comparison: [
+                ...fixedPresets,
+                ...workspace.scenarios
+                  .filter(
+                    (item) =>
+                      isScenarioCurrent(item, compiled.networkKey) &&
+                      !fixedPresets.some(
+                        (preset) =>
+                          scenarioInputsKey(preset) ===
+                          scenarioInputsKey(item.scenario),
+                      ),
+                  )
+                  .map((item) => item.scenario),
+              ].map((item) => simulate(compiled.dataset, item)),
+              comparisonUnavailable: workspace.scenarios
+                .filter((item) => !isScenarioCurrent(item, compiled.networkKey))
+                .map((item) => ({
+                  id: item.scenario.id,
+                  name: item.scenario.name,
+                  reason: "Requires review against the changed network",
+                })),
+            });
+      const url = URL.createObjectURL(
+        new Blob([JSON.stringify(value, null, 2)], {
+          type: "application/json",
+        }),
+      );
       const link = document.createElement("a");
       link.href = url;
-      link.download = kind === "report" ? "needtrace-scenario-report.json" : "needtrace-dataset.json";
+      link.download =
+        kind === "report"
+          ? "needtrace-scenario-report.json"
+          : "needtrace-dataset.json";
       link.click();
       window.setTimeout(() => URL.revokeObjectURL(url), 1000);
       setError("");
@@ -559,10 +730,12 @@ export function BuilderExperience({
   }
 
   function sourceProvenance() {
-    return workspace.source.provenance ??
+    return (
+      workspace.source.provenance ??
       (workspace.source.origin === "fictional"
         ? fictionalProvenance()
-        : provenanceAfterImport(fictionalProvenance(), DATASET_TABLES));
+        : provenanceAfterImport(fictionalProvenance(), DATASET_TABLES))
+    );
   }
 
   function exportJson() {
@@ -586,21 +759,41 @@ export function BuilderExperience({
     const captured = latest.current;
     setImporting(true);
     try {
-      if (files.length > 5 || files.some(file => file.size > MAX_WORKSPACE_BYTES))
-        throw new Error("Choose one JSON file or up to five CSV files, each smaller than 2 MB.");
-      const inputs = await Promise.all(files.map(async file => ({
-        name: /\.(json|csv)$/i.test(file.name) ? file.name : `${file.name}.json`,
-        text: await file.text(),
-      })));
-      const imported = prepareProjectImport(inputs, compiled.ok ? {
-        data: compiled.dataset,
-        provenance: sourceProvenance(),
-      } : undefined);
-      const next = imported.kind === "workspace" ? imported.workspace : datasetToWorkspace(imported.state.data, {
-        scenario: { ...imported.state.scenario, id: `editable-${crypto.randomUUID()}` },
-        scenarios: presetsFor(imported.state.data),
-        origin: imported.state.provenance.kind,
-      });
+      if (
+        files.length > 5 ||
+        files.some((file) => file.size > MAX_WORKSPACE_BYTES)
+      )
+        throw new Error(
+          "Choose one JSON file or up to five CSV files, each smaller than 2 MB.",
+        );
+      const inputs = await Promise.all(
+        files.map(async (file) => ({
+          name: /\.(json|csv)$/i.test(file.name)
+            ? file.name
+            : `${file.name}.json`,
+          text: await file.text(),
+        })),
+      );
+      const imported = prepareProjectImport(
+        inputs,
+        compiled.ok
+          ? {
+              data: compiled.dataset,
+              provenance: sourceProvenance(),
+            }
+          : undefined,
+      );
+      const next =
+        imported.kind === "workspace"
+          ? imported.workspace
+          : datasetToWorkspace(imported.state.data, {
+              scenario: {
+                ...imported.state.scenario,
+                id: `editable-${crypto.randomUUID()}`,
+              },
+              scenarios: presetsFor(imported.state.data),
+              origin: imported.state.provenance.kind,
+            });
       if (imported.kind === "dataset") {
         next.source.provenance = imported.state.provenance;
         next.source.retainedProductBoms = imported.state.retainedProductBoms;
@@ -618,13 +811,9 @@ export function BuilderExperience({
   }
 
   const source =
-    workspace.source.origin === "fictional"
-      ? "Fictional example"
-      : workspace.source.origin === "imported"
-        ? "Imported data"
-        : workspace.source.origin === "mixed"
-          ? "Mixed demo + imported data"
-      : "Authored in builder";
+    workspace.source.origin === "authored"
+      ? "Authored in builder"
+      : provenanceLabel(sourceProvenance().kind);
   const issues = compiled.ok ? [] : compiled.issues;
   const namedScenarios = (
     <NamedScenarios
@@ -647,11 +836,121 @@ export function BuilderExperience({
       onSave={saveScenario}
       onSelect={selectScenario}
       onCompare={() => {
-        setCompare(true);
         run();
+        setComparisonRequest((value) => value + 1);
       }}
     />
   );
+  const fixedPresets = compiled.ok
+    ? presetsFor(compiled.dataset).slice(
+        0,
+        compiled.dataset.deliveries.length ? 3 : 1,
+      )
+    : [];
+  const activePreset = fixedPresets.findIndex(
+    (preset) => scenarioInputsKey(preset) === scenarioInputsKey(scenario),
+  );
+  function choosePreset(index: number) {
+    if (!compiled.ok) return;
+    const preset = fixedPresets[index];
+    if (!preset || !canSwitchScenario()) return;
+    const saved = workspace.scenarios.find(
+      (item) =>
+        isScenarioCurrent(item, compiled.networkKey) &&
+        scenarioInputsKey(item.scenario) === scenarioInputsKey(preset),
+    );
+    const next = saved
+      ? clone(saved)
+      : revalidateScenario(compiled.dataset, compiled.networkKey, {
+          scenario: {
+            ...preset,
+            id: crypto.randomUUID(),
+            name: NORTHSTAR_PRESETS[index].label,
+          },
+          validatedNetworkKey: null,
+        });
+    change((previous) => ({
+      ...previous,
+      selectedScenarioId: saved?.scenario.id ?? null,
+      workingScenario: next,
+    }));
+    setError("");
+  }
+  const presetToggle =
+    fixedPresets.length > 0 ? (
+      <ToggleGroup
+        type="single"
+        className="scenario-switch"
+        value={activePreset < 0 ? "custom" : String(activePreset)}
+        onValueChange={(value) => {
+          if (value && value !== "custom") choosePreset(Number(value));
+        }}
+        aria-label="Scenario presets"
+      >
+        {fixedPresets.map((_, index) => (
+          <ToggleGroupItem key={index} value={String(index)}>
+            {NORTHSTAR_PRESETS[index].label}
+          </ToggleGroupItem>
+        ))}
+        {activePreset < 0 && (
+          <ToggleGroupItem value="custom">Custom</ToggleGroupItem>
+        )}
+      </ToggleGroup>
+    ) : null;
+  const comparisonRows: ComparisonRow[] =
+    compiled.ok && assessment?.result
+      ? [
+          ...fixedPresets.map((preset, index) => ({
+            key: `preset:${index}`,
+            name: NORTHSTAR_PRESETS[index].label,
+            summary: simulate(compiled.dataset, preset).summary,
+            current: activePreset === index,
+            onShow: () => choosePreset(index),
+          })),
+          ...(activePreset < 0
+            ? [
+                {
+                  key: "working",
+                  name:
+                    scenario.name + (scenarioDirty ? " (unsaved changes)" : ""),
+                  summary: assessment.result.summary,
+                  current: true,
+                },
+              ]
+            : []),
+          ...workspace.scenarios
+            .filter(
+              (item) =>
+                !isScenarioCurrent(item, compiled.networkKey) ||
+                (item.scenario.id !== record?.scenario.id &&
+                  !fixedPresets.some(
+                    (preset) =>
+                      scenarioInputsKey(preset) ===
+                      scenarioInputsKey(item.scenario),
+                  )),
+            )
+            .map((item) => ({
+              key: `saved:${item.scenario.id}`,
+              name: item.scenario.name,
+              summary: isScenarioCurrent(item, compiled.networkKey)
+                ? simulate(compiled.dataset, item.scenario).summary
+                : null,
+              unavailableReason: "Requires review against the changed network",
+              current: false,
+              onShow: () => selectScenario(item.scenario.id),
+            })),
+        ]
+      : [];
+  function testDelay() {
+    if (!compiled.ok) return;
+    // The disruption preset is derived from the network's first receipt, so it works for any valid network.
+    const delay = presetsFor(compiled.dataset)[1];
+    updateScenario({
+      ...scenario,
+      deliveryOverrides: delay.deliveryOverrides,
+      alternatives: [],
+    });
+  }
   const untouchedBlank =
     !workspace.document.name.trim() &&
     !workspace.document.asOf &&
@@ -660,17 +959,32 @@ export function BuilderExperience({
   return (
     <main className="builder-experience" aria-label="Supply chain builder">
       <header className="builder-bar">
-        <img
+        <a
           className="builder-bar__mark"
-          src="/favicon.svg"
-          width="26"
-          height="26"
-          alt=""
-        />
+          href="/"
+          aria-label="Needtrace home"
+          onClick={(event) => {
+            if (
+              event.ctrlKey ||
+              event.metaKey ||
+              event.shiftKey ||
+              event.altKey
+            )
+              return;
+            event.preventDefault();
+            if (prepareClose()) window.location.assign("/");
+          }}
+        >
+          <img src="/favicon.svg" width="26" height="26" alt="" />
+        </a>
         <div className="builder-bar__title">
-          <h1>{workspace.document.name || "Build a network"}</h1>
+          {view === "build" ? (
+            <h1>{workspace.document.name || "Build a network"}</h1>
+          ) : (
+            <h2>{workspace.document.name || "Build a network"}</h2>
+          )}
           <p className="builder-experience__source">
-            Needtrace · {source}
+            Needtrace · <span>{source}</span>
             {workspace.source.openedFromFile ? " · Imported workspace" : ""}
           </p>
         </div>
@@ -696,6 +1010,39 @@ export function BuilderExperience({
             Simulate
           </Button>
         </div>
+        {view === "simulate" && (
+          <>
+            {demoProject && (
+              <Button
+                variant="outline"
+                size="sm"
+                title="Reset demo"
+                onClick={() => setResetOpen(true)}
+              >
+                <RotateCcw data-icon="inline-start" />
+                <span className="label-narrow">Reset demo</span>
+              </Button>
+            )}
+            <Button
+              variant="outline"
+              size="sm"
+              title="Import data"
+              onClick={() => setImportOpen(true)}
+            >
+              <Upload data-icon="inline-start" />
+              <span className="label-narrow">Import data</span>
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              title="Model assumptions"
+              onClick={() => setAssumptionsOpen(true)}
+            >
+              <CircleHelp data-icon="inline-start" />
+              <span className="label-wide">Assumptions</span>
+            </Button>
+          </>
+        )}
         {view === "build" && (
           <ToolbarPopover
             className="builder-bar__scenario"
@@ -744,7 +1091,12 @@ export function BuilderExperience({
           )}
         </span>
         <ToolbarPopover label="Alternatives" className="builder-alternatives">
-          {() => <AlternativeCatalogEditor document={workspace.document} onDocumentChange={updateDocument} />}
+          {() => (
+            <AlternativeCatalogEditor
+              document={workspace.document}
+              onDocumentChange={updateDocument}
+            />
+          )}
         </ToolbarPopover>
         <ToolbarPopover
           className="builder-bar__file"
@@ -771,7 +1123,13 @@ export function BuilderExperience({
               >
                 Core example
               </button>
-              <button type="button" onClick={() => { closeMenu(); loadDemoExample(); }}>
+              <button
+                type="button"
+                onClick={() => {
+                  closeMenu();
+                  loadDemoExample();
+                }}
+              >
                 Northstar demo
               </button>
               <hr />
@@ -794,12 +1152,39 @@ export function BuilderExperience({
               >
                 <Download aria-hidden size={15} /> Export workspace JSON
               </button>
-                <p>Import workspace or dataset JSON, scenario reports, or CSV tables. CSV imports retain the current valid network’s other tables, or use the Northstar demo when this draft is incomplete.</p>
-              <button type="button" disabled={!compiled.ok} onClick={() => { closeMenu(); exportSimulation("dataset"); }}>
+              <p>
+                Import workspace or dataset JSON, scenario reports, or CSV
+                tables. CSV imports retain the current valid network’s other
+                tables, or use the Northstar demo when this draft is incomplete.
+              </p>
+              <button
+                type="button"
+                disabled={!compiled.ok}
+                onClick={() => {
+                  closeMenu();
+                  exportSimulation("dataset");
+                }}
+              >
                 Export dataset JSON
               </button>
-              <button type="button" disabled={!assessment?.result} onClick={() => { closeMenu(); exportSimulation("report"); }}>
+              <button
+                type="button"
+                disabled={!assessment?.result}
+                onClick={() => {
+                  closeMenu();
+                  exportSimulation("report");
+                }}
+              >
                 Export scenario report
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  closeMenu();
+                  setImportOpen(true);
+                }}
+              >
+                <Upload aria-hidden size={15} /> Import data…
               </button>
               <button
                 type="button"
@@ -910,10 +1295,27 @@ export function BuilderExperience({
         </Alert>
       )}
       {notice && (
-        <p role="status" className="builder-experience__notice">
+        <p role="status" className="builder-experience__notice notice">
           {notice}
         </p>
       )}
+      {workspace.source.retainedProductBoms && (
+        <p role="status" className="builder-experience__notice">
+          Product names and SKUs are imported; existing BOMs were retained and
+          may include fictional demo values. Import products and BOM together to
+          replace both.
+        </p>
+      )}
+      {!allowSave &&
+        (initial.error || initialSaveError) &&
+        error !== (initial.error ?? initialSaveError) && (
+          <Alert variant="destructive">
+            <AlertTitle>Changes not saved</AlertTitle>
+            <AlertDescription>
+              {initial.error ?? initialSaveError}
+            </AlertDescription>
+          </Alert>
+        )}
 
       {record && !current && (
         <section
@@ -1018,21 +1420,78 @@ export function BuilderExperience({
                   );
                 })}
                 {record.scenario.alternatives.map((use) => {
-                  const context = compiled.ok ? alternativeReviewContext(compiled.dataset, use.alternativeId) : null;
-                  const previous = record.alternativeSnapshots?.find(item => item.alternativeId === use.alternativeId);
-                  return <li key={`alternative:${use.alternativeId}`}>
-                    <p><strong>Alternative {use.alternativeId}</strong></p>
-                    {previous && <p>Previously validated: {previous.supplier.name} ({previous.supplier.id}) → {previous.component.name} ({previous.component.id})</p>}
-                    {context ? <>
-                      <p>Current catalog: {context.supplier.name} ({context.supplier.id}) → {context.component.name} ({context.component.id})</p>
-                      <p>{context.alternative.approved ? "Approved" : "Not approved"}; up to {context.alternative.quantity} units from {context.alternative.availableDate}. Product scope: {context.alternative.approvedProductIds.join(", ")}.</p>
-                    </> : <p>This alternative is missing or the network needs repair. Remove its use or repair the catalog before revalidating.</p>}
-                    <p>Scenario use: {use.quantity} units on {use.availableDate}</p>
-                    <Button variant="ghost" size="sm" onClick={() => change(previousWorkspace => ({
-                      ...previousWorkspace,
-                      workingScenario: { ...record, scenario: { ...record.scenario, alternatives: record.scenario.alternatives.filter(item => item.alternativeId !== use.alternativeId) } },
-                    }))}>Remove alternative {use.alternativeId}</Button>
-                  </li>;
+                  const context = compiled.ok
+                    ? alternativeReviewContext(
+                        compiled.dataset,
+                        use.alternativeId,
+                      )
+                    : null;
+                  const previous = record.alternativeSnapshots?.find(
+                    (item) => item.alternativeId === use.alternativeId,
+                  );
+                  return (
+                    <li key={`alternative:${use.alternativeId}`}>
+                      <p>
+                        <strong>Alternative {use.alternativeId}</strong>
+                      </p>
+                      {previous && (
+                        <p>
+                          Previously validated: {previous.supplier.name} (
+                          {previous.supplier.id}) → {previous.component.name} (
+                          {previous.component.id})
+                        </p>
+                      )}
+                      {context ? (
+                        <>
+                          <p>
+                            Current catalog: {context.supplier.name} (
+                            {context.supplier.id}) → {context.component.name} (
+                            {context.component.id})
+                          </p>
+                          <p>
+                            {context.alternative.approved
+                              ? "Approved"
+                              : "Not approved"}
+                            ; up to {context.alternative.quantity} units from{" "}
+                            {context.alternative.availableDate}. Product scope:{" "}
+                            {context.alternative.approvedProductIds.join(", ")}.
+                          </p>
+                        </>
+                      ) : (
+                        <p>
+                          This alternative is missing or the network needs
+                          repair. Remove its use or repair the catalog before
+                          revalidating.
+                        </p>
+                      )}
+                      <p>
+                        Scenario use: {use.quantity} units on{" "}
+                        {use.availableDate}
+                      </p>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() =>
+                          change((previousWorkspace) => ({
+                            ...previousWorkspace,
+                            workingScenario: {
+                              ...record,
+                              scenario: {
+                                ...record.scenario,
+                                alternatives:
+                                  record.scenario.alternatives.filter(
+                                    (item) =>
+                                      item.alternativeId !== use.alternativeId,
+                                  ),
+                              },
+                            },
+                          }))
+                        }
+                      >
+                        Remove alternative {use.alternativeId}
+                      </Button>
+                    </li>
+                  );
                 })}
               </ul>
               <Button
@@ -1073,124 +1532,27 @@ export function BuilderExperience({
         assessment.baseline &&
         assessment.scenario &&
         compiled.ok ? (
-        <div className="builder-experience__simulation">
-          <div className="builder-sim-scenarios">{namedScenarios}</div>
-          <section aria-label="Simulation summary" className="outcome-banner">
-            <div>
-              <h2>
-                {assessment.result.summary.atRiskOrders
-                  ? `${assessment.result.summary.atRiskOrders} order${assessment.result.summary.atRiskOrders === 1 ? "" : "s"} at risk due to material shortage`
-                  : "Every order has its required materials"}
-              </h2>
-              <p>
-                {scenario.name}
-                {scenarioDirty ? " — unsaved changes" : ""}.{" "}
-                {assessment.result.summary.missingUnits} component units
-                missing.
-              </p>
-            </div>
-          </section>
-          {compare && (
-            <section
-              aria-label="Baseline comparison"
-              className="builder-experience__comparison"
-            >
-              <h2>Compare with baseline</h2>
-              <div className="table-scroll">
-                <table>
-                  <thead>
-                    <tr>
-                      <th>Scenario</th>
-                      <th>Orders at risk</th>
-                      <th>Units missing</th>
-                      <th>Order value exposed</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {[
-                      {
-                        name: "Baseline",
-                        summary: assessment.baseline.summary,
-                      },
-                      {
-                        name:
-                          scenario.name +
-                          (scenarioDirty ? " (unsaved changes)" : ""),
-                        summary: assessment.result.summary,
-                      },
-                      ...workspace.scenarios
-                        .filter((item) => item.scenario.id !== record?.scenario.id &&
-                          isScenarioCurrent(item, compiled.networkKey))
-                        .map((item) => ({
-                          name: item.scenario.name,
-                          summary: simulate(compiled.dataset, item.scenario).summary,
-                        })),
-                    ].map((row, index) => (
-                      <tr key={index}>
-                        <th scope="row">{row.name}</th>
-                        <td>{row.summary.atRiskOrders}</td>
-                        <td>{row.summary.missingUnits}</td>
-                        <td>{money(row.summary.atRiskValue)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </section>
-          )}
-          <SupplyGraph
-            preferNames
+        <div className="sim builder-sim">
+          <SimulationSurface
+            comparisonRequest={comparisonRequest}
+            scenarioError={error}
             data={compiled.dataset}
-            result={assessment.result}
             scenario={assessment.scenario}
-            selected={selection}
-            onSelect={setSelection}
-            onMoveReceipt={
-              record
-                ? (id, date) =>
-                    updateScenario(
-                      withReceiptDate(
-                        compiled.dataset,
-                        assessment.scenario!,
-                        id,
-                        date,
-                      ),
-                    )
-                : undefined
+            onScenarioChange={updateScenario}
+            comparisons={comparisonRows}
+            scenarioSwitch={
+              <>
+                {presetToggle}
+                {namedScenarios}
+              </>
             }
-          />
-          <div className="builder-experience__panels">
-            <ImpactPanel
-              preferNames
-              data={compiled.dataset}
-              result={assessment.result}
-              selectedOrderId={
-                selection?.kind === "order" ? selection.id : undefined
-              }
-            />
-            {record ? (
-              <ScenarioPanel
-                key={`${workspace.document.id}:${compiled.networkKey}:${scenario.id}`}
-                data={compiled.dataset}
-                scenario={assessment.scenario}
-                onChange={updateScenario}
-              />
-            ) : (
-              <section className="builder-experience__baseline">
-                <h2>Baseline</h2>
-                <p>
-                  All receipt dates and quantities are as planned. Create a
-                  scenario to change them.
-                </p>
-                <Button onClick={newScenario}>Create a scenario</Button>
-              </section>
-            )}
-          </div>
-          <RecoveryComparison
-            data={compiled.dataset}
-            scenario={assessment.scenario}
-            current={assessment.result}
-            onApply={updateScenario}
+            preferNames
+            panelKey={`${workspace.document.id}:${compiled.networkKey}`}
+            onTestDelay={testDelay}
+            onNotice={setNotice}
+            onExportReport={() => exportSimulation("report")}
+            assumptionsOpen={assumptionsOpen}
+            onAssumptionsOpenChange={setAssumptionsOpen}
           />
         </div>
       ) : (
@@ -1212,6 +1574,65 @@ export function BuilderExperience({
           </Button>
         </section>
       )}
+      <ImportDataDialog
+        open={importOpen}
+        onOpenChange={setImportOpen}
+        data={compiled.ok ? compiled.dataset : demoData}
+        provenance={sourceProvenance()}
+        autosaves={allowSave}
+        onConfirm={applyImportedDataset}
+      />
+      <Dialog open={resetOpen} onOpenChange={setResetOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              {workspace.source.origin === "fictional"
+                ? "Reset this demo?"
+                : "Replace your imported plan?"}
+            </DialogTitle>
+            <DialogDescription>
+              This replaces this network and its saved scenarios with the
+              original fictional Northstar demo. Export workspace JSON first to
+              keep your edits.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="import-preview-actions">
+            <Button
+              variant="outline"
+              autoFocus
+              onClick={() => setResetOpen(false)}
+            >
+              Keep my plan
+            </Button>
+            <Button
+              onClick={() => {
+                if (
+                  replace(
+                    datasetToWorkspace(demoData, {
+                      scenario: NORMAL_SCENARIO,
+                      scenarios: [
+                        NORMAL_SCENARIO,
+                        DISRUPTION_SCENARIO,
+                        RECOVERY_SCENARIO,
+                      ],
+                      origin: "fictional",
+                    }),
+                    true,
+                  )
+                ) {
+                  setView("simulate");
+                  setNotice(
+                    "Fictional demo restored. All scenario changes cleared.",
+                  );
+                  setResetOpen(false);
+                }
+              }}
+            >
+              Reset to fictional demo
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
       <CloudProjectsDialog
         open={cloud.dialog?.kind === "projects"}
         projects={cloud.projects}
