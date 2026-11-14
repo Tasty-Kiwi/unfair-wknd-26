@@ -23,15 +23,8 @@ test("cloud-disabled production hides auth controls and preserves guest editing 
     const path = new URL(request.url()).pathname;
     if (path.startsWith("/api/")) apiCalls.push(path);
   });
-  const health = page.waitForResponse(
-    (response) => response.url() === origin + "/api/health",
-  );
-  // Even an auth return URL must not call /api/me when cloud is disabled.
-  await page.goto(origin + "/?builder=1");
-  expect(await (await health).json()).toEqual({
-    ok: true,
-    cloudEnabled: false,
-  });
+  // Even stale OAuth return flags must not activate API calls or cloud errors.
+  await page.goto(origin + "/?builder=1&authError=1");
   const builder = page.getByRole("main", { name: "Supply chain builder" });
   for (const name of ["Sign in with GitHub", "My projects", "Save to cloud"]) {
     await expect(
@@ -59,8 +52,13 @@ test("cloud-disabled production hides auth controls and preserves guest editing 
   await expect(builder.getByLabel("Network name", { exact: true })).toHaveValue(
     "Guest work stays local",
   );
-  expect(apiCalls.length).toBeGreaterThan(0);
-  expect(apiCalls.every((path) => path === "/api/health")).toBe(true);
+  expect(apiCalls).toEqual([]);
+  await expect(
+    builder.getByText(/Cloud is unavailable|GitHub sign-in did not finish/),
+  ).toHaveCount(0);
+  await expect(
+    builder.getByRole("button", { name: "Retry cloud connection" }),
+  ).toHaveCount(0);
   await expect(
     builder.getByRole("button", { name: "Sign in with GitHub" }),
   ).toHaveCount(0);

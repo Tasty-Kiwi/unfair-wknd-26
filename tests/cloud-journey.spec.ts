@@ -924,3 +924,35 @@ test("an account changed in another tab detaches the old project before saving",
   await expect(list).toContainText("Other account network");
   await expect(list).not.toContainText("Remote network");
 });
+
+test("OAuth callback restores the initiating project instead of the legacy device draft", async ({
+  page,
+}) => {
+  await page.goto("/projects");
+  await page
+    .getByRole("button", { name: "New project", exact: true })
+    .first()
+    .click();
+  const dialog = page.getByRole("dialog", { name: "New project", exact: true });
+  await dialog.getByRole("radio", { name: "Start blank", exact: true }).click();
+  await dialog
+    .getByLabel("Project name", { exact: true })
+    .fill("OAuth return project");
+  await dialog
+    .getByRole("button", { name: "Create project", exact: true })
+    .click();
+  await expect(
+    page.getByRole("main", { name: "Supply chain builder" }),
+  ).toBeVisible();
+  const path = new URL(page.url()).pathname;
+  await page.evaluate(
+    (value) =>
+      sessionStorage.setItem("needtrace.oauth.project-return.v1", value),
+    path,
+  );
+  await page.goto("/?builder=1&authError=1");
+  await expect(page).toHaveURL(new RegExp(path + "\\?builder=1$"));
+  await expect(page.getByLabel("Network name", { exact: true })).toHaveValue(
+    "OAuth return project",
+  );
+});

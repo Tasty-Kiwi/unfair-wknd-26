@@ -1,5 +1,7 @@
 # Staging deployment and verification
 
+**Current decision, 14 November 2026:** Cloud is indefinitely deferred. Default client builds make no cloud requests; default production/preview/local/staging configs disable cloud and have no D1 binding. Local/staging cloud configuration is retained only under `--env cloud`, paired with frontend `VITE_CLOUD_ENABLED=true`. The evidence and commands below describe historical work; use [the updated setup guide](GITHUB_AUTH_SETUP.md) for future opt-in development. No remote deployment or resource change was made for this deferral.
+
 13 November 2026. The user explicitly approved creating the isolated staging Worker and D1 database, applying migrations, uploading the supplied GitHub/session secrets and deploying for testing. Workers Free is required. Production deployment remains unapproved.
 
 ## Resources and deployed source

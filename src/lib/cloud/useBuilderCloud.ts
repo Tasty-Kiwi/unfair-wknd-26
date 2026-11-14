@@ -13,6 +13,7 @@ import {
   type ProjectMetadata,
 } from "./contracts";
 import { cloudClient, CloudClientError, type CloudClient } from "./client";
+import { CLOUD_ENABLED } from "./config";
 
 export const GUEST_DRAFT_KEY = WORKSPACE_STORAGE_KEY;
 export const PROJECTS_PAGE_SIZE = 50;
@@ -227,8 +228,9 @@ export function useBuilderCloud({
 
   const [session, setSession] = useState<CloudSession>({ kind: "unknown" });
   // Fail closed for cloud UI until the public configuration check succeeds.
-  const [availability, setAvailability] =
-    useState<CloudAvailability>("checking");
+  const [availability, setAvailability] = useState<CloudAvailability>(
+    CLOUD_ENABLED ? "checking" : "disabled",
+  );
   // The one in-flight health probe. Its identity decides whether a completion is current.
   const healthRunRef = useRef<HealthRun | null>(null);
   // An OAuth return whose signed-in check has not run yet. Survives a failed probe so Retry can run it.
@@ -264,7 +266,12 @@ export function useBuilderCloud({
   }
 
   function beginOp(kind: string): Token | null {
-    if (pendingRef.current !== null) return null;
+    if (
+      !CLOUD_ENABLED ||
+      availability !== "enabled" ||
+      pendingRef.current !== null
+    )
+      return null;
     const controller = new AbortController();
     controllersRef.current.add(controller);
     pendingRef.current = kind;
@@ -745,7 +752,7 @@ export function useBuilderCloud({
   // never waits for this. Health does not use the op lock, so an unrelated cloud
   // action or epoch change cannot strand the availability state at "checking".
   function checkAvailability() {
-    if (healthRunRef.current) return;
+    if (!CLOUD_ENABLED || healthRunRef.current) return;
     const run: HealthRun = { controller: new AbortController() };
     healthRunRef.current = run;
     const isLatest = () => healthRunRef.current === run;
@@ -791,8 +798,12 @@ export function useBuilderCloud({
     })();
   }
 
-  // Probe public availability on builder mount.
+  // Discard stale error flags silently in browser-only builds, preserving navigation.
   useEffect(() => {
+    if (!CLOUD_ENABLED) {
+      clearReturnFlags();
+      return;
+    }
     const url = new URL(window.location.href);
     const authError = url.searchParams.get("authError") === "1";
     if (url.searchParams.get("builder") === "1")

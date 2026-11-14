@@ -2,9 +2,9 @@
 
 Deadline: **14 November 2026, 20:00 Europe/Vilnius**.
 
-Order: product UX → brand → cloud decision → final QA → Devpost package (last). Mark an item done only with evidence. Release evidence and the local fallback live in [docs/NEEDTRACE_RELEASE.md](docs/NEEDTRACE_RELEASE.md).
+Order: product UX → brand → browser-only scope → final QA → Devpost package (last). Mark an item done only with evidence. Release evidence and the local fallback live in [docs/NEEDTRACE_RELEASE.md](docs/NEEDTRACE_RELEASE.md).
 
-**Release status (checked 13 November 2026):** PR #7 is merged into `main` as `91bf9b45c55001e690bb39b2cbdd0c02d9a96b23`. Post-merge CI passed, the Cloudflare production build of that commit succeeded, and the public URL serves that build in guest mode with cloud saving disabled. Production cloud saving stays **deferred and disabled**.
+**Release status (checked 13 November 2026):** PR #7 is merged into `main` as `91bf9b45c55001e690bb39b2cbdd0c02d9a96b23`. Post-merge CI passed, the Cloudflare production build of that commit succeeded, and the public URL serves that build in guest mode with cloud saving disabled. Cloud saving is **indefinitely deferred and disabled**; the release is browser-only.
 
 ## 1. Frontend and UX
 
@@ -27,17 +27,15 @@ Order: product UX → brand → cloud decision → final QA → Devpost package 
 - [ ] **Repository description:** still "Unfair Weekend 2026 Hackathon Repo". Update it in GitHub settings (human action).
 - [ ] **Hostname decision:** confirm the team accepts `domino-os.tasty-kiwi.workers.dev` for submission. No Needtrace domain is configured. If the origin ever changes, update the OAuth callback settings.
 
-## 3. Cloud saving — deferred, disabled, NOT approved
+## 3. Cloud — indefinitely deferred
 
-Production runs `cloudEnabled: false`. Do not enable it for this release or present cloud saving as a demo feature. Open gates, for after the hackathon:
+**Decision, 14 November 2026:** Needtrace is browser-only. Cloud saving, GitHub OAuth, sessions and D1 are indefinitely deferred, with no planned release date. They are not hackathon release gates or demo features. Keep the backend code, migrations and existing storage/workspace identifiers for possible future work.
 
-- [x] Staging: one real GitHub account completed sign-in/save/open/update/logout/re-sign-in ([staging verification](docs/STAGING_VERIFICATION.md)).
-- [x] Guest/local builder works without cloud; disabled-cloud and unavailable-cloud regressions pass, including on production.
-- [ ] Clean browser profile reopens a saved staging project with nodes, scenarios and results intact.
-- [ ] A second real GitHub account cannot list, read or update the first account's projects.
-- [ ] Logout revokes the old session; account switching keeps separate local drafts.
-- [ ] Workers Free CPU reliability under repeated OAuth/project operations and larger workspaces (current staging samples exceed the nominal allowance).
-- [ ] Production D1, migrations, secrets and exact `AUTH_URL`; then `CLOUD_ENABLED`, callback URLs and live checks. Requires explicit team approval.
+The default client must make **no cloud/API requests** and show no cloud links, sign-in controls, cloud-save actions, connection warnings or retry buttons. Production, branch-preview, local and staging configurations must default to `CLOUD_ENABLED: false`, with no default D1 binding. Guest demo, deterministic simulation, named scenarios, local autosave and JSON import/export remain required.
+
+Reconsidering cloud requires a new explicit scope decision and approval. Retained backend development uses both the explicit `VITE_CLOUD_ENABLED=true` frontend opt-in and the `--env cloud` local/staging configuration. Existing backend session, owner-isolation and version-conflict safeguards must remain intact.
+
+Historical staging results and unfinished acceptance checks remain in [staging verification](docs/STAGING_VERIFICATION.md). They are future reference only. Existing remote staging resources have not been disabled or deleted by this local change; changing those requires a separate explicit deployment/resource request.
 
 ## 4. Final QA and release freeze
 
@@ -56,7 +54,7 @@ Use [docs/DEVPOST_READY.md](docs/DEVPOST_READY.md) as the single source for offi
 - [ ] **Video:** record and edit a demo of at most 3:00 that opens on the working product.
 - [ ] **Upload:** post it to YouTube or Vimeo as Public or Unlisted and check playback while signed out.
 - [ ] **Try it out:** enter `https://domino-os.tasty-kiwi.workers.dev/landing` (demo: `/`) and open it in an incognito window.
-- [ ] **Built with:** React, TypeScript, Vite, Tailwind CSS, React Flow, Cloudflare Workers, D1, GitHub OAuth, plus any other tools actually used.
+- [ ] **Built with:** React, TypeScript, Vite, Tailwind CSS, React Flow, Cloudflare Workers hosting, plus any other tools actually used. Describe D1/GitHub OAuth only as retained, deferred backend work; they are not part of the browser-only demo.
 - [ ] **Team:** the team name and every member's full name and email.
 - [ ] **Disclosures:** truthfully disclose pre-existing work; do not state “None” without team confirmation.
 - [ ] **Optional slides link:** slides are optional; add a link only if a useful deck already exists.
@@ -85,7 +83,7 @@ Video split: about 20 s problem, 100 s live product, 40 s local builder and evid
 - [ ] Repository owner: invite Nedomas with Read access and verify status. Agent admin requests denied (403); permission still `none`.
 - [ ] Repository owner: update description; visibility remains private.
 - [ ] Team: confirm team details and pre-existing-work/build-period disclosures; review video, upload to YouTube/Vimeo, submit before deadline and retain confirmation.
-- [ ] Production cloud: not approved; keep disabled. Live cloud gates remain open.
+- [ ] Cloud: indefinitely deferred; keep all default client/backend paths disabled. No cloud work is required for submission.
 
 ## Final guest UX execution — 14 November
 

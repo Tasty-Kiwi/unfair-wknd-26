@@ -9,15 +9,16 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "preview": "vite preview --host 0.0.0.0",
-    "test:e2e": "playwright test",
+    "test:e2e": "npm run build:test:cloud && playwright test",
     "format": "prettier --write src tests *.ts *.json *.md",
     "deploy": "npm run build && wrangler deploy",
     "deploy:check": "wrangler deploy --dry-run",
     "dev:api": "wrangler dev --config wrangler.local.jsonc --local --port 8787",
-    "types:worker": "wrangler types --config wrangler.local.jsonc --strict-vars=false --include-main-module=false",
+    "types:worker": "wrangler types --config wrangler.local.jsonc --env cloud --strict-vars=false --include-main-module=false",
     "typecheck:worker": "npm run types:worker && tsc -p tsconfig.worker.json",
     "typecheck:tests": "tsc -p tsconfig.tests.json",
-    "test:worker": "vitest run --config vitest.worker.config.ts"
+    "test:worker": "vitest run --config vitest.worker.config.ts",
+    "build:test:cloud": "VITE_CLOUD_ENABLED=true vite build --outDir dist-cloud"
   },
   "dependencies": {
     "@fontsource/ibm-plex-sans": "^5.3.0",

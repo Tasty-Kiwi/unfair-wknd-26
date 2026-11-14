@@ -1,6 +1,6 @@
 import { test, expect, type BrowserContext, type Page } from "@playwright/test";
 import { fileAction, openScenarios } from "./ui-helpers";
-import { createTestHarness } from "wrangler";
+import { createTestHarness, unstable_readConfig } from "wrangler";
 import { randomTestToken, hashTestToken } from "../worker-tests/helpers";
 import { readFile } from "node:fs/promises";
 import { createCoreExample } from "../src/lib/builder/factories";
@@ -9,11 +9,22 @@ import type { BuilderWorkspaceV1 } from "../src/lib/builder/types";
 // This runs the built SPA and production Worker against isolated local D1.
 // Only session setup is synthetic: no API interception or deployed auth bypass.
 // It proves persistence/authorization through real cookies, not GitHub code exchange.
+const cloudConfig = unstable_readConfig({
+  config: "./wrangler.local.jsonc",
+  env: "cloud",
+});
 const workerOptions = {
-  configPath: "./wrangler.local.jsonc",
-  secrets: {
-    GITHUB_CLIENT_ID: "browser-test-client",
-    GITHUB_CLIENT_SECRET: "browser-test-secret",
+  config: {
+    name: cloudConfig.name,
+    main: cloudConfig.main,
+    compatibility_date: cloudConfig.compatibility_date,
+    d1_databases: cloudConfig.d1_databases,
+    assets: { ...cloudConfig.assets, directory: "./dist-cloud" },
+    vars: {
+      ...cloudConfig.vars,
+      GITHUB_CLIENT_ID: "browser-test-client",
+      GITHUB_CLIENT_SECRET: "browser-test-secret",
+    },
   },
 };
 const server = createTestHarness({ workers: [workerOptions] });
@@ -26,7 +37,14 @@ test.beforeAll(async () => {
   origin = url.origin;
   // The real browser's Origin must match the configured canonical auth origin.
   await server.update({
-    workers: [{ ...workerOptions, vars: { AUTH_URL: origin } }],
+    workers: [
+      {
+        config: {
+          ...workerOptions.config,
+          vars: { ...workerOptions.config.vars, AUTH_URL: origin },
+        },
+      },
+    ],
   });
   const worker = server.getWorker<Env>();
   await worker.applyD1Migrations("DB");

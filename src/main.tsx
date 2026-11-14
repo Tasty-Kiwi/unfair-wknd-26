@@ -7,12 +7,15 @@ import "@fontsource/ibm-plex-sans-condensed/latin-500.css";
 import "@fontsource/ibm-plex-sans-condensed/latin-600.css";
 import "./index.css";
 import { initTheme } from "./lib/theme";
+import { CLOUD_ENABLED } from "./lib/cloud/config";
 import { projectAuthReturn } from "./lib/cloud/projectReturn";
 import { LoadingScreen } from "./components/LoadingScreen";
 
 initTheme();
 try {
-  const returnPath = projectAuthReturn(new URL(window.location.href));
+  const returnPath = CLOUD_ENABLED
+    ? projectAuthReturn(new URL(window.location.href))
+    : null;
   if (returnPath)
     window.history.replaceState(window.history.state, "", returnPath);
 } catch {

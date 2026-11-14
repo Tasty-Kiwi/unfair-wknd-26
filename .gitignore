@@ -12,3 +12,4 @@ playwright-report
 .env*
 worker-configuration.d.ts
 auth-probe-configuration.d.ts
+dist-cloud

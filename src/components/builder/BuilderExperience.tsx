@@ -698,10 +698,7 @@ export function BuilderExperience({
               >
                 <Upload aria-hidden size={15} /> Import workspace JSON…
               </button>
-              <p>
-                Saved in this browser. Export JSON for a portable copy. Cloud
-                saving is not enabled.
-              </p>
+              <p>Saved in this browser. Export JSON for a portable copy.</p>
             </div>
           )}
         </ToolbarPopover>

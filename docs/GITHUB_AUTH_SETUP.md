@@ -1,4 +1,6 @@
-# GitHub sign-in setup
+# GitHub sign-in setup — retained, indefinitely deferred
+
+**14 November 2026:** Cloud is indefinitely deferred. The app is browser-only by default. The instructions below are explicit opt-in backend development, not release or demo requirements. A new approval is required before any remote cloud activation.
 
 Current implementation: a small custom GitHub OAuth flow on Workers with D1-backed opaque sessions. Better Auth, its CLI and signing secret are no longer used. No new authentication dependency is required.
 
@@ -32,16 +34,16 @@ Do not use `VITE_` variables, source, localStorage or logs for these values. `BE
 ```sh
 npm ci
 npm run types:worker
-npx wrangler d1 migrations apply DB --local --config wrangler.local.jsonc
-npm run build
-# Separate terminals:
-npm run dev
-npm run dev:api
+npx wrangler d1 migrations apply DB --local --config wrangler.local.jsonc --env cloud
+VITE_CLOUD_ENABLED=true npm run build
+# Separate terminals (frontend stays on localhost:5173):
+VITE_CLOUD_ENABLED=true npm run dev
+npm run dev:api -- --env cloud
 ```
 
 Use `http://localhost:5173`; the Vite proxy forwards `/api` to Wrangler on 8787. A direct mutation with an incorrect Origin is rejected. GitHub returns to `/?builder=1`; the current local draft is preserved. After refresh, reopen a cloud project through My Projects.
 
-A failed public health probe offers Retry cloud connection without reloading or discarding local work. An explicit `cloudEnabled:false` hides cloud controls and does not offer retry. Guest editing and local autosave work without credentials.
+Only an explicitly cloud-enabled frontend probes health. In that mode, a failed public health probe offers Retry cloud connection without reloading or discarding local work. An explicit `cloudEnabled:false` hides cloud controls and does not offer retry. Guest editing and local autosave work without credentials.
 
 ## Migrations and the auth transition
 
@@ -65,14 +67,14 @@ npm run test:e2e
 
 OAuth tests mock only external GitHub HTTP responses and use actual local D1 for one-use state, PKCE, identity mapping, session hashes and revocation. Browser persistence tests seed opaque sessions only in isolated local D1 and exercise the production Worker without API interception. These are not live GitHub-provider proof.
 
-## Approved staging and release boundary
+## Historical staging and future release boundary
 
-Use existing `wrangler.staging.jsonc`, Worker `domino-os-staging` and D1 `75faa40c-c80c-4fd6-ab27-6dc8f6cc66e4`. The user approved staging resources, migrations and deployment. Before deploying the new runtime, review/apply migration 0003 on that isolated database:
+Use existing `wrangler.staging.jsonc`, Worker `domino-os-staging` and D1 `75faa40c-c80c-4fd6-ab27-6dc8f6cc66e4`. Earlier approval covered the historical staging work below. It does not authorize a new deployment now that cloud is indefinitely deferred. If future work is explicitly approved, the retained commands select the cloud environment:
 
 ```sh
-npx wrangler d1 migrations apply DB --remote --config wrangler.staging.jsonc
-npm run build
-npx wrangler deploy --config wrangler.staging.jsonc
+npx wrangler d1 migrations apply DB --remote --config wrangler.staging.jsonc --env cloud
+VITE_CLOUD_ENABLED=true npm run build
+npx wrangler deploy --config wrangler.staging.jsonc --env cloud
 ```
 
 Query-string redaction remains enabled so callback codes/state are not logged. Production `domino-os` and branch previews remain cloud-disabled with no production DB. Do not create production resources, merge the PR or activate production cloud without separate approval.

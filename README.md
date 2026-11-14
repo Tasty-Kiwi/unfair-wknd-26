@@ -4,7 +4,7 @@
 
 A manufacturing material-availability simulator built for the Unfair Weekend 2026 hackathon. Change a supplier receipt, trace the affected customer order, and test an approved alternative in under a minute.
 
-The local app opens with the landing page at `/`, followed by the project library at `/projects`. Open the fictional demo, or choose **New project** to import JSON/CSV or start a blank network. Each local project opens at `/projects/:id` and autosaves separately. `/demo` opens the session-only simulator directly; `/landing` and `/?builder=1` remain compatible entry points. These route changes have not been deployed. The existing public Workers URL still uses the legacy `domino-os` hostname; no Needtrace domain is claimed here. Production cloud features remain disabled. Staging and release limits are documented in [staging verification](docs/STAGING_VERIFICATION.md).
+The local app opens with the landing page at `/`, followed by the project library at `/projects`. Open the fictional demo, or choose **New project** to import JSON/CSV or start a blank network. Each local project opens at `/projects/:id` and autosaves separately. `/demo` opens the session-only simulator directly; `/landing` and `/?builder=1` remain compatible entry points. These route changes have not been deployed. The existing public Workers URL still uses the legacy `domino-os` hostname; no Needtrace domain is claimed here. Cloud features are indefinitely deferred; this release is browser-only. Staging and release limits are documented in [staging verification](docs/STAGING_VERIFICATION.md).
 
 Designed for a small manufacturer building a material network or testing a spreadsheet plan without a full planning-system rollout. This buyer segment and willingness to pay are hypotheses; no customer validation or measured savings are claimed. See [commercial narrative](docs/PITCH.md) and [human validation playbook](docs/VALIDATION_PLAYBOOK.md).
 
@@ -28,7 +28,7 @@ npm run preview
 
 ## Deploy on Cloudflare Workers
 
-The production public link currently serves the guest app with cloud features disabled. The optional Worker backend is deployed separately to staging; see the cloud section below. New projects save locally, including dataset imports and scenario changes. The standalone `/demo` simulator remains session-only: export a report before leaving it and keep source files for reimport. Resetting an imported plan requires confirmation. Product CSV imports without a BOM retain matching products' existing BOMs; the preview and active plan disclose this. To redeploy from this checkout:
+The production public link currently serves the guest app with cloud features disabled. The retained optional backend is disabled by default; an older staging deployment is historical evidence, not a demo dependency. New projects save locally, including dataset imports and scenario changes. The standalone `/demo` simulator remains session-only: export a report before leaving it and keep source files for reimport. Resetting an imported plan requires confirmation. Product CSV imports without a BOM retain matching products' existing BOMs; the preview and active plan disclose this. To redeploy from this checkout:
 
 ```sh
 npx wrangler login
@@ -57,7 +57,7 @@ Choose **Build a network** from the existing simulator. Start blank or open the 
 
 In Simulate, choose **New scenario**, give it a name, change a receipt date or quantity and **Save scenario**. **Select scenario** reopens saved inputs; **Compare with baseline** compares the same network with and without those changes. Selecting an order shows its actual material allocations. Baseline quantities and dates are never changed by scenario controls. A material edit in Build requires explicit **Revalidate scenario** before an older scenario can run; its original overrides are retained.
 
-Builder progress auto-saves in this browser, including incomplete graph fields and named scenarios. Check for **Saved locally**, or use **Save workspace**. After refreshing, choose **Build a network** again to reopen it. **Export workspace JSON** and **Import workspace JSON** use one versioned format (2 MB limit). Storage errors remain visible; local browser storage is not an external backup. These device actions do not upload data; configured cloud saving is a separate explicit action.
+Builder progress auto-saves in this browser, including incomplete graph fields and named scenarios. Check for **Saved locally**, or use **Save workspace**. After refreshing, choose **Build a network** again to reopen it. **Export workspace JSON** and **Import workspace JSON** use one versioned format (2 MB limit). Storage errors remain visible; local browser storage is not an external backup. These actions stay on this device and do not upload data.
 
 The original **Import data** JSON/CSV path stays separate and preserves its existing behavior. Entering Build and returning with **Back to Simulate** preserves the original in-memory plan. Existing approved-alternative recovery continues there. Authoring alternatives, migrating arbitrary imports into Build and a dedicated mobile editor are deferred; the builder provides laptop editing, keyboard-accessible forms and a basic narrow layout.
 
@@ -97,19 +97,19 @@ Use **Import data**. Downloadable example JSON and CSV are available in the impo
 
 - Dates must be real ISO calendar dates, `YYYY-MM-DD`, on or after `asOf`. Counts must be nonnegative integers; BOM and order quantities must be positive. References, duplicate IDs, approval and product scope are checked using Zod plus semantic validation.
 - Each file is limited to 2 MB (one JSON or up to five CSVs). A rejected file leaves the current data and scenario unchanged. Imported plans get illustrative six-day disruption and recovery presets derived from their first receipt; these do not guarantee that a particular imported order will be affected or recovered.
-- JSON/CSV projects created from `/projects` save their dataset and scenario locally across refreshes. The standalone `/demo` import path remains in memory; refresh resets it. Export a report for a portable record; report JSON can be imported as a new project. These device actions do not upload data. Signed-in users can explicitly save builder workspaces to the cloud when cloud features are configured.
+- JSON/CSV projects created from `/projects` save their dataset and scenario locally across refreshes. The standalone `/demo` import path remains in memory; refresh resets it. Export a report for a portable record; report JSON can be imported as a new project. These actions stay on this device and do not upload data.
 
-## Optional cloud projects
+## Cloud backend — indefinitely deferred
 
-Cloud projects use a small custom **GitHub OAuth** flow, a same-origin Worker API and D1-backed sessions. Email/password sign-in is disabled. The public demo and guest builder remain available without authentication; local autosave and JSON import/export continue to work.
+The current product is browser-only. Default `npm run dev` and `npm run build` make no cloud/API requests and show no cloud links, GitHub sign-in, cloud saving, unavailable-cloud banner or retry button. Local autosave, named scenarios, guest demo and JSON import/export remain available without any server or account.
 
-In the builder, use Sign in with GitHub, My projects, Save to cloud and Open. Cloud saves are explicit and version-checked. A conflict offers Keep working locally, Save as new project, or Open cloud version after confirmation. Each account can keep 20 projects and create at most 5 per minute; a cloud workspace is limited to 1,000,000 UTF-8 bytes.
+Backend source, migrations and security tests are retained for future work. Production/preview configurations have cloud disabled and no D1 binding. Local/staging configurations also default to disabled with no D1 binding or required OAuth secrets. Their previous database bindings and OAuth configuration are retained only under the explicit `--env cloud` environment; resource names, workspace formats, IDs and storage keys are unchanged.
 
-For local development, follow [GitHub setup](docs/GITHUB_AUTH_SETUP.md), apply the local migrations, and run `npm run dev` alongside `npm run dev:api`. Credentials belong in ignored `.dev.vars`, never `VITE_` variables. Guest development works without credentials. Apply the checked-in migrations, including `0003_github_oauth.sql`, without rewriting previously applied files. Only GitHub Client ID/Secret are required; the fixed origin is `AUTH_URL`.
+Cloud requires **both** `VITE_CLOUD_ENABLED=true` when starting/building the frontend and an explicitly enabled, configured backend. The default Vite server does not proxy `/api`; only the frontend opt-in enables the existing local API proxy. `npm run dev:api` alone stays disabled. See [the retained setup guide](docs/GITHUB_AUTH_SETUP.md) for explicit backend development steps. Do not enable production cloud without a new scope decision and approval.
 
-The checked-in production and branch-preview configurations keep cloud disabled. The replacement custom OAuth flow has passed a real GitHub sign-in, save/list/open/update, logout and re-sign-in using one account in its existing browser profile on staging. Fresh-browser restoration, retained-old-cookie rejection and live second-account isolation remain unverified. Local Worker tests cover seeded sessions and owner checks, but do not replace those live checks. Several observed authenticated request CPU samples exceeded the nominal Workers Free allowance; reliability is not established. See [implementation evidence](docs/CLOUD_BACKEND_IMPLEMENTATION.md) and [staging verification](docs/STAGING_VERIFICATION.md). Production rollout is not approved.
+`npm run test:e2e` checks the browser-only defaults and retains cloud regressions in a separate opt-in test project. Its cloud-enabled fixture is built to ignored `dist-cloud/`; normal `dist/` remains the browser-only release build. Worker tests use isolated local D1 only in their explicit cloud environment.
 
-The builder checks public `/api/health` before showing cloud controls. If cloud is disabled, unreachable or returns an invalid response, guest editing and local saving continue without sign-in or project requests. A failed connection offers Retry cloud connection; an explicitly disabled backend keeps cloud controls hidden. After a refresh, the device draft opens; reopen a cloud project from My projects.
+Previous staging deployment/acceptance evidence is in [staging verification](docs/STAGING_VERIFICATION.md). This local change does not modify existing remote Workers, secrets, databases or OAuth registrations.
 
 ## Model and limits
 

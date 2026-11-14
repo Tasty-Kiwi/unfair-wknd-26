@@ -269,9 +269,7 @@ test("storage failure keeps creation in the modal and demo remains available", a
   await expect(page.locator(".scenario-switch")).toBeVisible();
 });
 
-test("OAuth callback restores the initiating project instead of the legacy device draft", async ({
-  page,
-}) => {
+test("browser-only ignores a stale OAuth project return", async ({ page }) => {
   await page.goto("/projects");
   await blank(page, "OAuth return project");
   const path = new URL(page.url()).pathname;
@@ -281,8 +279,8 @@ test("OAuth callback restores the initiating project instead of the legacy devic
     path,
   );
   await page.goto("/?builder=1&authError=1");
-  await expect(page).toHaveURL(new RegExp(path + "\\?builder=1&authError=1"));
-  await expect(page.getByLabel("Network name", { exact: true })).toHaveValue(
-    "OAuth return project",
-  );
+  await expect(page).toHaveURL(/\/\?builder=1$/);
+  await expect(
+    page.getByLabel("Network name", { exact: true }),
+  ).not.toHaveValue("OAuth return project");
 });
