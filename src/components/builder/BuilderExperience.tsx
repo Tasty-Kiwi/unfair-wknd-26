@@ -260,7 +260,7 @@ export function BuilderExperience({
   function run() {
     setValidationRequested(true);
     if (!compiled.ok) {
-      setError("Fix all network issues before running.");
+      setError("Fix the listed network issues before running.");
       return;
     }
     if (!compiled.canSimulate) {
@@ -778,8 +778,16 @@ export function BuilderExperience({
 
       {error && (
         <Alert variant="destructive">
-          <AlertTitle>Action could not complete</AlertTitle>
-          <AlertDescription>{error}</AlertDescription>
+          <AlertTitle>
+            {error === "Fix the listed network issues before running."
+              ? "Your network is still in progress"
+              : "Action could not complete"}
+          </AlertTitle>
+          <AlertDescription>
+            {error === "Fix the listed network issues before running."
+              ? "Use Next repair in the details panel, or open a group in Checks. You can keep building in any order; simulation waits until all checks pass."
+              : error}
+          </AlertDescription>
         </Alert>
       )}
       {notice && (
