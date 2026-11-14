@@ -1,4 +1,5 @@
 import { test, expect, type BrowserContext, type Page } from "@playwright/test";
+import { fileAction, openScenarios } from "./ui-helpers";
 import { createTestHarness } from "wrangler";
 import { randomTestToken, hashTestToken } from "../worker-tests/helpers";
 import { readFile } from "node:fs/promises";
@@ -67,9 +68,7 @@ const builder = (page: Page) =>
 
 async function exportedWorkspace(page: Page): Promise<BuilderWorkspaceV1> {
   const downloaded = page.waitForEvent("download");
-  await builder(page)
-    .getByRole("button", { name: "Export workspace JSON", exact: true })
-    .click();
+  await fileAction(builder(page), "Export workspace JSON");
   const path = await (await downloaded).path();
   expect(path).toBeTruthy();
   return JSON.parse(await readFile(path!, "utf8"));
@@ -180,6 +179,7 @@ test("real Worker and D1 preserve a project across browser contexts and deny a s
       .getByRole("dialog", { name: "My projects" })
       .getByRole("button", { name: "Open", exact: true })
       .click();
+    await openScenarios(builder(reopened));
     await expect(
       builder(reopened).getByLabel("Select scenario", { exact: true }),
     ).toContainText("D1 receipt delay");

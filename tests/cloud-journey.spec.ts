@@ -1,4 +1,5 @@
 import { test, expect, type Page } from "@playwright/test";
+import { openScenarios } from "./ui-helpers";
 import { createCoreExample } from "../src/lib/builder/factories";
 import type { BuilderWorkspaceV1 } from "../src/lib/builder/types";
 import type { CloudProject, CloudUser } from "../src/lib/cloud/contracts";
@@ -418,6 +419,7 @@ test("cloud round-trip in a fresh browser keeps guest draft and handles conflict
   await expect(
     builder(otherPage).getByLabel("Network name", { exact: true }),
   ).toHaveValue("Device draft");
+  await openScenarios(builder(otherPage));
   await expect(
     builder(otherPage).getByLabel("Select scenario", { exact: true }),
   ).toContainText("Saved disruption");

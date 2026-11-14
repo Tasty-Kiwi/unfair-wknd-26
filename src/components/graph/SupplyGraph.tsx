@@ -30,6 +30,8 @@ type SupplyData = Record<string, unknown> & {
   risk: boolean;
   active: boolean;
   flag: string;
+  /** Not on the shortage path while a shortage exists: faded, still present. */
+  dim?: boolean;
 };
 type SupplyNode = Node<SupplyData, "supply">;
 const icons = {
@@ -42,7 +44,7 @@ function SupplyNodeView({ data, selected }: NodeProps<SupplyNode>) {
   const Icon = icons[data.kind];
   return (
     <div
-      className={`supply-node ${data.risk ? "is-risk" : ""} ${selected ? "is-selected" : ""} ${data.active ? "is-active" : ""}`}
+      className={`supply-node ${data.risk ? "is-risk" : ""} ${selected ? "is-selected" : ""} ${data.active ? "is-active" : ""} ${data.dim ? "is-dim" : ""}`}
     >
       {data.kind !== "supplier" && (
         <Handle type="target" position={Position.Left} />
@@ -146,6 +148,7 @@ function GraphInner({
         .filter((o) => o.status === "at-risk")
         .map((o) => o.productId),
     );
+    const anyRisk = riskComponents.size > 0;
     const components = data.components.filter((c) => full || c.id === focused);
     const componentIds = new Set(components.map((c) => c.id));
     const products = data.products.filter((p) =>
@@ -184,6 +187,7 @@ function GraphInner({
       risk = false,
       active = false,
       flag = "",
+      keep = false,
     ) =>
       nodes.push({
         id: `${kind}:${id}`,
@@ -192,7 +196,16 @@ function GraphInner({
           x: col * 260,
           y: i * step + ((maxRows - count) * step) / 2,
         },
-        data: { label, sub, tag, kind, risk, active, flag },
+        data: {
+          label,
+          sub,
+          tag,
+          kind,
+          risk,
+          active,
+          flag,
+          dim: anyRisk && !risk && !active && !keep,
+        },
         selected: selected?.kind === kind && selected.id === id,
       });
     const edge = (
@@ -211,6 +224,7 @@ function GraphInner({
           stroke: risk ? "var(--short)" : alt ? "var(--alt)" : "var(--rule)",
           strokeWidth: risk ? 3 : 1.5,
           strokeDasharray: alt ? "5 4" : undefined,
+          opacity: anyRisk && !risk && !alt ? 0.35 : 1,
         },
         className: risk ? "edge-risk" : undefined,
       });
@@ -233,6 +247,11 @@ function GraphInner({
         (d) => d.quantity < (planned(d.id)?.quantity ?? d.quantity),
       );
       const flag = late ? "Late" : reduced ? "Reduced" : "Supply gap";
+      const anyLate = result.deliveries.some(
+        (d) =>
+          d.supplierId === s.id &&
+          d.availableDate > (planned(d.id)?.availableDate ?? d.availableDate),
+      );
       const alt = data.alternatives.some(
         (a) => a.supplierId === s.id && a.approved,
       );
@@ -253,10 +272,18 @@ function GraphInner({
           ? "Recovery active"
           : alt
             ? "Approved alternative"
-            : "Primary supplier",
+            : anyLate && !impacted
+              ? "Receipt still late"
+              : "Primary supplier",
         impacted,
         used,
         flag,
+        data.alternatives.some(
+          (a) =>
+            a.supplierId === s.id &&
+            a.approved &&
+            riskComponents.has(a.componentId),
+        ),
       );
     });
     components.forEach((c, i) => {
@@ -356,7 +383,7 @@ function GraphInner({
   }, [data, result, scenario, full, focused, selected]);
   return (
     <section
-      className="graph-section"
+      className={`graph-section ${result.summary.atRiskOrders ? "has-risk" : ""}`}
       aria-label="Interactive supply chain dependencies"
     >
       <div className="graph-toolbar">
@@ -455,7 +482,7 @@ function GraphInner({
       <div className="graph-legend">
         <span>
           <i className="legend-swatch covered" aria-hidden="true" />
-          Covered
+          {result.summary.atRiskOrders ? "Faded: not affected" : "Covered"}
         </span>
         <span>
           <i className="legend-swatch hatch" aria-hidden="true" />

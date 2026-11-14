@@ -1,0 +1,746 @@
+/*
+ * Builder workspace layout: one 52px toolbar, then the canvas takes the rest
+ * of the viewport. The palette is a narrow rail, the inspector floats over the
+ * canvas, and network checks sit in a small status bar. Phones get a
+ * structured list instead of a miniature graph, with the map one tap away.
+ * Loaded after builder.css and experience.css so these rules win.
+ */
+
+/* Per-kind accents, shared by palette, outline and canvas cards. */
+.builder,
+.builder-experience {
+  --k-supplier: #7d5e22;
+  --k-supplier-fill: #f4ead6;
+  --k-component: #2c6a55;
+  --k-component-fill: #dcefe6;
+  --k-receipt: #5b4884;
+  --k-receipt-fill: #e9e3f4;
+  --k-product: #355a78;
+  --k-product-fill: #dfe9f2;
+  --k-order: #873a5a;
+  --k-order-fill: #f6e2e9;
+}
+:root.dark .builder,
+:root.dark .builder-experience {
+  --k-supplier: #d9b56e;
+  --k-supplier-fill: #2e2718;
+  --k-component: #7fcfae;
+  --k-component-fill: #1b3029;
+  --k-receipt: #b9a5ea;
+  --k-receipt-fill: #29243d;
+  --k-product: #94bde0;
+  --k-product-fill: #1d2b3b;
+  --k-order: #e59ab9;
+  --k-order-fill: #35202b;
+}
+
+/* ---------- Shell ---------- */
+.builder-experience {
+  display: flex;
+  flex-direction: column;
+  max-width: none;
+  height: 100dvh;
+  margin: 0;
+  padding: 0;
+  background: var(--paper);
+}
+.builder-experience
+  > :not(.builder-bar):not(.builder):not(.builder-experience__simulation) {
+  margin: 8px 12px 0;
+}
+.builder-experience > [data-slot="alert"] {
+  width: auto;
+}
+
+/* ---------- Toolbar ---------- */
+.builder-bar {
+  position: relative;
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 52px;
+  padding: 0 12px;
+  background: var(--sheet);
+  border-bottom: 1px solid var(--hair);
+  flex-shrink: 0;
+}
+.builder-bar__mark {
+  flex-shrink: 0;
+}
+.builder-bar__title {
+  min-width: 0;
+  max-width: 280px;
+}
+.builder-bar__title h1 {
+  font-size: 16px;
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.builder-experience .builder-bar__title .builder-experience__source {
+  margin: 0;
+  font-size: 11.5px;
+  color: var(--ink-2);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.builder-bar__modes {
+  display: inline-flex;
+  padding: 2px;
+  border-radius: 8px;
+  background: var(--wash);
+  flex-shrink: 0;
+}
+.builder-bar__modes [data-slot="button"] {
+  height: 30px;
+  padding: 0 14px;
+  color: var(--ink-2);
+  border-radius: 6px;
+}
+.builder-bar__modes [data-slot="button"][aria-pressed="true"] {
+  color: var(--ink);
+  background: var(--sheet);
+  box-shadow: 0 0 0 1px var(--hair);
+}
+.builder-bar__k {
+  color: var(--ink-2);
+  font-weight: 400;
+}
+.builder-bar__v {
+  max-width: 180px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.builder-experience .builder-bar .builder-experience__save {
+  margin-inline-start: auto;
+  font-size: 12.5px;
+  color: var(--ok);
+  white-space: nowrap;
+}
+.builder-bar .theme-toggle {
+  flex-shrink: 0;
+}
+
+/* Popovers */
+.toolbar-popover {
+  position: relative;
+  flex-shrink: 0;
+}
+.toolbar-popover__panel {
+  position: absolute;
+  top: calc(100% + 6px);
+  z-index: 50;
+  min-width: 260px;
+  padding: 10px;
+  background: var(--sheet);
+  border: 1px solid var(--rule);
+  border-radius: 10px;
+  box-shadow: 0 14px 32px rgb(0 0 0 / 0.16);
+}
+.toolbar-popover__panel.is-end {
+  right: 0;
+}
+.toolbar-popover__panel.is-start {
+  left: 0;
+}
+.builder-experience .toolbar-popover__panel .named-scenarios {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 10px;
+  width: 340px;
+  max-width: calc(100vw - 32px);
+  margin: 0;
+  padding: 4px;
+  border: 0;
+  background: transparent;
+}
+.builder-experience .toolbar-popover__panel .named-scenarios__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.builder-file-menu {
+  display: flex;
+  flex-direction: column;
+  min-width: 240px;
+}
+.builder-file-menu button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 36px;
+  padding: 6px 10px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  font-size: 14px;
+  text-align: left;
+}
+.builder-file-menu button:hover,
+.builder-file-menu button:focus-visible {
+  background: var(--wash);
+  outline: none;
+}
+.builder-file-menu hr {
+  border: 0;
+  border-top: 1px solid var(--hair);
+  margin: 6px 0;
+}
+.builder-file-menu p {
+  margin: 6px 10px 2px;
+  font-size: 12px;
+  color: var(--ink-2);
+  max-width: 260px;
+}
+
+/* ---------- Workspace grid ---------- */
+.builder-experience .builder {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: 84px minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr);
+  grid-template-areas: "palette canvas";
+  border: 0;
+  background: var(--paper);
+}
+.builder__mobile-switch,
+.builder__outline {
+  display: none;
+}
+
+/* Palette rail */
+.builder-experience .builder__palette {
+  grid-area: palette;
+  display: flex;
+  flex-direction: column;
+  flex-wrap: nowrap;
+  gap: 4px;
+  padding: 10px 8px;
+  border: 0;
+  border-right: 1px solid var(--hair);
+  background: var(--sheet);
+  overflow-y: auto;
+}
+.builder-experience .builder-palette__item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  min-height: 0;
+  padding: 8px 2px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  font-size: 11.5px;
+  color: var(--ink-2);
+}
+.builder-experience .builder-palette__item:hover {
+  background: var(--wash);
+  color: var(--ink);
+}
+.builder-palette__swatch {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 28px;
+  border-radius: 7px;
+  border: 1.5px solid var(--kc);
+  background: var(--kf);
+  color: var(--kc);
+}
+.is-supplier {
+  --kc: var(--k-supplier);
+  --kf: var(--k-supplier-fill);
+}
+.is-component {
+  --kc: var(--k-component);
+  --kf: var(--k-component-fill);
+}
+.is-receipt {
+  --kc: var(--k-receipt);
+  --kf: var(--k-receipt-fill);
+}
+.is-product {
+  --kc: var(--k-product);
+  --kf: var(--k-product-fill);
+}
+.is-order {
+  --kc: var(--k-order);
+  --kf: var(--k-order-fill);
+}
+
+/* Canvas */
+.builder-experience .builder__canvas-wrap {
+  grid-area: canvas;
+  min-height: 0;
+  border: 0;
+  background-color: var(--paper);
+  background-image: radial-gradient(var(--hair) 1px, transparent 1px);
+  background-size: 20px 20px;
+}
+.builder-experience .builder-node {
+  border-radius: 8px;
+  border-color: var(--rule);
+  border-left: 5px solid var(--kind-ink);
+  box-shadow: 0 1px 0 var(--hair);
+}
+.builder-experience .builder-node.is-selected {
+  box-shadow: 0 0 0 2px var(--ink);
+}
+.builder-experience .builder__empty {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+  width: min(360px, calc(100% - 48px));
+  padding: 16px 18px;
+  background: var(--sheet);
+  border: 1px dashed var(--rule);
+  border-radius: 12px;
+  font-size: 14px;
+  pointer-events: auto;
+}
+.builder-experience .builder__empty p {
+  margin: 0;
+  color: var(--ink-2);
+}
+.builder-experience .builder__empty strong {
+  color: var(--ink);
+}
+/* The inspector floats over the dotted ground; the graph itself stops short
+   of it so fit-to-view never hides nodes underneath the panel. */
+.builder-experience .builder__canvas-wrap .builder-canvas {
+  right: 374px;
+}
+.builder-experience .panel-closed .builder__canvas-wrap .builder-canvas {
+  right: 0;
+}
+
+/* Status bar: checks and the primary run action */
+.builder__status {
+  position: absolute;
+  left: 96px;
+  bottom: 12px;
+  z-index: 6;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 6px 6px 12px;
+  background: var(--sheet);
+  border: 1px solid var(--rule);
+  border-radius: 10px;
+  box-shadow: 0 6px 18px rgb(0 0 0 / 0.08);
+  font-size: 13px;
+}
+.builder__status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--rule);
+}
+.builder__status-dot.is-ok {
+  background: var(--ok);
+}
+.builder__status-dot.is-bad {
+  background: var(--short);
+}
+.builder__status-text {
+  margin-right: 4px;
+  color: var(--ink-2);
+}
+
+/* Floating inspector */
+.builder-experience .builder__side {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 7;
+  width: 350px;
+  max-height: calc(100% - 24px);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--sheet);
+  border: 1px solid var(--rule);
+  border-radius: 12px;
+  box-shadow: 0 14px 34px rgb(0 0 0 / 0.14);
+}
+.builder__side-head {
+  display: flex;
+  align-items: flex-end;
+  gap: 6px;
+  padding: 10px 10px 10px 14px;
+  border-bottom: 1px solid var(--hair);
+}
+.builder__side-head .builder-field {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+}
+.builder__side-toggle {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border: 1px solid var(--rule);
+  border-radius: 7px;
+  background: transparent;
+  color: var(--ink);
+  flex-shrink: 0;
+}
+.builder__side-toggle:hover {
+  background: var(--wash);
+}
+.builder__side-body {
+  overflow-y: auto;
+  min-height: 0;
+}
+.builder-experience .builder__side-body > section {
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--hair);
+}
+.panel-closed .builder__side {
+  width: 300px;
+}
+.panel-closed .builder__side-body {
+  display: none;
+}
+.panel-closed .builder__side-head {
+  border-bottom: 0;
+}
+
+/* Simulate view inside the builder: scrolls under the toolbar. */
+.builder-experience .builder-experience__simulation {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 14px 16px 24px;
+}
+.builder-experience .builder-experience__simulation .outcome-banner {
+  margin-bottom: 14px;
+  padding: 0 0 12px;
+  border-bottom: 1px solid var(--hair);
+}
+.builder-experience .builder-experience__simulation .outcome-banner h2 {
+  font-size: 22px;
+}
+
+/* ---------- Tablet ---------- */
+@media (max-width: 1000px) {
+  .builder-bar {
+    flex-wrap: wrap;
+    padding: 8px 12px;
+    row-gap: 8px;
+  }
+  .builder-bar__title {
+    flex: 1;
+    max-width: none;
+  }
+  .builder-experience .builder-bar .builder-experience__save {
+    order: 5;
+    margin-inline-start: 0;
+  }
+  .builder-experience .builder__side {
+    width: 320px;
+  }
+  .builder-experience .builder__canvas-wrap .builder-canvas {
+    right: 344px;
+  }
+}
+
+/* ---------- Phone: structured editing first ---------- */
+@media (max-width: 720px) {
+  .builder-experience {
+    height: auto;
+    min-height: 100dvh;
+  }
+  .builder-bar {
+    position: sticky;
+    top: 0;
+  }
+  .builder-bar__back {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+  .builder-bar__title {
+    order: 1;
+    flex: 1 1 0;
+  }
+  .builder-bar .theme-toggle {
+    order: 2;
+  }
+  .builder-bar__backbtn {
+    order: 3;
+  }
+  .builder-bar__modes {
+    order: 4;
+  }
+  .builder-bar__scenario {
+    order: 5;
+    flex: 1;
+  }
+  .builder-bar__scenario > [data-slot="button"] {
+    width: 100%;
+    justify-content: flex-start;
+  }
+  .builder-bar__file {
+    order: 6;
+  }
+  .builder-experience .builder-bar .builder-experience__save {
+    order: 7;
+    flex-basis: 100%;
+  }
+  .builder-experience .builder {
+    display: flex;
+    flex-direction: column;
+    flex: none;
+  }
+  .builder__mobile-switch {
+    display: flex;
+    gap: 4px;
+    margin: 10px 12px 0;
+    padding: 2px;
+    border-radius: 8px;
+    background: var(--wash);
+  }
+  .builder__mobile-switch button {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    min-height: 38px;
+    border: 0;
+    border-radius: 6px;
+    background: transparent;
+    color: var(--ink-2);
+    font: inherit;
+    font-size: 14px;
+    font-weight: 500;
+  }
+  .builder__mobile-switch button[aria-pressed="true"] {
+    background: var(--sheet);
+    color: var(--ink);
+    box-shadow: 0 0 0 1px var(--hair);
+  }
+  .builder.is-list .builder__outline {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 10px 12px 0;
+  }
+  .builder.is-list .builder__palette {
+    display: none;
+  }
+  /* Keep the map laid out (off-screen) so React Flow measures a real size and
+     the Map tab opens fitted, not on an empty corner. */
+  .builder-experience .builder.is-list .builder__canvas-wrap {
+    position: absolute;
+    left: -10000px;
+    top: 0;
+    width: 100vw;
+    height: 62dvh;
+    visibility: hidden;
+  }
+  .builder-experience .builder.is-map .builder__palette {
+    flex-direction: row;
+    overflow-x: auto;
+    border-right: 0;
+    border-bottom: 1px solid var(--hair);
+  }
+  .builder-experience .builder.is-map .builder-palette__item {
+    min-width: 72px;
+  }
+  .builder-experience .builder.is-map .builder__canvas-wrap {
+    height: 62dvh;
+    min-height: 360px;
+  }
+  .builder-experience .builder__canvas-wrap .builder-canvas {
+    right: 0;
+  }
+  .builder__status {
+    position: static;
+    flex-wrap: wrap;
+    margin: 10px 12px 0;
+    box-shadow: none;
+  }
+  .builder__status [data-slot="button"] {
+    flex: 1;
+    min-height: 40px;
+  }
+  .builder-experience .builder__side {
+    position: static;
+    width: auto;
+    max-height: none;
+    margin: 10px 12px 24px;
+    box-shadow: none;
+  }
+  .builder__side-toggle {
+    display: none;
+  }
+  .panel-closed .builder__side-body {
+    display: block;
+  }
+}
+
+/* Structured list */
+.builder-outline__group {
+  background: var(--sheet);
+  border: 1px solid var(--hair);
+  border-radius: 12px;
+  overflow: hidden;
+}
+.builder-outline__head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 8px 8px 12px;
+  border-bottom: 1px solid var(--hair);
+}
+.builder-outline__head h3 {
+  font-size: 14px;
+  font-family: var(--font-sans);
+  font-weight: 600;
+}
+.builder-outline__head > span {
+  color: var(--ink-2);
+  font-size: 13px;
+}
+.builder-outline__head button {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 36px;
+  padding: 0 10px;
+  border: 1px solid var(--rule);
+  border-radius: 7px;
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  font-size: 13px;
+}
+.builder-outline__group ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.builder-outline__group li + li {
+  border-top: 1px solid var(--hair);
+}
+.builder-outline__group li button {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  width: 100%;
+  min-height: 48px;
+  padding: 8px 12px;
+  border: 0;
+  border-left: 4px solid var(--kc);
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  text-align: left;
+}
+.builder-outline__group li button[aria-current="true"] {
+  background: var(--kf);
+}
+.builder-outline__group li strong {
+  font-size: 14px;
+}
+.builder-outline__group li span {
+  font-size: 12.5px;
+  color: var(--ink-2);
+}
+.builder-outline__group li em {
+  font-style: normal;
+  font-size: 12px;
+  color: var(--short-ink);
+  font-weight: 600;
+}
+
+.builder-outline__empty {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 14px;
+  border: 1px dashed var(--rule);
+  border-radius: 12px;
+  background: var(--sheet);
+  font-size: 14px;
+}
+.builder-outline__empty p {
+  margin: 0;
+  color: var(--ink-2);
+}
+.builder-outline__empty strong {
+  color: var(--ink);
+}
+
+/* Simulate view: same command-centre shape as the simulator. Scenario controls
+   on top, then the map on the left and evidence plus inputs on the right. */
+.builder-experience .builder-experience__simulation {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 380px;
+  grid-auto-rows: max-content;
+  align-content: start;
+  gap: 14px 16px;
+}
+.builder-experience__simulation > * {
+  grid-column: 1 / -1;
+  min-width: 0;
+}
+.builder-experience__simulation > .graph-section {
+  grid-column: 1;
+}
+.builder-experience
+  .builder-experience__simulation
+  > .builder-experience__panels {
+  grid-column: 2;
+  grid-row: span 1;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  align-self: start;
+}
+.builder-experience .builder-sim-scenarios .named-scenarios {
+  margin: 0;
+  padding: 10px 12px;
+}
+.builder-experience__simulation .graph-section {
+  border-color: var(--hair);
+  border-radius: 10px;
+}
+.builder-experience__simulation .graph-toolbar h2 {
+  font-size: 15px;
+  font-family: var(--font-sans);
+  font-weight: 600;
+}
+@media (max-width: 1000px) {
+  .builder-experience .builder-experience__simulation {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .builder-experience__simulation > .graph-section,
+  .builder-experience
+    .builder-experience__simulation
+    > .builder-experience__panels {
+    grid-column: 1;
+  }
+}

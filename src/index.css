@@ -37,21 +37,24 @@
 :root {
   color-scheme: light;
   font-family: var(--font-sans);
-  /* surfaces */
-  --paper: #e9ece8; /* page ground */
-  --sheet: #f5f7f4; /* raised panels */
-  --wash: #dde2dd; /* hover, selected rows */
+  /* surfaces — shared with the landing page (src/landing/landing.css) */
+  --paper: #f2f1ec; /* page ground */
+  --sheet: #faf9f5; /* raised panels */
+  --wash: #e2e3dd; /* hover, selected rows */
   /* ink */
-  --ink: #1c2127; /* 13.6:1 on paper */
-  --ink-2: #56615b; /* 5.4:1 on paper, secondary text */
+  --ink: #1b2227; /* 14:1 on paper */
+  --ink-2: #59616a; /* 5.6:1 on paper, secondary text */
   /* rules: structural at 3:1, decorative hairlines below that */
-  --rule: #7f8a83;
-  --hair: #c9d1cb;
+  --rule: #858b87;
+  --hair: #d6d8d3;
   /* signal */
-  --short: #b8321f; /* marks and large text, 5.0:1 */
+  --short: #b83222; /* marks and large text, 5.3:1 */
   --short-ink: #9a2a1a; /* small text on tint, 6.3:1 */
-  --short-tint: #f6e4df;
-  --alt: #2f5d8a; /* approved alternative, 5.8:1, survives red-green CVD */
+  --short-tint: #f5e0d9;
+  --alt: #2858aa; /* approved alternative, 6.4:1, survives red-green CVD */
+  --alt-tint: #e4eaf5;
+  --ok: #2f6b4f;
+  --ok-tint: #dfece4;
   --hatch: repeating-linear-gradient(
     135deg,
     var(--short) 0 2px,
@@ -78,17 +81,20 @@
  * alarm and blue remedy keep their contrast on a dark ground. */
 :root.dark {
   color-scheme: dark;
-  --paper: #14181b;
-  --sheet: #1c2226;
-  --wash: #283035;
-  --ink: #e4e9e5; /* 14:1 on paper */
-  --ink-2: #a0aca5; /* 7.4:1 on paper */
-  --rule: #6c7871;
-  --hair: #323a3f;
-  --short: #e8654e;
-  --short-ink: #f4917e;
-  --short-tint: #3b211c;
-  --alt: #74a8db;
+  --paper: #0d1422;
+  --sheet: #182237;
+  --wash: #223047;
+  --ink: #f1eee6; /* 15:1 on paper */
+  --ink-2: #b0b9ca; /* 9:1 on paper */
+  --rule: #64759a;
+  --hair: #2a3852;
+  --short: #ff9a80;
+  --short-ink: #ffb3a0;
+  --short-tint: #34252d;
+  --alt: #a6c4ff;
+  --alt-tint: #223453;
+  --ok: #8fd3ae;
+  --ok-tint: #1c3330;
   --inverse: #0b0e10;
   --inverse-ink: #e4e9e5;
   --inverse-muted: #a9b5ae;

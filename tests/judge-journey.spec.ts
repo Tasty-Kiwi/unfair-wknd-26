@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import { openOrderBook } from "./ui-helpers";
 
 test("mobile product preview discloses retained BOMs and keeps actions usable", async ({
   page,
@@ -38,6 +39,7 @@ test("mobile product preview discloses retained BOMs and keeps actions usable", 
   await expect(
     page.getByText(/Product names and SKUs are imported; existing BOMs/),
   ).toBeVisible();
+  await openOrderBook(page);
   await page.getByRole("button", { name: "Export report" }).click();
 });
 
@@ -53,7 +55,7 @@ test("judge causes a disruption, audits allocation, and resolves it with live in
   await slider.fill("5");
   await expect(summary).toContainText("All material requirements covered");
   await slider.fill("6");
-  await expect(summary).toContainText("Due to material shortage");
+  await expect(summary).toContainText("at risk due to material shortage");
   await expect(page.locator(".outcome-banner")).toContainText("€36,000");
   await expect(page.locator(".outcome-banner")).toContainText(
     "2 component units",
@@ -76,13 +78,14 @@ test("judge causes a disruption, audits allocation, and resolves it with live in
     "Recovery active",
   );
   const downloadPromise = page.waitForEvent("download");
+  await openOrderBook(page);
   await page.getByRole("button", { name: "Export report" }).click();
   expect((await downloadPromise).suggestedFilename()).toBe(
     "needtrace-scenario-report.json",
   );
   await page.getByRole("button", { name: "Reset demo" }).click();
   await page.getByRole("radio", { name: /Supplier disruption/ }).click();
-  await expect(summary).toContainText("Due to material shortage");
+  await expect(summary).toContainText("at risk due to material shortage");
   await page.getByRole("radio", { name: /Approved recovery/ }).click();
   await expect(summary).toContainText("All material requirements covered");
   await page.getByRole("button", { name: "Full network", exact: true }).click();
@@ -254,7 +257,7 @@ test("recovery comparison evaluates independent options and applies the selected
   const purchase = comparison
     .locator("article")
     .filter({ hasText: "Use Vector Components" });
-  await expect(purchase).toContainText("2net units recovered");
+  await expect(purchase).toContainText("2 net units recovered");
   await purchase.getByRole("button", { name: "Apply recovery" }).click();
   await expect(page.locator(".outcome-banner")).toContainText("Every order");
   await expect(
@@ -326,7 +329,7 @@ test("receipt date moves by preset, timeline keyboard, and drag, all in sync", a
   ).toBeVisible();
 
   await page.getByRole("radio", { name: "First short, 23 Nov" }).click();
-  await expect(summary).toContainText("Due to material shortage");
+  await expect(summary).toContainText("at risk due to material shortage");
   await page.getByRole("radio", { name: "Latest safe, 22 Nov" }).click();
   await expect(summary).toContainText("All material requirements covered");
   await page.getByRole("radio", { name: "As planned, 17 Nov" }).click();
@@ -344,7 +347,7 @@ test("receipt date moves by preset, timeline keyboard, and drag, all in sync", a
   ).toHaveAttribute("aria-checked", "true");
   await handle.press("End");
   await expect(handle).toHaveAttribute("aria-valuenow", "12");
-  await expect(summary).toContainText("Due to material shortage");
+  await expect(summary).toContainText("at risk due to material shortage");
   await handle.press("Home");
   await expect(handle).toHaveAttribute("aria-valuenow", "-5");
 
@@ -396,7 +399,7 @@ test("a supplier is only flagged Late when its receipt actually slips", async ({
   await page.getByLabel("Quantity").first().fill("1");
   await expect(
     page.getByRole("region", { name: "Simulation summary" }),
-  ).toContainText("Due to material shortage");
+  ).toContainText("at risk due to material shortage");
   await expect(aster).toContainText("Reduced");
   await expect(aster).not.toContainText("Late");
 });

@@ -42,7 +42,7 @@ test("closing builder removes query and browser history reopens it", async ({
     .getByRole("button", { name: "Build a network", exact: true })
     .click();
   await expect(page).toHaveURL(/builder=1/);
-  await builder(page).getByRole("button", { name: "Back to Simulate" }).click();
+  await builder(page).getByRole("button", { name: "Back to demo" }).click();
   await expect(page).not.toHaveURL(/builder=1/);
   await page.goBack();
   await expect(builder(page)).toBeVisible();
@@ -72,7 +72,7 @@ test("device draft persists across closing and reopening builder", async ({
   await expect(
     builder(page).getByText("Saved locally", { exact: true }),
   ).toBeVisible();
-  await builder(page).getByRole("button", { name: "Back to Simulate" }).click();
+  await builder(page).getByRole("button", { name: "Back to demo" }).click();
   await page
     .getByRole("button", { name: "Build a network", exact: true })
     .click();
