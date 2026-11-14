@@ -24,13 +24,7 @@ export function applyTheme(theme: Theme) {
   root.style.colorScheme = theme;
   if (isLanding()) root.dataset.landingTheme = theme;
   else delete root.dataset.landingTheme;
-  const background = isLanding()
-    ? theme === "dark"
-      ? "#0d1422"
-      : "#f2f1ec"
-    : theme === "dark"
-      ? "#14181b"
-      : "#e9ece8";
+  const background = theme === "dark" ? "#0d1422" : "#f2f1ec";
   root.style.backgroundColor = background;
   document
     .querySelector('meta[name="theme-color"]')

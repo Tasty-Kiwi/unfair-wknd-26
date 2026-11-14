@@ -1,0 +1,72 @@
+.app-loading {
+  display: grid;
+  place-items: center;
+  min-height: 100vh;
+  min-height: 100dvh;
+  padding: 32px 24px;
+  background: var(--paper);
+  color: var(--ink);
+}
+
+.app-loading__content {
+  width: min(100%, 280px);
+  text-align: center;
+}
+
+.app-loading__brand {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  font-family: var(--font-display);
+  font-size: 36px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  line-height: 1;
+}
+
+.app-loading__trace {
+  display: block;
+  width: 100%;
+  height: 40px;
+  margin: 28px 0 12px;
+  stroke-width: 1.5;
+}
+
+.app-loading__track {
+  stroke: var(--hair);
+}
+
+.app-loading__signal {
+  stroke: var(--alt);
+  stroke-linecap: round;
+  stroke-dasharray: 22 100;
+  animation: loading-trace 1.8s linear infinite;
+}
+
+.app-loading__trace rect {
+  fill: var(--paper);
+  stroke: var(--alt);
+}
+
+.app-loading p {
+  color: var(--ink-2);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+@keyframes loading-trace {
+  from {
+    stroke-dashoffset: 22;
+  }
+  to {
+    stroke-dashoffset: -100;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .app-loading__signal {
+    animation: none;
+    stroke-dasharray: none;
+  }
+}

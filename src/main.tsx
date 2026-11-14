@@ -8,6 +8,7 @@ import "@fontsource/ibm-plex-sans-condensed/latin-600.css";
 import "./index.css";
 import { initTheme } from "./lib/theme";
 import { projectAuthReturn } from "./lib/cloud/projectReturn";
+import { LoadingScreen } from "./components/LoadingScreen";
 
 initTheme();
 try {
@@ -40,7 +41,7 @@ const surface = projectMatch ? (
 );
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
-    <React.Suspense fallback={<p role="status">Loading Needtrace…</p>}>
+    <React.Suspense fallback={<LoadingScreen />}>
       {surface}
     </React.Suspense>
   </React.StrictMode>,
