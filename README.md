@@ -132,6 +132,6 @@ This prototype models **material availability only**. It excludes factory capaci
 - `src/components/scenarios/`: live scenario controls and structured allocation explanations.
 - `src/components/ui/`: shadcn/Radix primitives.
 - `src/tests/`: calculation and validation tests; `tests/`: Chrome journey tests.
-- `AGENT_DISCUSSION.md`: real timed review, participant contributions, disagreements and decisions.
+- `docs/archive/`: historical design debates, superseded release reviews and material from deleted branches, including the original timed agent discussion. See the [archive index](docs/archive/README.md) and [branch archive](docs/archive/BRANCH_ARCHIVE.md).
 
 React 19, TypeScript, Vite, Tailwind CSS 4, shadcn/ui, React Flow, Lucide, Zod and Vitest. The production bundle contains the graph and validation libraries; the public Worker hosts the prototype, with no ERP integration. Human usability and manufacturing-policy validation remain outstanding.

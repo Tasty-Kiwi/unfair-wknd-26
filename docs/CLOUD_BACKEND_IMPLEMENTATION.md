@@ -75,7 +75,7 @@ The review's remaining retry issue is fixed. Failed/timed-out/malformed health p
 - **GPT-6 Luna**, `codex/gpt-6-luna`: changed auth configuration tests only. [Custom OAuth tests — implementation ready](t3-thread://v2/55319d5f-3d07-4b9d-b7a7-291bcf25c769/thread:delegated-task:command%3Amcp%3Ac5096eeb-26c8-40a1-a97e-08e83ea6c75b%3Adelegate-task%3A1e2e98cf-e67e-4d6b-af61-652b4876f384) It did not migrate the remaining harness/tests or run them. The earlier attempt [Custom GitHub OAuth — tests](t3-thread://v2/55319d5f-3d07-4b9d-b7a7-291bcf25c769/thread:delegated-task:command%3Amcp%3Ac5096eeb-26c8-40a1-a97e-08e83ea6c75b%3Adelegate-task%3A08677b0b-3d7f-47af-a602-24949ee09b46) made no edits because the new server was not available yet.
 - **Coordinator:** removed SDK/CLI/probe dependencies and tooling, integrated entry point/env/config changes, completed the opaque-session harness/browser migration, restored URL-boundary cases, implemented mocked-provider OAuth/security/migration tests, added callback duplicate-param/origin/profile/redirect protections, reused bounded JSON reading, reviewed the retry code, and ran final verification.
 
-Luna/Haiku reported matching executed-model IDs. Hydrogen's separate executed-model field was unavailable; no stronger identity claim is made. Historical three-round discussions and the explicit user override remain in [the debate record](CLOUD_BACKEND_DESIGN_DEBATE.md).
+Luna/Haiku reported matching executed-model IDs. Hydrogen's separate executed-model field was unavailable; no stronger identity claim is made. Historical three-round discussions and the explicit user override remain in [the debate record](archive/historical-designs/CLOUD_BACKEND_DESIGN_DEBATE.md).
 
 ## Configuration and local use
 
