@@ -71,6 +71,12 @@ export function BuilderCanvas({
   const [livePositions, setLivePositions] = useState<
     Record<string, { x: number; y: number }>
   >({});
+  // React Flow hides nodes without measured dimensions. Keep its measurements
+  // when rebuilding controlled nodes for a drag, selection or document edit.
+  // These are canvas state only; they do not belong in the saved document.
+  const [measurements, setMeasurements] = useState<
+    Record<string, { width: number; height: number }>
+  >({});
 
   const nodes = useMemo<BuilderFlowNode[]>(
     () =>
@@ -81,6 +87,7 @@ export function BuilderCanvas({
           id: key,
           type: "builder",
           position: livePositions[key] ?? node.position,
+          measured: measurements[key],
           selected: selection?.type === "node" && selection.key === key,
           deletable: false,
           data: {
@@ -92,7 +99,14 @@ export function BuilderCanvas({
           },
         };
       }),
-    [document.nodes, summaries, issueCounts, livePositions, selection],
+    [
+      document.nodes,
+      summaries,
+      issueCounts,
+      livePositions,
+      measurements,
+      selection,
+    ],
   );
 
   const edges = useMemo<Edge[]>(
@@ -123,7 +137,28 @@ export function BuilderCanvas({
 
   const handleNodesChange = useCallback(
     (changes: NodeChange<BuilderFlowNode>[]) => {
-      // Only position updates matter; selection is owned by this component.
+      // Selection is owned by this component, but dimensions must survive
+      // controlled-node updates or every movement hides the entire graph.
+      const resized = changes.filter(
+        (change) => change.type === "dimensions" && change.dimensions,
+      );
+      if (resized.length > 0) {
+        setMeasurements((previous) => {
+          let next = previous;
+          for (const change of resized) {
+            if (change.type !== "dimensions" || !change.dimensions) continue;
+            const dimensions = change.dimensions;
+            if (
+              previous[change.id]?.width === dimensions.width &&
+              previous[change.id]?.height === dimensions.height
+            )
+              continue;
+            if (next === previous) next = { ...previous };
+            next[change.id] = dimensions;
+          }
+          return next;
+        });
+      }
       const moving = changes.filter(
         (
           change,

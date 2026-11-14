@@ -19,9 +19,10 @@
   z-index: 30;
   display: flex;
   align-items: center;
-  gap: 14px;
+  flex-wrap: wrap;
+  gap: 8px 14px;
   min-height: 52px;
-  padding: 0 16px;
+  padding: 8px 16px;
   background: var(--sheet);
   border-bottom: 1px solid var(--hair);
 }
@@ -62,9 +63,12 @@
   min-width: 0;
   font-size: 12.5px;
   color: var(--ink-2);
-  flex-wrap: nowrap;
+  flex-wrap: wrap;
+  flex-shrink: 0;
+  max-width: 100%;
 }
 .sim .dataset-name {
+  max-width: 220px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -86,9 +90,9 @@
   margin-left: auto;
   display: flex;
   align-items: center;
-  flex-wrap: nowrap;
+  flex-wrap: wrap;
   gap: 2px;
-  flex-shrink: 0;
+  max-width: 100%;
 }
 .sim .top-actions [data-slot="button"] {
   font-size: 13.5px;

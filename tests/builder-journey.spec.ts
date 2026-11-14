@@ -529,6 +529,101 @@ async function exportWorkspace(page: Page, builder: Locator) {
   return { path, workspace: JSON.parse(await readFile(path, "utf8")) };
 }
 
+for (const theme of ["light", "dark"]) {
+  test(`${theme}: dragging keeps every node and relationship visible throughout movement`, async ({
+    page,
+  }) => {
+    await page.addInitScript(
+      (value) => localStorage.setItem("dominoos.landing.theme.v2", value),
+      theme,
+    );
+    const errors: string[] = [];
+    page.on("pageerror", (error) => errors.push(error.message));
+    const builder = await openBuilder(page);
+    await builder
+      .getByRole("button", { name: "Core example", exact: true })
+      .click();
+    await motorScenario(builder);
+    await builder.getByRole("button", { name: "Build", exact: true }).click();
+    const key = await add(builder, "supplier", {});
+    await expect(
+      builder.getByRole("region", { name: "Scenario requires review" }),
+    ).toBeVisible();
+    await fit(builder);
+    const before = (await exportWorkspace(page, builder)).workspace;
+    const viewport = await canvasViewport(builder);
+    const canvas = builder.getByTestId("builder-canvas");
+    const node = canvas.locator(`.builder-node[data-node-key="${key}"]`);
+    const wrappers = canvas.locator(".react-flow__node");
+    for (const wrapper of await wrappers.all())
+      await expect(wrapper).toBeVisible();
+
+    // End-of-drag checks miss nodes being hidden and remeasured between frames.
+    // Observe both sides of style mutations, even if visibility recovers before
+    // Playwright's next assertion or screenshot.
+    const visibility = await canvas.evaluateHandle((element) => {
+      const hidden: string[] = [];
+      const observer = new MutationObserver((records) => {
+        for (const record of records) {
+          const target = record.target;
+          if (
+            target instanceof HTMLElement &&
+            target.matches(".react-flow__node") &&
+            (target.style.visibility === "hidden" ||
+              record.oldValue?.includes("visibility: hidden"))
+          )
+            hidden.push(target.dataset.id!);
+        }
+      });
+      observer.observe(element, {
+        subtree: true,
+        attributes: true,
+        attributeFilter: ["style"],
+        attributeOldValue: true,
+      });
+      return { hidden, observer };
+    });
+    const bounds = (await node.boundingBox())!;
+    const start = {
+      x: bounds.x + bounds.width / 2,
+      y: bounds.y + bounds.height / 2,
+    };
+    await page.mouse.move(start.x, start.y);
+    await page.mouse.down();
+    for (let step = 1; step <= 3; step++) {
+      await page.mouse.move(start.x + step * 15, start.y - step * 25, {
+        steps: 4,
+      });
+      for (const wrapper of await wrappers.all())
+        await expect(wrapper).toBeVisible();
+      await expect(canvas.locator(".react-flow__edge-path")).toHaveCount(
+        before.document.edges.length,
+      );
+      expect(await canvasViewport(builder)).toEqual(viewport);
+    }
+    await page.mouse.up();
+    const after = (await exportWorkspace(page, builder)).workspace;
+    expect(await visibility.evaluate((state) => state.hidden)).toEqual([]);
+    await visibility.evaluate((state) => state.observer.disconnect());
+    const moved = after.document.nodes.find(
+      (item: { id: string }) => `supplier:${item.id}` === key,
+    );
+    const original = before.document.nodes.find(
+      (item: { id: string }) => `supplier:${item.id}` === key,
+    );
+    expect(moved.position.x).toBeGreaterThan(original.position.x);
+    expect(moved.position.y).toBeLessThan(original.position.y);
+    expect(after.document.revision).toBe(before.document.revision);
+    expect(after.scenarios).toEqual(before.scenarios);
+    await fileAction(builder, "Save workspace");
+    await page.reload();
+    const restored = (await exportWorkspace(page, builder)).workspace;
+    expect(restored.document.nodes).toEqual(after.document.nodes);
+    expect(restored.document.viewport).toEqual(after.document.viewport);
+    expect(errors).toEqual([]);
+  });
+}
+
 test("each added node is revealed without Fit View and field edits keep the framing", async ({
   page,
 }) => {
