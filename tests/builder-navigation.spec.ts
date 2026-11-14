@@ -70,7 +70,7 @@ test("device draft persists across closing and reopening builder", async ({
     .getByLabel("Network name", { exact: true })
     .fill("Saved device draft");
   await expect(
-    builder(page).getByText("Saved locally", { exact: true }),
+    builder(page).getByRole("status", { name: "Saved locally", exact: true }),
   ).toBeVisible();
   await builder(page).getByRole("button", { name: "Back to demo" }).click();
   await page

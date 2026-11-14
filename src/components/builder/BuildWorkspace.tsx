@@ -114,7 +114,9 @@ export function BuildWorkspace({
   onCoreExample,
 }: BuildWorkspaceProps) {
   const [mobileView, setMobileView] = useState<"list" | "map">("list");
-  const [panelOpen, setPanelOpen] = useState(true);
+  const [panelOpen, setPanelOpen] = useState(
+    () => !window.matchMedia("(max-width: 720px)").matches,
+  );
   const [revealNodeKey, setRevealNodeKey] = useState<NodeKey | null>(null);
   const [rawSelection, setSelection] = useState<BuilderSelection>(null);
   // A deleted or replaced item must not stay selected.
@@ -253,6 +255,7 @@ export function BuildWorkspace({
     const result = addNode(document, kind);
     onChange(result.document);
     setSelection({ type: "node", key: result.key });
+    setPanelOpen(true);
     setRevealNodeKey(result.key);
   }
 
@@ -296,7 +299,10 @@ export function BuildWorkspace({
         <button
           type="button"
           aria-pressed={mobileView === "map"}
-          onClick={() => setMobileView("map")}
+          onClick={() => {
+            setMobileView("map");
+            setPanelOpen(false);
+          }}
         >
           <Network aria-hidden size={15} /> Map
         </button>
@@ -380,7 +386,10 @@ export function BuildWorkspace({
                           aria-current={
                             selectedKey === key ? "true" : undefined
                           }
-                          onClick={() => setSelection({ type: "node", key })}
+                          onClick={() => {
+                            setSelection({ type: "node", key });
+                            setPanelOpen(true);
+                          }}
                         >
                           <strong>{summary?.title}</strong>
                           <span>{summary?.details.join(" · ")}</span>
@@ -405,11 +414,15 @@ export function BuildWorkspace({
           document={document}
           selection={selection}
           revealNodeKey={revealNodeKey}
+          fitMobileMap={mobileView === "map"}
           onViewportChange={handleViewport}
           summaries={summaries}
           issueCounts={issueCounts}
           edgeLabels={edgeLabels}
-          onSelect={setSelection}
+          onSelect={(item) => {
+            setSelection(item);
+            setPanelOpen(item !== null);
+          }}
           onMoveNodes={handleMove}
           onConnect={handleConnect}
         />
@@ -509,67 +522,69 @@ export function BuildWorkspace({
             ) : (
               <PanelRightOpen aria-hidden size={16} />
             )}
-            <span className="sr-only">
+            <span className="builder__side-toggle-label">
               {panelOpen ? "Hide details panel" : "Show details panel"}
             </span>
           </button>
         </div>
-        <div className="builder__side-body">
-          <PropertiesInspector
-            document={document}
-            selection={selection}
-            labels={labels}
-            issues={issues}
-            onChange={onChange}
-            onSelect={setSelection}
-          />
+        <div className="builder__side-collapse" inert={!panelOpen}>
+          <div className="builder__side-body">
+            <PropertiesInspector
+              document={document}
+              selection={selection}
+              labels={labels}
+              issues={issues}
+              onChange={onChange}
+              onSelect={setSelection}
+            />
 
-          <section
-            className="builder-checks"
-            aria-labelledby="builder-checks-title"
-          >
-            <h3 id="builder-checks-title" className="builder-section-title">
-              Checks
-            </h3>
-            {issues.length === 0 ? (
-              <p className="builder-checks__ok">
-                {document.nodes.length === 0
-                  ? "Start with Core example, or name your network and add a supplier. Check network when you are ready."
-                  : "No problems listed. Check the network to refresh."}
-              </p>
-            ) : (
-              <div className="builder-check-groups">
-                <p className="builder-checks__intro">
-                  {issues.length} checks to complete before simulation. Choose
-                  an item to repair; all fields remain editable.
+            <section
+              className="builder-checks"
+              aria-labelledby="builder-checks-title"
+            >
+              <h3 id="builder-checks-title" className="builder-section-title">
+                Checks
+              </h3>
+              {issues.length === 0 ? (
+                <p className="builder-checks__ok">
+                  {document.nodes.length === 0
+                    ? "Start with Core example, or name your network and add a supplier. Check network when you are ready."
+                    : "No problems listed. Check the network to refresh."}
                 </p>
-                {issueGroups.map(([key, group], index) => (
-                  <details
-                    key={key}
-                    open={index === 0}
-                    className="builder-check-group"
-                  >
-                    <summary>
-                      {group.label} <span>{group.issues.length}</span>
-                    </summary>
-                    <ul className="builder-issues builder-checks__list">
-                      {group.issues.map((issue, i) => (
-                        <li key={`${i}-${issue.message}`}>
-                          <button
-                            type="button"
-                            className="builder-checks__jump"
-                            onClick={() => inspectIssue(issue)}
-                          >
-                            {issue.message}
-                          </button>
-                        </li>
-                      ))}
-                    </ul>
-                  </details>
-                ))}
-              </div>
-            )}
-          </section>
+              ) : (
+                <div className="builder-check-groups">
+                  <p className="builder-checks__intro">
+                    {issues.length} checks to complete before simulation. Choose
+                    an item to repair; all fields remain editable.
+                  </p>
+                  {issueGroups.map(([key, group], index) => (
+                    <details
+                      key={key}
+                      open={index === 0}
+                      className="builder-check-group"
+                    >
+                      <summary>
+                        {group.label} <span>{group.issues.length}</span>
+                      </summary>
+                      <ul className="builder-issues builder-checks__list">
+                        {group.issues.map((issue, i) => (
+                          <li key={`${i}-${issue.message}`}>
+                            <button
+                              type="button"
+                              className="builder-checks__jump"
+                              onClick={() => inspectIssue(issue)}
+                            >
+                              {issue.message}
+                            </button>
+                          </li>
+                        ))}
+                      </ul>
+                    </details>
+                  ))}
+                </div>
+              )}
+            </section>
+          </div>
         </div>
       </aside>
     </div>

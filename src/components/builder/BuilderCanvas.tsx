@@ -12,6 +12,7 @@ import {
   MarkerType,
   ReactFlow,
   useInternalNode,
+  useNodesInitialized,
   useStore,
   useReactFlow,
   type Connection,
@@ -43,6 +44,7 @@ export type BuilderCanvasProps = {
   document: BuilderDocument;
   selection: BuilderSelection;
   revealNodeKey: NodeKey | null;
+  fitMobileMap: boolean;
   onViewportChange: (viewport: BuilderViewport) => void;
   summaries: Map<NodeKey, { title: string; details: string[] }>;
   issueCounts: Map<NodeKey, number>;
@@ -58,6 +60,7 @@ export function BuilderCanvas({
   document,
   selection,
   revealNodeKey,
+  fitMobileMap,
   onViewportChange,
   summaries,
   issueCounts,
@@ -251,17 +254,48 @@ export function BuilderCanvas({
         fitView={!document.viewport}
         onMoveEnd={(_event, viewport) => onViewportChange(viewport)}
         fitViewOptions={{ padding: 0.2 }}
-        minZoom={0.4}
+        minZoom={0.15}
         maxZoom={1.6}
         proOptions={{ hideAttribution: true }}
         aria-label="Supply network canvas"
       >
         <RevealAddedNode nodeKey={revealNodeKey} />
+        <FitMobileMap
+          active={fitMobileMap}
+          hasNodes={document.nodes.length > 0}
+        />
         <Background gap={24} size={1} />
         <Controls showInteractive={false} position="bottom-right" />
       </ReactFlow>
     </div>
   );
+}
+
+/** The canvas is initially measured off-screen on phones; fit it once when
+ * the map is first opened, then leave subsequent navigation to the user. */
+function FitMobileMap({
+  active,
+  hasNodes,
+}: {
+  active: boolean;
+  hasNodes: boolean;
+}) {
+  const initialized = useNodesInitialized();
+  const { fitView } = useReactFlow();
+  const fitted = useRef(false);
+  useEffect(() => {
+    if (!active || fitted.current || (hasNodes && !initialized)) return;
+    if (!hasNodes) {
+      fitted.current = true;
+      return;
+    }
+    const frame = requestAnimationFrame(() => {
+      fitted.current = true;
+      void fitView({ padding: 0.12, minZoom: 0.15, maxZoom: 1 });
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [active, hasNodes, initialized, fitView]);
+  return null;
 }
 
 /** Only an explicit palette addition changes the view. Field edits, selection

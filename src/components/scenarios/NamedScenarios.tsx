@@ -1,4 +1,5 @@
 import { Button } from "@/components/ui/button";
+import { CircleAlert, GitCompareArrows, Plus, Save } from "lucide-react";
 import type { ScenarioRecord } from "@/lib/builder/types";
 
 type Props = {
@@ -77,22 +78,42 @@ export function NamedScenarios(props: Props) {
         />
       </div>
       <div className="named-scenarios__actions">
-        <Button variant="outline" onClick={onNew}>
-          New scenario
+        <Button
+          variant="outline"
+          size="icon"
+          onClick={onNew}
+          aria-label="New scenario"
+          title="New scenario"
+        >
+          <Plus aria-hidden="true" />
         </Button>
         <Button
           variant="outline"
+          size="icon"
+          aria-label="Save scenario"
+          title="Save scenario"
           onClick={onSave}
           disabled={selectedId === null || !name.trim()}
         >
-          Save scenario
+          <Save aria-hidden="true" />
         </Button>
-        <Button variant="outline" onClick={onCompare}>
-          Compare with baseline
+        <Button
+          variant="outline"
+          size="icon"
+          onClick={onCompare}
+          aria-label="Compare with baseline"
+          title="Compare with baseline"
+        >
+          <GitCompareArrows aria-hidden="true" />
         </Button>
         {dirty && (
-          <span className="named-scenarios__dirty">
-            Unsaved scenario changes
+          <span
+            className="named-scenarios__dirty"
+            role="status"
+            aria-label="Unsaved scenario changes"
+            title="Unsaved scenario changes"
+          >
+            <CircleAlert aria-hidden="true" size={18} />
           </span>
         )}
       </div>

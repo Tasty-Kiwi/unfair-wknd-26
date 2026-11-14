@@ -227,7 +227,7 @@ test("blank graph -> named motor disruption -> baseline comparison -> reload and
 
   await fileAction(builder, "Save workspace");
   await expect(
-    builder.getByText("Saved locally", { exact: true }),
+    builder.getByRole("status", { name: "Saved locally", exact: true }),
   ).toBeVisible();
   await page.reload();
   await expect(builder).toBeVisible();
@@ -435,6 +435,7 @@ test("narrow editing connects on the map without page overflow", async ({
 }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   const builder = await openBuilder(page);
+  await builder.getByRole("button", { name: "Show details panel" }).click();
   await builder.getByLabel("Network name", { exact: true }).fill("Small chain");
   await builder
     .getByLabel("Inventory as of", { exact: true })
@@ -450,9 +451,14 @@ test("narrow editing connects on the map without page overflow", async ({
     name: "Network details",
   });
   await expect(details).toHaveCSS("position", "fixed");
-  await builder.getByRole("button", { name: "Hide details panel" }).click();
+  await expect(
+    builder.getByRole("button", { name: "Show details panel" }),
+  ).toBeVisible();
   await connect(builder, "primarySupplier", supplier, component);
-  await builder.getByRole("button", { name: "Show details panel" }).click();
+  const showDetails = builder.getByRole("button", {
+    name: "Show details panel",
+  });
+  if (await showDetails.isVisible()) await showDetails.click();
   await builder
     .getByLabel("Edit item", { exact: true })
     .selectOption(`node:${component}`);
@@ -734,7 +740,7 @@ test("pan and zoom restore after reload and same-ID import without invalidating 
     .poll(() => canvasViewport(builder))
     .not.toEqual(restoredViewport);
   await expect(
-    builder.getByText("Saved locally", { exact: true }),
+    builder.getByRole("status", { name: "Saved locally", exact: true }),
   ).toBeVisible();
   // React Flow's onMoveEnd commits after its DOM transform changes. Wait for
   // that exact viewport to reach storage before starting an atomic import.

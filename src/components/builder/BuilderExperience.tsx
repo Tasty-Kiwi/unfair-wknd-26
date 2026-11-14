@@ -1,5 +1,13 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ArrowLeft, Download, Save, Upload } from "lucide-react";
+import {
+  ArrowLeft,
+  Check,
+  CircleAlert,
+  Download,
+  LoaderCircle,
+  Save,
+  Upload,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { AccountControls } from "@/components/account/AccountControls";
@@ -628,7 +636,12 @@ export function BuilderExperience({
                   {record
                     ? record.scenario.name || "Unnamed scenario"
                     : "Baseline"}
-                  {scenarioDirty ? " ·  unsaved" : ""}
+                  {scenarioDirty && (
+                    <CircleAlert
+                      size={14}
+                      aria-label="Unsaved scenario changes"
+                    />
+                  )}
                 </span>
               </>
             }
@@ -639,9 +652,24 @@ export function BuilderExperience({
         <span
           role="status"
           className="builder-experience__save"
-          title="Saved in this browser. Export JSON for a portable copy."
+          data-error={saveStatus === "Changes not saved" || undefined}
+          title={importing ? "Reading workspace…" : saveStatus}
+          aria-label={importing ? "Reading workspace…" : saveStatus}
         >
-          {importing ? "Reading workspace…" : saveStatus}
+          {importing || saveStatus === "Saving…" ? (
+            <LoaderCircle aria-hidden="true" />
+          ) : saveStatus === "Changes not saved" ? (
+            <>
+              <CircleAlert aria-hidden="true" /> {saveStatus}
+            </>
+          ) : (
+            <Check aria-hidden="true" />
+          )}
+          {saveStatus !== "Changes not saved" && (
+            <span className="sr-only">
+              {importing ? "Reading workspace…" : saveStatus}
+            </span>
+          )}
         </span>
         <ToolbarPopover
           className="builder-bar__file"
