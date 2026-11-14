@@ -58,7 +58,7 @@ Additional browser cases cover explicit review after stock changes, Save not byp
 
 Run `npm run dev`, choose **Build a network**, and start blank or open the fictional Core example. Use **Edit item** for keyboard selection, the inspector for values, and handles or Connect for relationships. Run the network before creating a named disruption. Save workspace/export for a portable copy. After refresh, choose Build a network again to reopen the locally stored draft.
 
-The current [implementation plan](SUPPLY_CHAIN_BUILDER_PLAN.md) defines the reduced scope. The [design debate](BUILDER_DESIGN_DEBATE.md) remains a historical record; its larger original P0 and person-hour estimates are not acceptance requirements for this implementation.
+The current [implementation plan](archive/historical-designs/SUPPLY_CHAIN_BUILDER_PLAN.md) defines the reduced scope. The [design debate](archive/historical-designs/BUILDER_DESIGN_DEBATE.md) remains a historical record; its larger original P0 and person-hour estimates are not acceptance requirements for this implementation.
 
 ## PR #4 UX review follow-up — 13 November 2026
 

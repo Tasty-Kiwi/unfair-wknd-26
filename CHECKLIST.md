@@ -81,7 +81,7 @@ Video split: about 20 s problem, 100 s live product, 40 s local builder and evid
 - [x] Reviewed and merged PRs #8–#11 sequentially; main CI and Cloudflare builds passed after each. Merged remote task branches deleted after incorporation checks.
 - [x] Official event rules consolidated in `docs/DEVPOST_READY.md`; About is under 150 words; no fabricated team details or pre-existing-work attestation.
 - [x] Focused UX fixes implemented and independently code/visually reviewed: names, blank-state validation, durable builder navigation/save guard, recovery payoff, laptop space and JSON export clarity.
-- [x] Full integrated checks executed; details and safe guest fallback in `docs/FINAL_RELEASE_EXECUTION.md`.
+- [x] Full integrated checks executed; details and safe guest fallback in `docs/archive/historical-releases/FINAL_RELEASE_EXECUTION.md`.
 - [ ] Repository owner: invite Nedomas with Read access and verify status. Agent admin requests denied (403); permission still `none`.
 - [ ] Repository owner: update description; visibility remains private.
 - [ ] Team: confirm team details and pre-existing-work/build-period disclosures; review video, upload to YouTube/Vimeo, submit before deadline and retain confirmation.
