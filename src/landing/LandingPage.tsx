@@ -426,21 +426,6 @@ export default function LandingPage() {
           <p className="lp-close-note">
             Material availability. Clear assumptions. Your next what-if.
           </p>
-          <details className="lp-boundaries">
-            <summary>What the prototype does—and where it stops</summary>
-            <p>
-              Deterministic material allocation and scenario comparisons.
-              Factory capacity, costs, supplier confirmation and exact shipment
-              predictions are outside the model. Simulated recoveries do not
-              place orders.
-            </p>
-            <p>
-              Builder workspaces save in this browser; export JSON for a
-              portable copy. CSV/JSON imports in the original simulator are
-              session-only and clear on refresh. Neither is uploaded to a
-              server. No customer validation or measured savings are claimed.
-            </p>
-          </details>
         </section>
       </main>
       <footer className="lp-footer lp-wrap">

@@ -630,18 +630,6 @@
   color: var(--muted);
   margin-top: 18px;
 }
-.lp-page .lp-boundaries {
-  font-size: 12px;
-  color: var(--muted);
-  max-width: 680px;
-  margin: 35px auto 0;
-}
-.lp-page .lp-boundaries p {
-  text-align: left;
-  font-size: 13px;
-  line-height: 1.65;
-  margin-top: 12px;
-}
 .lp-page .lp-footer {
   display: flex;
   justify-content: space-between;
