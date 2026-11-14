@@ -59,6 +59,16 @@ export const projectWorkspaceKey = (id: string) =>
     ? WORKSPACE_STORAGE_KEY
     : `needtrace.workspace.v1:${id}`;
 export const projectUrl = (id: string) => `/projects/${encodeURIComponent(id)}`;
+
+export function deleteProject(id: string, storage: Storage = localStorage) {
+  if (id === "device-draft") {
+    storage.removeItem(WORKSPACE_STORAGE_KEY);
+    return;
+  }
+  const project = readProject(id, storage);
+  if (project.kind === "workspace") storage.removeItem(projectWorkspaceKey(id));
+  storage.removeItem(PROJECT_PREFIX + id);
+}
 const baseline: Scenario = {
   id: "baseline",
   name: "Normal operations",

@@ -87,11 +87,20 @@
   text-decoration: none;
   color: var(--ink);
 }
+.project-card__link {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: flex-start;
+  align-self: stretch;
+  color: inherit;
+  text-decoration: none;
+}
 .project-card:hover {
   border-color: var(--alt);
   background: var(--alt-tint);
 }
-.project-card > svg {
+.project-card__link > svg {
   color: var(--alt);
   margin-bottom: 20px;
 }
@@ -112,6 +121,9 @@
   margin-top: auto;
   font-size: 14px;
   font-weight: 500;
+}
+.project-card > button {
+  margin-top: 16px;
 }
 .projects-empty {
   display: flex;

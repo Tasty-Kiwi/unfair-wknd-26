@@ -118,6 +118,7 @@ export function BuilderCanvas({
         sourceHandle: edge.kind,
         targetHandle: edge.kind,
         type: "smoothstep",
+        interactionWidth: 28,
         label: edgeLabels.get(edge.id),
         selected: selection?.type === "edge" && selection.id === edge.id,
         deletable: false,

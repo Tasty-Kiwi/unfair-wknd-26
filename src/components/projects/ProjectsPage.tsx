@@ -23,10 +23,12 @@ import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { ThemeToggle } from "@/components/theme/ThemeToggle";
 import {
   createProject,
+  deleteProject,
   listProjects,
   prepareProjectImport,
   projectUrl,
   type ProjectImport,
+  type ProjectSummary,
 } from "@/lib/projects";
 import "./projects.css";
 
@@ -44,7 +46,9 @@ function savedProjects() {
 }
 
 export default function ProjectsPage() {
-  const [saved] = useState(savedProjects);
+  const [saved, setSaved] = useState(savedProjects);
+  const [removing, setRemoving] = useState<ProjectSummary | null>(null);
+  const [removeError, setRemoveError] = useState("");
   const [open, setOpen] = useState(false);
   const [mode, setMode] = useState("import");
   const [name, setName] = useState("");
@@ -318,19 +322,30 @@ export default function ProjectsPage() {
           {saved.projects.length ? (
             <div className="project-grid">
               {saved.projects.map((project) => (
-                <a
-                  className="project-card"
-                  key={project.id}
-                  href={projectUrl(project.id)}
-                >
-                  <FolderOpen size={25} aria-hidden="true" />
-                  <h3>{project.name}</h3>
-                  <p>{project.detail}</p>
-                  <span className="project-card__open">
-                    Open {project.kind === "workspace" ? "network" : "plan"}
-                    <ArrowRight size={17} aria-hidden="true" />
-                  </span>
-                </a>
+                <div className="project-card" key={project.id}>
+                  <a
+                    className="project-card__link"
+                    href={projectUrl(project.id)}
+                  >
+                    <FolderOpen size={25} aria-hidden="true" />
+                    <h3>{project.name}</h3>
+                    <p>{project.detail}</p>
+                    <span className="project-card__open">
+                      Open {project.kind === "workspace" ? "network" : "plan"}
+                      <ArrowRight size={17} aria-hidden="true" />
+                    </span>
+                  </a>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      setRemoveError("");
+                      setRemoving(project);
+                    }}
+                  >
+                    Remove <span className="sr-only">{project.name}</span>
+                  </Button>
+                </div>
               ))}
             </div>
           ) : (
@@ -350,6 +365,53 @@ export default function ProjectsPage() {
             </div>
           )}
         </section>
+        <Dialog
+          open={removing !== null}
+          onOpenChange={(open) => {
+            if (!open) setRemoving(null);
+          }}
+        >
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Remove project?</DialogTitle>
+              <DialogDescription>
+                Remove “{removing?.name}” from this browser? Its local data and
+                saved scenarios will be deleted. Export JSON first if you want
+                to keep a copy.
+              </DialogDescription>
+            </DialogHeader>
+            {removeError && (
+              <Alert variant="destructive">
+                <AlertTitle>Could not remove project</AlertTitle>
+                <AlertDescription>{removeError}</AlertDescription>
+              </Alert>
+            )}
+            <div className="new-project-footer">
+              <Button variant="outline" onClick={() => setRemoving(null)}>
+                Cancel
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={() => {
+                  if (!removing) return;
+                  try {
+                    deleteProject(removing.id);
+                    setSaved(savedProjects());
+                    setRemoving(null);
+                  } catch (caught) {
+                    setRemoveError(
+                      caught instanceof Error
+                        ? caught.message
+                        : "Check browser storage and try again.",
+                    );
+                  }
+                }}
+              >
+                Remove project
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
         <section
           className="project-demo"
           id="demo"

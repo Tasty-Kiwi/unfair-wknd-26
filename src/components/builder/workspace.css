@@ -163,6 +163,9 @@
   flex-wrap: wrap;
   gap: 6px;
 }
+.builder-experience .toolbar-popover__panel .named-scenarios .scenario-field {
+  flex: none;
+}
 .builder-file-menu {
   display: flex;
   flex-direction: column;

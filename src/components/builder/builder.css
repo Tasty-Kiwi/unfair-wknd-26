@@ -412,17 +412,17 @@
   outline-offset: 1px;
 }
 
-.builder-edge path {
+.builder-edge .react-flow__edge-path {
   stroke: var(--rel, var(--ink));
   stroke-width: 1.5;
 }
 
-.builder-edge.is-missing path {
+.builder-edge.is-missing .react-flow__edge-path {
   stroke: var(--short);
   stroke-dasharray: 4 3;
 }
 
-.builder-edge.react-flow__edge.selected path {
+.builder-edge.react-flow__edge.selected .react-flow__edge-path {
   stroke: var(--alt);
   stroke-width: 2.5;
 }

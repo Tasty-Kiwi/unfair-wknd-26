@@ -21,6 +21,23 @@ async function blank(page: Page, name: string) {
   ).toBeVisible();
 }
 
+test("remove a local project only after confirmation", async ({ page }) => {
+  await page.goto("/projects");
+  await blank(page, "Remove me");
+  await page.getByRole("button", { name: "Projects", exact: true }).click();
+  await blank(page, "Keep me");
+  await page.getByRole("button", { name: "Projects", exact: true }).click();
+  await page.getByRole("button", { name: "Remove Remove me" }).click();
+  const dialog = page.getByRole("dialog", { name: "Remove project?" });
+  await dialog.getByRole("button", { name: "Cancel" }).click();
+  await expect(page.getByRole("link", { name: /Remove me/ })).toBeVisible();
+  await page.getByRole("button", { name: "Remove Remove me" }).click();
+  await dialog.getByRole("button", { name: "Remove project" }).click();
+  await page.reload();
+  await expect(page.getByRole("link", { name: /Remove me/ })).toHaveCount(0);
+  await expect(page.getByRole("link", { name: /Keep me/ })).toBeVisible();
+});
+
 test("landing to projects to demo and back, with isolated blank projects and refresh", async ({
   page,
 }) => {

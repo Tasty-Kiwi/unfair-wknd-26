@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { nodeKey } from "@/lib/builder/factories";
+import { deleteEdge, deleteNode } from "@/lib/builder/connections";
 import type {
   BuilderDocument,
   BuilderViewport,
@@ -119,6 +120,41 @@ export function BuildWorkspace({
   const [rawSelection, setSelection] = useState<BuilderSelection>(null);
   // A deleted or replaced item must not stay selected.
   const selection = liveSelection(document, rawSelection);
+
+  useEffect(() => {
+    function onKeyDown(event: KeyboardEvent) {
+      if (
+        !selection ||
+        (event.key !== "Delete" && event.key !== "Backspace") ||
+        event.metaKey ||
+        event.ctrlKey ||
+        event.altKey ||
+        event.shiftKey ||
+        event.defaultPrevented ||
+        event.isComposing ||
+        window.document.querySelector('[role="dialog"]')
+      )
+        return;
+      const target = event.target;
+      if (
+        target instanceof HTMLElement &&
+        (target.isContentEditable ||
+          target.closest(
+            "input, textarea, select, [contenteditable], [role='dialog']",
+          ))
+      )
+        return;
+      event.preventDefault();
+      onChange(
+        selection.type === "node"
+          ? deleteNode(document, selection.key)
+          : deleteEdge(document, selection.id),
+      );
+      setSelection(null);
+    }
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [document, onChange, selection]);
 
   const labels = useMemo(() => buildLabels(document), [document]);
   const side = useRef<HTMLElement>(null);
