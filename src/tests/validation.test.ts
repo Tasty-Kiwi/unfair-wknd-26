@@ -1,4 +1,8 @@
+import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
+import { demoData } from "@/data/demo";
+import { presetsFor } from "@/lib/scenarioPresets";
+import { simulate } from "@/lib/simulation";
 import type { Dataset, Scenario } from "@/lib/types";
 import {
   parseDataset,
@@ -146,6 +150,150 @@ describe("parseDataset", () => {
     const data = fixture();
     data.orders[0].quantity = Number.MAX_SAFE_INTEGER;
     expect(() => parseDataset(data)).toThrow(/safe integer/i);
+  });
+});
+
+describe("aggregate numeric safety", () => {
+  const MAX = Number.MAX_SAFE_INTEGER;
+
+  /** One component per BOM line, quantity 1 each, so an order's demand is quantity * lines. */
+  function withOrders(
+    quantities: number[],
+    options: { bomLines?: number; values?: number[] } = {},
+  ): Dataset {
+    const data = fixture();
+    const lines = options.bomLines ?? 1;
+    data.products[0].bom = Array.from({ length: lines }, (_, i) => ({
+      componentId: i === 0 ? "MTR-01" : `MTR-0${i + 1}`,
+      quantity: 1,
+    }));
+    for (let i = 1; i < lines; i += 1) {
+      data.components.push({
+        id: `MTR-0${i + 1}`,
+        name: `Part ${i + 1}`,
+        unit: "pcs",
+        supplierId: "SUP-01",
+      });
+    }
+    data.orders = quantities.map((quantity, i) => ({
+      id: `ORD-${i + 1}`,
+      customer: "Acme",
+      productId: "P-1",
+      quantity,
+      requiredDate: "2026-11-22",
+      value: options.values?.[i] ?? 1,
+    }));
+    return data;
+  }
+
+  it("rejects finite order values whose sum overflows to Infinity", () => {
+    const data = withOrders([1, 1], { values: [1e308, 1e308] });
+    // Each value is finite, but the total the simulator reports would be Infinity.
+    expect(data.orders.every((order) => Number.isFinite(order.value))).toBe(
+      true,
+    );
+    expect(data.orders.reduce((sum, order) => sum + order.value, 0)).toBe(
+      Infinity,
+    );
+    expect(() => parseDataset(data)).toThrow(/order value.*finite/i);
+  });
+
+  it("rejects ten 1e308 values, not just a pair", () => {
+    const data = withOrders(Array(10).fill(1), {
+      values: Array(10).fill(1e308),
+    });
+    expect(() => parseDataset(data)).toThrow(/order value.*finite/i);
+  });
+
+  it("accepts ordinary large finite values, including a lone 1e308", () => {
+    const large = withOrders(Array(10).fill(1), {
+      values: Array(10).fill(1e300),
+    });
+    expect(parseDataset(large).orders).toHaveLength(10);
+    expect(
+      Number.isFinite(simulate(large, scenario()).summary.totalValue),
+    ).toBe(true);
+    expect(
+      parseDataset(withOrders([1], { values: [1e308] })).orders,
+    ).toHaveLength(1);
+  });
+
+  it("rejects many individually safe order demands that sum beyond the safe range", () => {
+    const each = Math.floor(MAX / 2);
+    const data = withOrders([each, each, each]);
+    const problem = /orders\[2\].*safe integer/i;
+    expect(() => parseDataset(data)).toThrow(problem);
+  });
+
+  it("rejects a BOM whose lines are each safe but whose order total is not", () => {
+    const data = withOrders([Math.floor(MAX / 2) + 1], { bomLines: 2 });
+    expect(() => parseDataset(data)).toThrow(/orders\[0\].*safe integer/i);
+  });
+
+  it("accepts total demand exactly at the safe integer limit and rejects one over", () => {
+    expect(parseDataset(withOrders([MAX - 1, 1])).orders).toHaveLength(2);
+    expect(parseDataset(withOrders([MAX])).orders).toHaveLength(1);
+    expect(() => parseDataset(withOrders([MAX - 1, 2]))).toThrow(
+      /safe integer/i,
+    );
+    expect(() => parseDataset(withOrders([MAX, 1]))).toThrow(/safe integer/i);
+    const twoLines = withOrders([(MAX - 1) / 2], { bomLines: 2 });
+    expect(parseDataset(twoLines).orders).toHaveLength(1);
+    twoLines.orders[0].quantity += 1;
+    expect(() => parseDataset(twoLines)).toThrow(/safe integer/i);
+  });
+
+  it("does not cap supply or any single large demand that stays representable", () => {
+    const data = withOrders([MAX]);
+    data.inventory[0].quantity = MAX;
+    data.deliveries.push({
+      ...data.deliveries[0],
+      id: "PO-102",
+      quantity: MAX,
+    });
+    expect(parseDataset(data).deliveries).toHaveLength(2);
+  });
+
+  it("reports both problems together", () => {
+    const data = withOrders([MAX, MAX], { values: [1e308, 1e308] });
+    expect(() => parseDataset(data)).toThrow(/finite/i);
+    expect(() => parseDataset(data)).toThrow(/safe integer/i);
+  });
+
+  it("leaves the demo dataset, shipped example and every preset unchanged", () => {
+    const before = structuredClone(demoData);
+    expect(parseDataset(demoData)).toEqual(demoData);
+    expect(demoData).toEqual(before);
+    const example = JSON.parse(
+      readFileSync("public/examples/domino-demo.json", "utf8"),
+    );
+    expect(() => parseDataset(example)).not.toThrow();
+    for (const preset of presetsFor(demoData)) {
+      expect(() => parseScenario(demoData, preset)).not.toThrow();
+    }
+    expect(simulate(demoData, presetsFor(demoData)[1]).summary).toMatchObject({
+      atRiskOrders: 1,
+      missingUnits: 2,
+      atRiskValue: 36000,
+    });
+  });
+
+  it("applies to JSON and spreadsheet imports", () => {
+    const data = withOrders([1, 1], { values: [1e308, 1e308] });
+    expect(() =>
+      parseImport(JSON.stringify(data), "plan.json", fixture()),
+    ).toThrow(/finite/i);
+    expect(() =>
+      parseImportFiles(
+        [
+          {
+            name: "orders.csv",
+            text: `id,customer,productId,quantity,requiredDate,value\nA,Acme,P-1,1,2026-11-22,${"9".repeat(308)}\nB,Acme,P-1,1,2026-11-22,${"9".repeat(308)}`,
+          },
+        ],
+        fixture(),
+      ),
+    ).toThrow(/finite/i);
   });
 });
 

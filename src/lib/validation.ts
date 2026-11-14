@@ -216,6 +216,43 @@ function requireRef(
 /* Dataset semantic checks                                                     */
 /* -------------------------------------------------------------------------- */
 
+/**
+ * The simulator adds up order values and BOM-expanded demand (missing units are bounded by
+ * total demand). Each term can be valid on its own while the sum is not representable, which
+ * would surface as Infinity (exported as null) or silently lose precision. There is no business
+ * maximum here: demand must remain a safe integer and summed values must remain finite.
+ */
+function checkOrderTotals(problems: string[], data: Dataset): void {
+  const unitsPerProduct = new Map(
+    data.products.map((product) => [
+      product.id,
+      product.bom.reduce((sum, line) => sum + line.quantity, 0),
+    ]),
+  );
+  let demand = 0;
+  let value = 0;
+  let demandProblem = false;
+  let valueProblem = false;
+
+  data.orders.forEach((order, i) => {
+    value += order.value;
+    if (!valueProblem && !Number.isFinite(value)) {
+      valueProblem = true;
+      problems.push(
+        `orders[${i}].value: the summed order value across all orders is not a finite number. Reduce the order values.`,
+      );
+    }
+
+    demand += order.quantity * (unitsPerProduct.get(order.productId) ?? 0);
+    if (!demandProblem && !Number.isSafeInteger(demand)) {
+      demandProblem = true;
+      problems.push(
+        `orders[${i}]: total component demand across orders exceeds the safe integer range (${Number.MAX_SAFE_INTEGER}). Reduce the order or BOM quantities.`,
+      );
+    }
+  });
+}
+
 function checkDataset(data: Dataset): string[] {
   const problems: string[] = [];
 
@@ -320,22 +357,14 @@ function checkDataset(data: Dataset): string[] {
       productIds,
       "products",
     );
-    const product = data.products.find((p) => p.id === order.productId);
-    if (
-      product?.bom.some(
-        (line) => !Number.isSafeInteger(line.quantity * order.quantity),
-      )
-    ) {
-      problems.push(
-        `orders[${i}]: component demand exceeds the safe integer range.`,
-      );
-    }
     if (order.requiredDate < data.asOf) {
       problems.push(
         `orders[${i}].requiredDate ${order.requiredDate} is before the dataset as-of date ${data.asOf}.`,
       );
     }
   });
+
+  checkOrderTotals(problems, data);
 
   data.alternatives.forEach((alternative, i) => {
     requireRef(
