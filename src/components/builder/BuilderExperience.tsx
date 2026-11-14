@@ -260,7 +260,7 @@ export function BuilderExperience({
   function run() {
     setValidationRequested(true);
     if (!compiled.ok) {
-      setError("Fix all network issues before running.");
+      setError("Fix the listed network issues before running.");
       return;
     }
     if (!compiled.canSimulate) {

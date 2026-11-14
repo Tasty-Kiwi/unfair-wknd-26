@@ -13,7 +13,7 @@ test("blank builder offers a starting point before requested validation", async 
     .click();
   await expect(checks).toContainText("Network name must not be blank");
   await expect(
-    page.getByText("Fix all network issues before running.", { exact: true }),
+    page.getByText("Your network is still in progress", { exact: true }),
   ).toBeVisible();
   page.on("dialog", (d) => d.accept());
   await page.getByRole("button", { name: "Core example", exact: true }).click();

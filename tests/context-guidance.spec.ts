@@ -66,6 +66,13 @@ for (const width of [1366, 390]) {
       .getByRole("button", { name: "Add component", exact: true })
       .click();
     await page
+      .getByRole("button", { name: "Run simulation", exact: true })
+      .click();
+    await expect(
+      page.getByText("Your network is still in progress", { exact: true }),
+    ).toBeVisible();
+    await expect(page.getByRole("alert")).toContainText("Use Next repair");
+    await page
       .getByRole("button", { name: "Check network", exact: true })
       .click();
     const groups = page.locator(".builder-check-group");

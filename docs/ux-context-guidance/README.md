@@ -30,3 +30,9 @@ Rendered both light/dark modes at 1366×768 and 390×844; no horizontal page ove
 The builder still allows incomplete work and displays field-specific errors after validation. On mobile, editing can require scrolling. A complete guided wizard, new graph styling and another layout redesign are deliberately outside scope. No real participant, physical device or screen reader session was available. Additional iteration should follow observed use rather than adding more controls.
 
 An independent read-only code reviewer checked the working diff, coverage render guard, stale recovery resets, repair focus targets and supported import/schema paths. No concrete correctness or compatibility finding remained after checking those callers. Parent execution supplied the test evidence above; the reviewer did not rerun tests.
+
+## Pre-merge review
+
+The final code review found that Run simulation still used the old generic validation error, while Check network showed the new repair guidance. Both now show the same in-progress guidance. Browser regressions cover the failed-run message on blank networks and at desktop/mobile repair destinations.
+
+Reverified locally on 14 November: 102 unit tests, 44 Worker tests, both typechecks, production build and deployment dry run passed. All 78 browser journeys passed using Playwright's Chromium channel with the required v1254 browser and a temporary configuration outside the repository; the default headless shell was not yet installed. No deployment was performed.
