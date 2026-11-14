@@ -9,6 +9,7 @@ import {
   RotateCcw,
   Save,
   Upload,
+  X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -1295,9 +1296,21 @@ export function BuilderExperience({
         </Alert>
       )}
       {notice && (
-        <p role="status" className="builder-experience__notice notice">
-          {notice}
-        </p>
+        <div
+          role="status"
+          className={`builder-experience__notice notice${view === "build" ? " builder-experience__notice--floating" : ""}`}
+        >
+          <span>{notice}</span>
+          {view === "build" && (
+            <button
+              type="button"
+              aria-label="Dismiss notification"
+              onClick={() => setNotice("")}
+            >
+              <X size={16} aria-hidden="true" />
+            </button>
+          )}
+        </div>
       )}
       {workspace.source.retainedProductBoms && (
         <p role="status" className="builder-experience__notice">

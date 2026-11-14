@@ -48,8 +48,35 @@
 .builder-experience
   > :not(.builder-bar):not(.builder):not(.builder-experience__simulation):not(
     .builder-experience__review
-  ) {
+  ):not(.builder-experience__notice--floating) {
   margin: 8px 12px 0;
+}
+.builder-experience > .builder-experience__notice--floating {
+  position: absolute;
+  z-index: 40;
+  bottom: 80px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: max-content;
+  max-width: calc(100% - 24px);
+  margin: 0;
+  padding: 10px 12px;
+  background: var(--sheet);
+  border: 1px solid var(--rule);
+  border-radius: 8px;
+  box-shadow: 0 6px 20px rgb(0 0 0 / 0.16);
+}
+.builder-experience__notice--floating button {
+  display: inline-flex;
+  flex: none;
+  border: 0;
+  padding: 4px;
+  color: inherit;
+  background: transparent;
+  cursor: pointer;
 }
 .builder-experience > [data-slot="alert"] {
   width: auto;

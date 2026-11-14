@@ -1,6 +1,42 @@
 import { expect, test } from "@playwright/test";
 
 for (const width of [390, 1440]) {
+  test(`validation notice does not move the workspace at ${width}px`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width, height: 844 });
+    await page.goto("/?builder=1");
+    await page
+      .getByRole("button", { name: "Core example", exact: true })
+      .click();
+    const builder = page.getByTestId("build-workspace");
+    const geometry = () =>
+      builder.evaluate((element) => {
+        const rect = element.getBoundingClientRect();
+        return {
+          x: rect.x + scrollX,
+          y: rect.y + scrollY,
+          width: rect.width,
+          height: rect.height,
+        };
+      });
+    const before = await geometry();
+    await builder.getByRole("button", { name: "Check network" }).click();
+    await expect(
+      page
+        .getByRole("status")
+        .filter({ hasText: "Network is valid and ready to simulate." }),
+    ).toBeVisible();
+    const after = await geometry();
+    expect(after).toEqual(before);
+    await page.getByRole("button", { name: "Dismiss notification" }).click();
+    await expect(
+      page.getByText("Network is valid and ready to simulate."),
+    ).toHaveCount(0);
+  });
+}
+
+for (const width of [390, 1440]) {
   test(`inspector contents remain visible while collapsing at ${width}px`, async ({
     page,
   }) => {
