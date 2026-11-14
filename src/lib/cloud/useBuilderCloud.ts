@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { BuilderWorkspaceV1 } from "../builder/types";
 import { loadWorkspace, WORKSPACE_STORAGE_KEY } from "../builder/storage";
+import { rememberProjectReturn } from "./projectReturn";
 import {
   canonicalizeCloudWorkspace,
   CLOUD_MAX_WORKSPACE_BYTES,
@@ -214,10 +215,12 @@ export function useBuilderCloud({
   host,
   workspace,
   client = cloudClient,
+  guestDraftKey = GUEST_DRAFT_KEY,
 }: {
   host: CloudHost;
   workspace: BuilderWorkspaceV1;
   client?: CloudClient;
+  guestDraftKey?: string;
 }) {
   const hostRef = useRef(host);
   hostRef.current = host;
@@ -292,7 +295,7 @@ export function useBuilderCloud({
   function slotKeyOf(value: CloudBinding | null): string {
     return value
       ? cloudDraftKey(value.ownerId, value.projectId)
-      : GUEST_DRAFT_KEY;
+      : guestDraftKey;
   }
 
   // Flushes the editor, drops the cloud binding and restores the guest draft.
@@ -366,6 +369,7 @@ export function useBuilderCloud({
       if (!hostRef.current.persist(slotKeyOf(bindingRef.current))) return;
       const url = await client.startGitHubSignIn(token.controller.signal);
       if (!isCurrent(token)) return;
+      rememberProjectReturn(window.location.pathname);
       window.location.assign(url);
     } catch (error) {
       if (isCurrent(token)) setMessage(describeCloudError(error));

@@ -9,7 +9,7 @@ Order: product UX → brand → cloud decision → final QA → Devpost package 
 ## 1. Frontend and UX
 
 - [x] First screen names manufacturers, supply changes and customer-order impact; inspected in both themes.
-- [x] Landing offers **Try interactive demo** (`/`) and **Build your network** (`/?builder=1`); both verified at 1440, 1366, 1024 and 390 px.
+- [x] Local UX update (14 November): landing (`/`) → projects (`/projects`) → demo or New project (JSON/CSV import or blank) → project. Verified project isolation, autosave/reopen, legacy drafts, import validation, and keyboard/modal layout at 1440 and 390 px in both themes; 88 browser tests pass. This update has not been deployed.
 - [x] Three presets, allocation evidence and recovery verified: ten covered → two motors short → coverage restored.
 - [x] Typed node/relationship colours and dark tokens integrated; zoom and selection inspected.
 - [x] Validation, Edit item and Connect paths retained and regression-tested; phone guidance added.

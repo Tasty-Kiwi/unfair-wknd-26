@@ -15,9 +15,10 @@ for (const theme of ["light", "dark"] as const)
         })
         .click();
       await page
-        .getByRole("link", { name: "Try interactive demo", exact: true })
+        .getByRole("link", { name: "Open projects", exact: true })
         .first()
         .click();
+      await page.getByRole("link", { name: "Open demo project" }).click();
       await expect(
         page.getByRole("link", { name: "Needtrace home", exact: true }),
       ).toBeVisible();
@@ -50,6 +51,7 @@ for (const theme of ["light", "dark"] as const)
       await page
         .getByRole("button", { name: "Core example", exact: true })
         .click();
+      await fileAction(page, "Save workspace");
       await expect(
         page.getByRole("button", { name: "Run simulation", exact: true }),
       ).toBeVisible();
@@ -70,9 +72,13 @@ for (const theme of ["light", "dark"] as const)
         theme === "dark" ? "light" : "dark",
       );
       await page
-        .getByRole("link", { name: "Build your network", exact: true })
+        .getByRole("link", { name: "Explore the demo", exact: true })
         .first()
         .click();
+      await expect(
+        page.getByRole("heading", { name: "Your projects" }),
+      ).toBeVisible();
+      await page.getByRole("link", { name: /Motor assembly network/ }).click();
       await expect(
         page.getByRole("main", { name: "Supply chain builder" }),
       ).toBeVisible();

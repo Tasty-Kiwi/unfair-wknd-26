@@ -33,8 +33,8 @@ const states = [
 const reports = states.map((s) => simulate(demoData, s.scenario));
 function DemoLink() {
   return (
-    <a className="lp-cta" href="/">
-      Try interactive demo <ArrowUpRight size={18} aria-hidden="true" />
+    <a className="lp-cta" href="/projects">
+      Open projects <ArrowUpRight size={18} aria-hidden="true" />
     </a>
   );
 }
@@ -57,7 +57,7 @@ export default function LandingPage() {
         Skip to content
       </a>
       <header className="lp-header lp-wrap">
-        <a className="lp-logo" href="/landing" aria-label="Needtrace home">
+        <a className="lp-logo" href="/" aria-label="Needtrace home">
           <img src="/favicon.svg" width="28" height="28" alt="" />
           Needtrace
         </a>
@@ -101,8 +101,8 @@ export default function LandingPage() {
             </p>
             <div className="lp-actions">
               <DemoLink />
-              <a className="lp-builder-cta" href="/?builder=1">
-                Build your network <ArrowUpRight size={16} aria-hidden="true" />
+              <a className="lp-builder-cta" href="/projects#demo">
+                Explore the demo <ArrowUpRight size={16} aria-hidden="true" />
               </a>
             </div>
           </div>
@@ -337,7 +337,7 @@ export default function LandingPage() {
                     ? "The actual supplier-to-order map. Select a node in the simulator to inspect its relationships."
                     : "Connect suppliers, materials and customer orders on an editable canvas. Workspaces save in this browser."}
               </p>
-              <a className="lp-text-link" href="/?builder=1">
+              <a className="lp-text-link" href="/projects">
                 Build your network <ArrowUpRight size={16} />
               </a>
               <small>

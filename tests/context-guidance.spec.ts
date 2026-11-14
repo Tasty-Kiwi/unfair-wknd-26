@@ -8,7 +8,7 @@ for (const theme of ["light", "dark"]) {
       (t) => localStorage.setItem("dominoos.landing.theme.v2", t),
       theme,
     );
-    await page.goto("/");
+    await page.goto("/demo");
     await expect(
       page.getByRole("heading", { name: "10 of 10 orders covered" }),
     ).toBeVisible();

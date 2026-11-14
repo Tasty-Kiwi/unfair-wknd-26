@@ -28,6 +28,7 @@ import {
   serializeWorkspace,
   parseWorkspaceJson,
   MAX_WORKSPACE_BYTES,
+  WORKSPACE_STORAGE_KEY,
 } from "@/lib/builder/storage";
 import {
   isScenarioCurrent,
@@ -85,11 +86,15 @@ const REPLACE_MESSAGE =
 export function BuilderExperience({
   onClose,
   registerNavigationGuard,
+  storageKey = WORKSPACE_STORAGE_KEY,
+  closeLabel = "Back to demo",
 }: {
   onClose: () => void;
   registerNavigationGuard?: (guard: () => boolean) => () => void;
+  storageKey?: string;
+  closeLabel?: string;
 }) {
-  const [initial] = useState(() => loadWorkspace());
+  const [initial] = useState(() => loadWorkspace(undefined, storageKey));
   const [workspace, setWorkspace] = useState<BuilderWorkspaceV1>(
     () => initial.workspace ?? blank(),
   );
@@ -116,7 +121,7 @@ export function BuilderExperience({
   const cloudHost: CloudHost = {
     current: () => latest.current,
     persist(key) {
-      if (key === GUEST_DRAFT_KEY && !allowSaveRef.current) {
+      if (key === storageKey && !allowSaveRef.current) {
         setError(
           "Your saved device draft could not be read, so it was kept untouched. Save workspace to replace it, or export first.",
         );
@@ -132,7 +137,7 @@ export function BuilderExperience({
     },
     apply: (next) => adopt(next, true),
     restoreGuest() {
-      const guest = loadWorkspace(undefined, GUEST_DRAFT_KEY);
+      const guest = loadWorkspace(undefined, storageKey);
       if (guest.error) {
         // An unreadable guest draft stays untouched: the editor is blank and autosave is off.
         adopt(
@@ -150,7 +155,11 @@ export function BuilderExperience({
       return !replaceNeedsConfirm() || window.confirm(REPLACE_MESSAGE);
     },
   };
-  const cloud = useBuilderCloud({ host: cloudHost, workspace });
+  const cloud = useBuilderCloud({
+    host: cloudHost,
+    workspace,
+    guestDraftKey: storageKey,
+  });
   const draftKey = cloud.draftKey;
   const boundProjectId = cloud.binding?.projectId ?? null;
   const cloudGuard = useRef(cloud.binding);
@@ -718,7 +727,7 @@ export function BuilderExperience({
           onClick={close}
         >
           <ArrowLeft data-icon="inline-start" />
-          <span className="builder-bar__back">Back to demo</span>
+          <span className="builder-bar__back">{closeLabel}</span>
         </Button>
       </header>
 

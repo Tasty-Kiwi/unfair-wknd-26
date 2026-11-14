@@ -7,15 +7,41 @@ import "@fontsource/ibm-plex-sans-condensed/latin-500.css";
 import "@fontsource/ibm-plex-sans-condensed/latin-600.css";
 import "./index.css";
 import { initTheme } from "./lib/theme";
+import { projectAuthReturn } from "./lib/cloud/projectReturn";
 
 initTheme();
+try {
+  const returnPath = projectAuthReturn(new URL(window.location.href));
+  if (returnPath)
+    window.history.replaceState(window.history.state, "", returnPath);
+} catch {
+  /* Guest routes remain usable when session storage is unavailable. */
+}
 const App = React.lazy(() => import("./App"));
 const LandingPage = React.lazy(() => import("./landing/LandingPage"));
-const isLanding = window.location.pathname.replace(/\/$/, "") === "/landing";
+const ProjectsPage = React.lazy(
+  () => import("./components/projects/ProjectsPage"),
+);
+const ProjectPage = React.lazy(
+  () => import("./components/projects/ProjectPage"),
+);
+const path = window.location.pathname.replace(/\/$/, "");
+const legacyBuilder =
+  new URLSearchParams(window.location.search).get("builder") === "1";
+const projectMatch = path.match(/^\/projects\/([^/]+)$/);
+const surface = projectMatch ? (
+  <ProjectPage id={projectMatch[1]} />
+) : legacyBuilder || path === "/demo" ? (
+  <App />
+) : path === "/projects" ? (
+  <ProjectsPage />
+) : (
+  <LandingPage />
+);
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
     <React.Suspense fallback={<p role="status">Loading Needtrace…</p>}>
-      {isLanding ? <LandingPage /> : <App />}
+      {surface}
     </React.Suspense>
   </React.StrictMode>,
 );

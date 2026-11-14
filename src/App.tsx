@@ -2,6 +2,7 @@ import { CoverageOverview } from "./components/scenarios/CoverageOverview";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   ArrowDownToLine,
+  ArrowLeft,
   ArrowRight,
   Check,
   CheckCircle2,
@@ -60,6 +61,7 @@ import "./simulator.css";
 import "@/components/scenarios/panels.css";
 import { BuilderExperience } from "@/components/builder/BuilderExperience";
 import { ThemeToggle } from "@/components/theme/ThemeToggle";
+import type { DatasetProjectState } from "@/lib/projects";
 
 const money = (n: number) =>
   new Intl.NumberFormat("en-IE", {
@@ -294,7 +296,15 @@ function NodeDetail({
     </div>
   );
 }
-export default function App() {
+export default function App({
+  initialProject,
+  projectName,
+  onProjectChange,
+}: {
+  initialProject?: DatasetProjectState;
+  projectName?: string;
+  onProjectChange?: (state: DatasetProjectState) => void;
+} = {}) {
   // The URL is the durable navigation state, so builder links survive refreshes
   // and browser history can restore either surface without remounting the app.
   const [builderOpen, setBuilderOpen] = useState(
@@ -334,17 +344,21 @@ export default function App() {
     window.history.pushState(window.history.state, "", next.toString());
     setBuilderOpen(open);
   };
-  const [data, setData] = useState<Dataset>(demoData);
-  const [provenance, setProvenance] = useState<DatasetProvenance>(() =>
-    fictionalProvenance(),
+  const [data, setData] = useState<Dataset>(initialProject?.data ?? demoData);
+  const [provenance, setProvenance] = useState<DatasetProvenance>(
+    () => initialProject?.provenance ?? fictionalProvenance(),
   );
   const presets = useMemo(() => presetsFor(data), [data]);
-  const [scenario, setScenario] = useState<Scenario>(NORMAL_SCENARIO);
+  const [scenario, setScenario] = useState<Scenario>(
+    initialProject?.scenario ?? NORMAL_SCENARIO,
+  );
   const [selection, setSelection] = useState<Selection | null>(null);
   const [importOpen, setImportOpen] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
   const [resetOpen, setResetOpen] = useState(false);
-  const [retainedProductBoms, setRetainedProductBoms] = useState(false);
+  const [retainedProductBoms, setRetainedProductBoms] = useState(
+    initialProject?.retainedProductBoms ?? false,
+  );
   const [importError, setImportError] = useState("");
   const [importing, setImporting] = useState(false);
   const [pendingImport, setPendingImport] = useState<PendingImport | null>(
@@ -352,6 +366,29 @@ export default function App() {
   );
   const [notice, setNotice] = useState("");
   const [controlError, setControlError] = useState("");
+  const [saveError, setSaveError] = useState("");
+  const projectSave = useRef(onProjectChange);
+  projectSave.current = onProjectChange;
+  useEffect(() => {
+    if (!projectSave.current) return;
+    try {
+      projectSave.current({ data, scenario, provenance, retainedProductBoms });
+      setSaveError("");
+    } catch {
+      setSaveError(
+        "Changes could not be saved on this device. Export your report before leaving, then free browser storage and try again.",
+      );
+    }
+  }, [data, scenario, provenance, retainedProductBoms]);
+  useEffect(() => {
+    const guard = (event: BeforeUnloadEvent) => {
+      if (!saveError) return;
+      event.preventDefault();
+      event.returnValue = "";
+    };
+    window.addEventListener("beforeunload", guard);
+    return () => window.removeEventListener("beforeunload", guard);
+  }, [saveError]);
   const orderTable = useRef<HTMLElement>(null);
   const evidence = useRef<HTMLDivElement>(null);
   const rail = useRef<HTMLElement>(null);
@@ -367,9 +404,38 @@ export default function App() {
   const s = result.summary;
   const activePreset = presets.findIndex(
     (p) =>
-      JSON.stringify(p.deliveryOverrides) ===
-        JSON.stringify(scenario.deliveryOverrides) &&
-      JSON.stringify(p.alternatives) === JSON.stringify(scenario.alternatives),
+      JSON.stringify(
+        p.deliveryOverrides.map(({ deliveryId, availableDate, quantity }) => [
+          deliveryId,
+          availableDate,
+          quantity,
+        ]),
+      ) ===
+        JSON.stringify(
+          scenario.deliveryOverrides.map(
+            ({ deliveryId, availableDate, quantity }) => [
+              deliveryId,
+              availableDate,
+              quantity,
+            ],
+          ),
+        ) &&
+      JSON.stringify(
+        p.alternatives.map(({ alternativeId, availableDate, quantity }) => [
+          alternativeId,
+          availableDate,
+          quantity,
+        ]),
+      ) ===
+        JSON.stringify(
+          scenario.alternatives.map(
+            ({ alternativeId, availableDate, quantity }) => [
+              alternativeId,
+              availableDate,
+              quantity,
+            ],
+          ),
+        ),
   );
   const update = (next: Scenario) => {
     setNotice("");
@@ -481,7 +547,7 @@ export default function App() {
   return (
     <div className={`app-shell sim ${drawerOpen ? "drawer-is-open" : ""}`}>
       <header className="topbar">
-        <a href="#" className="wordmark" aria-label="Needtrace home">
+        <a href="/" className="wordmark" aria-label="Needtrace home">
           <img src="/favicon.svg" width="26" height="26" alt="" />
           <span className="wordmark__text">Needtrace</span>
         </a>
@@ -507,13 +573,19 @@ export default function App() {
           className="dataset-line"
           title={`${data.name} · inventory as of ${data.asOf}`}
         >
-          <span className="dataset-name">{data.name}</span>
+          <span className="dataset-name">{projectName ?? data.name}</span>
           <span className="dataset-asof">Inventory {day(data.asOf)}</span>
           <span className="dataset-kind">
             {provenanceLabel(provenance.kind)}
           </span>
         </p>
         <div className="top-actions">
+          <Button variant="outline" size="sm" asChild>
+            <a href="/projects">
+              <ArrowLeft data-icon="inline-start" />
+              Projects
+            </a>
+          </Button>
           <Button
             variant="ghost"
             size="sm"
@@ -544,18 +616,26 @@ export default function App() {
             <RotateCcw data-icon="inline-start" />
             <span className="label-narrow">Reset demo</span>
           </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            title="Build a network"
-            onClick={() => navigateBuilder(true)}
-          >
-            <Workflow data-icon="inline-start" />
-            <span className="label-narrow">Build a network</span>
-          </Button>
+          {!initialProject && (
+            <Button
+              variant="outline"
+              size="sm"
+              title="Build a network"
+              onClick={() => navigateBuilder(true)}
+            >
+              <Workflow data-icon="inline-start" />
+              <span className="label-narrow">Build a network</span>
+            </Button>
+          )}
           <ThemeToggle />
         </div>
       </header>
+      {saveError && (
+        <Alert variant="destructive">
+          <AlertTitle>Changes not saved</AlertTitle>
+          <AlertDescription>{saveError}</AlertDescription>
+        </Alert>
+      )}
       {(retainedProductBoms || notice) && (
         <div className="notices">
           {retainedProductBoms && (
@@ -957,10 +1037,10 @@ export default function App() {
             <DialogTitle>Bring your material plan</DialogTitle>
             <DialogDescription>
               Replace the dataset with JSON, or select spreadsheet CSV tables
-              together. Everything stays in your browser. Data is not saved
-              between sessions: refreshing or closing this page clears your
-              imported plan and scenario changes. Export your report before
-              leaving, and keep your source files to import again.
+              together. Everything stays in your browser.{" "}
+              {initialProject
+                ? "This project autosaves its dataset and scenario changes on this device. Export your report for a portable backup, and keep your source files."
+                : "Data is not saved between sessions: refreshing or closing this page clears your imported plan and scenario changes. Export your report before leaving, and keep your source files to import again."}
             </DialogDescription>
           </DialogHeader>
           <div className="import-zone">

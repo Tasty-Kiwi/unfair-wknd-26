@@ -14,7 +14,7 @@ test("builder URL opens directly and survives refresh", async ({ page }) => {
 test("browser back and forward restore simulator and builder without losing the draft", async ({
   page,
 }) => {
-  await page.goto("/");
+  await page.goto("/demo");
   await page
     .getByRole("button", { name: "Build a network", exact: true })
     .click();
@@ -37,7 +37,7 @@ test("browser back and forward restore simulator and builder without losing the 
 test("closing builder removes query and browser history reopens it", async ({
   page,
 }) => {
-  await page.goto("/");
+  await page.goto("/demo");
   await page
     .getByRole("button", { name: "Build a network", exact: true })
     .click();
@@ -62,7 +62,7 @@ test("OAuth error cleanup keeps durable builder query", async ({ page }) => {
 test("device draft persists across closing and reopening builder", async ({
   page,
 }) => {
-  await page.goto("/");
+  await page.goto("/demo");
   await page
     .getByRole("button", { name: "Build a network", exact: true })
     .click();
@@ -92,7 +92,7 @@ test("failed local save cancels history exit and preserves the editable draft", 
       return save.call(this, key, value);
     };
   });
-  await page.goto("/");
+  await page.goto("/demo");
   await page
     .getByRole("button", { name: "Build a network", exact: true })
     .click();

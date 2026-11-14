@@ -76,7 +76,7 @@ for (const theme of ["light", "dark"]) {
         theme,
       );
       const cta = page
-        .getByRole("link", { name: "Try interactive demo", exact: true })
+        .getByRole("link", { name: "Open projects", exact: true })
         .first();
       const r = (await cta.boundingBox())!;
       expect(r.y + r.height).toBeLessThan(height);
@@ -129,9 +129,10 @@ test("default light, simulator and actual builder entry points remain isolated",
   await expect(page.locator(".lp-page")).toHaveAttribute("data-theme", "light");
   await page.getByRole("button", { name: "Dark mode", exact: true }).click();
   await page
-    .getByRole("link", { name: "Try interactive demo", exact: true })
+    .getByRole("link", { name: "Open projects", exact: true })
     .first()
     .click();
+  await page.getByRole("link", { name: "Open demo project" }).click();
   await expect(page.getByRole("heading", { level: 1 })).toContainText(
     "Every order has its required materials",
   );
@@ -141,13 +142,24 @@ test("default light, simulator and actual builder entry points remain isolated",
   ).toBeVisible();
   await page.goto("/landing");
   await page
-    .getByRole("link", { name: "Build your network", exact: true })
+    .getByRole("link", { name: "Explore the demo", exact: true })
     .first()
     .click();
-  await expect(
-    page.getByRole("button", { name: "Core example", exact: true }),
-  ).toBeVisible();
-  await page.getByRole("button", { name: "Core example", exact: true }).click();
+  await page
+    .getByRole("button", { name: "New project", exact: true })
+    .first()
+    .click();
+  await page.getByRole("radio", { name: "Start blank", exact: true }).click();
+  await page.getByLabel("Project name", { exact: true }).fill("My network");
+  await page
+    .getByRole("button", { name: "Create project", exact: true })
+    .click();
+  page.once("dialog", (dialog) => dialog.accept());
+  await page.getByRole("button", { name: "File", exact: true }).click();
+  await page
+    .getByLabel("Workspace actions")
+    .getByRole("button", { name: "Core example", exact: true })
+    .click();
   await expect(page.getByRole("heading", { level: 1 })).toHaveText(
     "Motor assembly network",
   );

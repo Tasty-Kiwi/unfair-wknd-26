@@ -4,7 +4,7 @@
 
 A manufacturing material-availability simulator built for the Unfair Weekend 2026 hackathon. Change a supplier receipt, trace the affected customer order, and test an approved alternative in under a minute.
 
-The interactive demo and network builder are available from the app at `/` and `/landing`. The existing public Workers URL still uses the legacy `domino-os` hostname; no Needtrace domain is claimed here. The current production deployment is guest-only with cloud features disabled. Production rebrand/URL and cloud release acceptance remain pending. Staging and release limits are documented in [staging verification](docs/STAGING_VERIFICATION.md).
+The local app opens with the landing page at `/`, followed by the project library at `/projects`. Open the fictional demo, or choose **New project** to import JSON/CSV or start a blank network. Each local project opens at `/projects/:id` and autosaves separately. `/demo` opens the session-only simulator directly; `/landing` and `/?builder=1` remain compatible entry points. These route changes have not been deployed. The existing public Workers URL still uses the legacy `domino-os` hostname; no Needtrace domain is claimed here. Production cloud features remain disabled. Staging and release limits are documented in [staging verification](docs/STAGING_VERIFICATION.md).
 
 Designed for a small manufacturer building a material network or testing a spreadsheet plan without a full planning-system rollout. This buyer segment and willingness to pay are hypotheses; no customer validation or measured savings are claimed. See [commercial narrative](docs/PITCH.md) and [human validation playbook](docs/VALIDATION_PLAYBOOK.md).
 
@@ -28,7 +28,7 @@ npm run preview
 
 ## Deploy on Cloudflare Workers
 
-The production public link currently serves the guest app with cloud features disabled. The optional Worker backend is deployed separately to staging; see the cloud section below. In the original simulator, imported plans and scenario changes live only in memory and are cleared on refresh or when the page closes. Builder workspaces save locally as described below. Export a report before leaving the original simulator and keep source files for reimport. Resetting an imported plan requires confirmation. Product CSV imports without a BOM retain matching products' existing BOMs; the preview and active plan disclose this. To redeploy from this checkout:
+The production public link currently serves the guest app with cloud features disabled. The optional Worker backend is deployed separately to staging; see the cloud section below. New projects save locally, including dataset imports and scenario changes. The standalone `/demo` simulator remains session-only: export a report before leaving it and keep source files for reimport. Resetting an imported plan requires confirmation. Product CSV imports without a BOM retain matching products' existing BOMs; the preview and active plan disclose this. To redeploy from this checkout:
 
 ```sh
 npx wrangler login
@@ -38,6 +38,8 @@ npm run deploy
 `wrangler.jsonc` selects the Tasty Kiwi account and the legacy `domino-os` Worker. These infrastructure identifiers and the public hostname are not the product's visible brand. Change them only as a deliberate migration, including checking OAuth origins/callbacks. `npm run deploy:check` validates a built asset deployment without publishing. Keep `npm run dev` ready as the local demo fallback. GitHub CI verifies code but does not deploy or store Cloudflare credentials.
 
 ## Demonstrate
+
+Open `/`, choose **Open projects**, then **Open demo project**. To use your own plan, choose **New project** instead: import one workspace/dataset/report JSON or up to five CSV tables, review the import preview, name the project, and create it. **Start blank** opens a separate network builder. The project library also surfaces an existing device draft without migrating or replacing it. Browser storage is local to this browser and device; export JSON for a portable backup.
 
 1. Start on **Normal operations**: 10 customer orders, zero shortages.
 2. Click **Supplier disruption**, or pick **Latest safe** (22 Nov) then **First short** (23 Nov) under _Land on_. You can also drag the PO-101 receipt on the dated timeline under the map. The motor receipt moves from November 17 to November 23. ORD-102 needs four motors on November 22; two remain after ORD-101 reserves six of the eight in stock. The result is one order at risk, two missing motors, and €36,000 of order value exposed.
@@ -95,7 +97,7 @@ Use **Import data**. Downloadable example JSON and CSV are available in the impo
 
 - Dates must be real ISO calendar dates, `YYYY-MM-DD`, on or after `asOf`. Counts must be nonnegative integers; BOM and order quantities must be positive. References, duplicate IDs, approval and product scope are checked using Zod plus semantic validation.
 - Each file is limited to 2 MB (one JSON or up to five CSVs). A rejected file leaves the current data and scenario unchanged. Imported plans get illustrative six-day disruption and recovery presets derived from their first receipt; these do not guarantee that a particular imported order will be affected or recovered.
-- This original JSON/CSV import path keeps state in browser memory; refresh resets it. Export a report if you need a record. It does not upload data. Builder workspace persistence is separate; signed-in users can explicitly save builder workspaces to cloud when cloud features are configured.
+- JSON/CSV projects created from `/projects` save their dataset and scenario locally across refreshes. The standalone `/demo` import path remains in memory; refresh resets it. Export a report for a portable record; report JSON can be imported as a new project. These device actions do not upload data. Signed-in users can explicitly save builder workspaces to the cloud when cloud features are configured.
 
 ## Optional cloud projects
 

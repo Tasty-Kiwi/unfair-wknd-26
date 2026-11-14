@@ -34,7 +34,7 @@ test("blank builder offers a starting point before requested validation", async 
 test("recovery announces modeled coverage and keeps the original receipt late", async ({
   page,
 }) => {
-  await page.goto("/");
+  await page.goto("/demo");
   await page
     .getByRole("radio", { name: "Supplier disruption", exact: true })
     .click();
@@ -72,7 +72,7 @@ for (const theme of ["light", "dark"]) {
       (t) => localStorage.setItem("dominoos.landing.theme.v2", t),
       theme,
     );
-    await page.goto("/");
+    await page.goto("/demo");
     const selected = page.getByRole("radio", {
       name: "Approved recovery",
       exact: true,
@@ -105,7 +105,7 @@ for (const theme of ["light", "dark"]) {
 test("partial recovery reports the remaining shortage without claiming restored coverage", async ({
   page,
 }) => {
-  await page.goto("/");
+  await page.goto("/demo");
   await page
     .getByRole("radio", { name: "Supplier disruption", exact: true })
     .click();

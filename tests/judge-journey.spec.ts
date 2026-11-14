@@ -5,7 +5,7 @@ test("mobile product preview discloses retained BOMs and keeps actions usable", 
   page,
 }) => {
   await page.setViewportSize({ width: 390, height: 844 });
-  await page.goto("/");
+  await page.goto("/demo");
   await page
     .getByRole("button", { name: "Import data", exact: true })
     .last()
@@ -48,7 +48,7 @@ test("judge causes a disruption, audits allocation, and resolves it with live in
 }) => {
   const errors: string[] = [];
   page.on("pageerror", (e) => errors.push(e.message));
-  await page.goto("/");
+  await page.goto("/demo");
   const summary = page.getByRole("region", { name: "Simulation summary" });
   await expect(summary).toContainText("All material requirements covered");
   const slider = page.getByRole("slider", { name: "Shift from baseline" });
@@ -96,7 +96,7 @@ test("judge causes a disruption, audits allocation, and resolves it with live in
 test("bad import preserves baseline; valid CSV replaces deliveries", async ({
   page,
 }) => {
-  await page.goto("/");
+  await page.goto("/demo");
   await page
     .getByRole("button", { name: "Import data", exact: true })
     .last()
@@ -189,7 +189,7 @@ test("complete JSON import becomes fully imported and reset restores provenance"
     ],
     alternatives: [],
   };
-  await page.goto("/");
+  await page.goto("/demo");
   await page
     .getByRole("button", { name: "Import data", exact: true })
     .last()
@@ -225,7 +225,7 @@ test("narrow screen retains disclosure and has no page overflow", async ({
   page,
 }) => {
   await page.setViewportSize({ width: 390, height: 844 });
-  await page.goto("/");
+  await page.goto("/demo");
   await expect(
     page.getByText("Fictional demo data", { exact: true }),
   ).toBeVisible();
@@ -247,7 +247,7 @@ test("narrow screen retains disclosure and has no page overflow", async ({
 test("recovery comparison evaluates independent options and applies the selected plan", async ({
   page,
 }) => {
-  await page.goto("/");
+  await page.goto("/demo");
   await page.getByRole("radio", { name: /Supplier disruption/ }).click();
   const comparison = page.getByRole("region", { name: "Recovery options" });
   await expect(comparison.locator("article")).toHaveCount(2);
@@ -278,7 +278,7 @@ test("recovery comparison evaluates independent options and applies the selected
 test("spreadsheet bundle imports atomically and rejects invalid related tables", async ({
   page,
 }) => {
-  await page.goto("/");
+  await page.goto("/demo");
   await page
     .getByRole("button", { name: "Import data", exact: true })
     .last()
@@ -319,7 +319,7 @@ test("receipt date moves by preset, timeline keyboard, and drag, all in sync", a
 }) => {
   const errors: string[] = [];
   page.on("pageerror", (e) => errors.push(e.message));
-  await page.goto("/");
+  await page.goto("/demo");
   const summary = page.getByRole("region", { name: "Simulation summary" });
   await expect(page.getByLabel("Receipt", { exact: true })).toContainText(
     "PO-101 · Servo motor · 17 Nov",
@@ -366,7 +366,7 @@ test("receipt date moves by preset, timeline keyboard, and drag, all in sync", a
 test("a typed date beyond the drag window widens every slider's range", async ({
   page,
 }) => {
-  await page.goto("/");
+  await page.goto("/demo");
   const date = page.getByLabel("Available date").first();
   await date.fill("2026-12-07"); // PO-101 planned 17 Nov, so 20 days late
   const handle = page.getByRole("slider", { name: "Move receipt PO-101" });
@@ -389,7 +389,7 @@ test("a typed date beyond the drag window widens every slider's range", async ({
 test("a supplier is only flagged Late when its receipt actually slips", async ({
   page,
 }) => {
-  await page.goto("/");
+  await page.goto("/demo");
   const aster = page.locator('[data-id="supplier:SUP-01"]');
   await page.getByRole("radio", { name: /Supplier disruption/ }).click();
   await expect(aster).toContainText("Late");
@@ -409,7 +409,7 @@ test("a receipt dated 2035 keeps the timeline axis bounded and movable", async (
 }) => {
   const errors: string[] = [];
   page.on("pageerror", (e) => errors.push(e.message));
-  await page.goto("/");
+  await page.goto("/demo");
   await page.getByRole("button", { name: "Import data" }).last().click();
   await page.locator("#data-upload").setInputFiles({
     name: "deliveries.csv",

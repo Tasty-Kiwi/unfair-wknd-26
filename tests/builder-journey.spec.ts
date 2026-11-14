@@ -6,7 +6,7 @@ const builderFor = (page: Page) =>
   page.getByRole("main", { name: "Supply chain builder" });
 
 async function openBuilder(page: Page) {
-  await page.goto("/");
+  await page.goto("/demo");
   await page
     .getByRole("button", { name: "Build a network", exact: true })
     .click();
@@ -391,7 +391,7 @@ test("incomplete draft survives refresh; duplicate BOM, incompatible handles and
 test("legacy imported plan and disruption survive entering and returning from Build", async ({
   page,
 }) => {
-  await page.goto("/");
+  await page.goto("/demo");
   await page
     .getByRole("button", { name: "Import data", exact: true })
     .last()
