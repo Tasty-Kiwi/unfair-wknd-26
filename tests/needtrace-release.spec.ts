@@ -72,7 +72,7 @@ for (const theme of ["light", "dark"] as const)
         theme === "dark" ? "light" : "dark",
       );
       await page
-        .getByRole("link", { name: "Explore the demo", exact: true })
+        .getByRole("link", { name: "Open projects", exact: true })
         .first()
         .click();
       await expect(
