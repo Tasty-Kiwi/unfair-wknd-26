@@ -4,6 +4,10 @@ import {
   PackageCheck,
   Plus,
   ShieldCheck,
+  List,
+  Network,
+  PanelRightClose,
+  PanelRightOpen,
   Factory,
   Box,
   Cog,
@@ -45,6 +49,8 @@ export type BuildWorkspaceProps = {
   issues: BuilderIssue[];
   onValidate: () => void;
   onRun: () => void;
+  /** Offered in the empty canvas so newcomers can start from the example. */
+  onCoreExample?: () => void;
 };
 
 const PALETTE_ICONS: Record<NodeKind, LucideIcon> = {
@@ -91,7 +97,10 @@ export function BuildWorkspace({
   issues,
   onValidate,
   onRun,
+  onCoreExample,
 }: BuildWorkspaceProps) {
+  const [mobileView, setMobileView] = useState<"list" | "map">("list");
+  const [panelOpen, setPanelOpen] = useState(true);
   const [revealNodeKey, setRevealNodeKey] = useState<NodeKey | null>(null);
   const [rawSelection, setSelection] = useState<BuilderSelection>(null);
   // A deleted or replaced item must not stay selected.
@@ -169,29 +178,31 @@ export function BuildWorkspace({
     return result;
   }
 
+  const ready = issues.length === 0 && document.nodes.length > 0;
+  const selectedKey = selection?.type === "node" ? selection.key : null;
+
   return (
-    <div className="builder" data-testid="build-workspace">
-      <header className="builder__toolbar">
-        <div className="builder__title">
-          <h2>Build the network</h2>
-          <p>
-            Draw suppliers, components, receipts, products and orders, then run
-            the engine on the whole network.
-          </p>
-          <p className="builder-mobile-hint">
-            On a phone, pan or zoom the canvas. Use Edit item and Connect below
-            to edit without dragging.
-          </p>
-        </div>
-        <div className="builder__actions">
-          <Button type="button" variant="outline" onClick={onValidate}>
-            <ShieldCheck aria-hidden /> Check network
-          </Button>
-          <Button type="button" onClick={onRun}>
-            <Play aria-hidden /> Run simulation
-          </Button>
-        </div>
-      </header>
+    <div
+      className={`builder is-${mobileView} ${panelOpen ? "" : "panel-closed"}`}
+      data-testid="build-workspace"
+    >
+      <h2 className="sr-only">Build the network</h2>
+      <div className="builder__mobile-switch" role="group" aria-label="View">
+        <button
+          type="button"
+          aria-pressed={mobileView === "list"}
+          onClick={() => setMobileView("list")}
+        >
+          <List aria-hidden size={15} /> List
+        </button>
+        <button
+          type="button"
+          aria-pressed={mobileView === "map"}
+          onClick={() => setMobileView("map")}
+        >
+          <Network aria-hidden size={15} /> Map
+        </button>
+      </div>
 
       <nav className="builder__palette" aria-label="Add to network">
         {NODE_KIND_ORDER.map((kind) => {
@@ -200,17 +211,81 @@ export function BuildWorkspace({
             <button
               key={kind}
               type="button"
-              className="builder-palette__item"
+              className={`builder-palette__item is-${kind}`}
               aria-label={`Add ${KIND_LABELS[kind].toLowerCase()}`}
+              title={`Add ${KIND_LABELS[kind].toLowerCase()}`}
               onClick={() => addItem(kind)}
             >
-              <Icon aria-hidden size={15} strokeWidth={1.8} />
+              <span className="builder-palette__swatch" aria-hidden>
+                <Icon size={15} strokeWidth={1.8} />
+              </span>
               <span>{KIND_LABELS[kind]}</span>
-              <Plus aria-hidden size={13} />
             </button>
           );
         })}
       </nav>
+
+      <section className="builder__outline" aria-label="Network items">
+        {document.nodes.length === 0 && (
+          <div className="builder-outline__empty">
+            <p>
+              <strong>Start a network.</strong> Load the fictional example, or
+              add items below and connect them in the details panel.
+            </p>
+            {onCoreExample && (
+              <Button type="button" size="sm" onClick={onCoreExample}>
+                Core example
+              </Button>
+            )}
+          </div>
+        )}
+        {NODE_KIND_ORDER.map((kind) => {
+          const nodes = document.nodes.filter((node) => node.kind === kind);
+          return (
+            <div className={`builder-outline__group is-${kind}`} key={kind}>
+              <div className="builder-outline__head">
+                <h3>{KIND_LABELS[kind]}s</h3>
+                <span>{nodes.length}</span>
+                <button
+                  type="button"
+                  onClick={() => addItem(kind)}
+                  aria-label={`Add ${KIND_LABELS[kind].toLowerCase()}`}
+                >
+                  <Plus aria-hidden size={14} /> Add
+                </button>
+              </div>
+              {nodes.length > 0 && (
+                <ul>
+                  {nodes.map((node) => {
+                    const key = nodeKey(node);
+                    const summary = summaries.get(key);
+                    const count = issueCounts.get(key) ?? 0;
+                    return (
+                      <li key={key}>
+                        <button
+                          type="button"
+                          aria-current={
+                            selectedKey === key ? "true" : undefined
+                          }
+                          onClick={() => setSelection({ type: "node", key })}
+                        >
+                          <strong>{summary?.title}</strong>
+                          <span>{summary?.details.join(" · ")}</span>
+                          {count > 0 && (
+                            <em>
+                              {count} issue{count === 1 ? "" : "s"}
+                            </em>
+                          )}
+                        </button>
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
+            </div>
+          );
+        })}
+      </section>
 
       <div className="builder__canvas-wrap">
         <BuilderCanvas
@@ -226,102 +301,149 @@ export function BuildWorkspace({
           onConnect={handleConnect}
         />
         {document.nodes.length === 0 && (
-          <p className="builder__empty">
-            Start with Core example above, or add a supplier from the palette to
-            build your own network.
-          </p>
+          <div className="builder__empty">
+            <p>
+              <strong>Start a network.</strong> Load the fictional example, or
+              add a supplier from the palette and connect it through to a
+              customer order.
+            </p>
+            {onCoreExample && (
+              <Button type="button" size="sm" onClick={onCoreExample}>
+                Core example
+              </Button>
+            )}
+          </div>
         )}
       </div>
 
+      <div className="builder__status" role="group" aria-label="Network checks">
+        <span
+          className={`builder__status-dot ${ready ? "is-ok" : issues.length ? "is-bad" : ""}`}
+        />
+        <span className="builder__status-text">
+          {document.nodes.length === 0
+            ? "Empty network"
+            : issues.length
+              ? `${issues.length} issue${issues.length === 1 ? "" : "s"} to fix`
+              : "No problems listed"}
+        </span>
+        <Button type="button" variant="outline" size="sm" onClick={onValidate}>
+          <ShieldCheck aria-hidden /> Check network
+        </Button>
+        <Button type="button" size="sm" onClick={onRun}>
+          <Play aria-hidden /> Run simulation
+        </Button>
+      </div>
+
       <aside className="builder__side" aria-label="Network details">
-        <section className="builder-field">
-          <label htmlFor="builder-edit-item">Edit item</label>
-          <select
-            id="builder-edit-item"
-            value={
-              selection === null
-                ? "network"
-                : selection.type === "node"
-                  ? `node:${selection.key}`
-                  : `edge:${selection.id}`
-            }
-            onChange={(event) => {
-              const value = event.target.value;
-              setSelection(
-                value === "network"
-                  ? null
-                  : value.startsWith("node:")
-                    ? { type: "node", key: value.slice(5) }
-                    : { type: "edge", id: value.slice(5) },
-              );
-            }}
-          >
-            <option value="network">Network settings</option>
-            {document.nodes.map((node) => (
-              <option key={nodeKey(node)} value={`node:${nodeKey(node)}`}>
-                {labels.get(nodeKey(node))}
-              </option>
-            ))}
-            {document.edges.map((edge) => (
-              <option key={edge.id} value={`edge:${edge.id}`}>
-                {RELATIONSHIP_LABELS[edge.kind]}: {labels.get(edge.source)} →{" "}
-                {labels.get(edge.target)}
-              </option>
-            ))}
-          </select>
-        </section>
-        <section
-          className="builder-checks"
-          aria-labelledby="builder-checks-title"
-        >
-          <h3 id="builder-checks-title" className="builder-section-title">
-            Checks
-          </h3>
-          {issues.length === 0 ? (
-            <p className="builder-checks__ok">
-              {document.nodes.length === 0
-                ? "Start with Core example, or name your network and add a supplier. Check network when you are ready."
-                : "No problems listed. Check the network to refresh."}
-            </p>
-          ) : (
-            <ul className="builder-issues builder-checks__list">
-              {issues.map((issue, index) => {
-                const target = issueTarget(document, issue);
-                return (
-                  <li key={`${index}-${issue.message}`}>
-                    {target ? (
-                      <button
-                        type="button"
-                        className="builder-checks__jump"
-                        onClick={() => setSelection(target)}
-                      >
-                        {issue.message}
-                      </button>
-                    ) : (
-                      issue.message
-                    )}
-                  </li>
+        <div className="builder__side-head">
+          <section className="builder-field">
+            <label htmlFor="builder-edit-item">Edit item</label>
+            <select
+              id="builder-edit-item"
+              value={
+                selection === null
+                  ? "network"
+                  : selection.type === "node"
+                    ? `node:${selection.key}`
+                    : `edge:${selection.id}`
+              }
+              onChange={(event) => {
+                const value = event.target.value;
+                setSelection(
+                  value === "network"
+                    ? null
+                    : value.startsWith("node:")
+                      ? { type: "node", key: value.slice(5) }
+                      : { type: "edge", id: value.slice(5) },
                 );
-              })}
-            </ul>
-          )}
-        </section>
+              }}
+            >
+              <option value="network">Network settings</option>
+              {document.nodes.map((node) => (
+                <option key={nodeKey(node)} value={`node:${nodeKey(node)}`}>
+                  {labels.get(nodeKey(node))}
+                </option>
+              ))}
+              {document.edges.map((edge) => (
+                <option key={edge.id} value={`edge:${edge.id}`}>
+                  {RELATIONSHIP_LABELS[edge.kind]}: {labels.get(edge.source)} →{" "}
+                  {labels.get(edge.target)}
+                </option>
+              ))}
+            </select>
+          </section>
+          <button
+            type="button"
+            className="builder__side-toggle"
+            aria-expanded={panelOpen}
+            onClick={() => setPanelOpen((open) => !open)}
+            title={panelOpen ? "Hide details panel" : "Show details panel"}
+          >
+            {panelOpen ? (
+              <PanelRightClose aria-hidden size={16} />
+            ) : (
+              <PanelRightOpen aria-hidden size={16} />
+            )}
+            <span className="sr-only">
+              {panelOpen ? "Hide details panel" : "Show details panel"}
+            </span>
+          </button>
+        </div>
+        <div className="builder__side-body">
+          <PropertiesInspector
+            document={document}
+            selection={selection}
+            labels={labels}
+            issues={issues}
+            onChange={onChange}
+            onSelect={setSelection}
+          />
 
-        <PropertiesInspector
-          document={document}
-          selection={selection}
-          labels={labels}
-          issues={issues}
-          onChange={onChange}
-          onSelect={setSelection}
-        />
+          <section
+            className="builder-checks"
+            aria-labelledby="builder-checks-title"
+          >
+            <h3 id="builder-checks-title" className="builder-section-title">
+              Checks
+            </h3>
+            {issues.length === 0 ? (
+              <p className="builder-checks__ok">
+                {document.nodes.length === 0
+                  ? "Start with Core example, or name your network and add a supplier. Check network when you are ready."
+                  : "No problems listed. Check the network to refresh."}
+              </p>
+            ) : (
+              <ul className="builder-issues builder-checks__list">
+                {issues.map((issue, index) => {
+                  const target = issueTarget(document, issue);
+                  return (
+                    <li key={`${index}-${issue.message}`}>
+                      {target ? (
+                        <button
+                          type="button"
+                          className="builder-checks__jump"
+                          onClick={() => setSelection(target)}
+                        >
+                          {issue.message}
+                        </button>
+                      ) : (
+                        issue.message
+                      )}
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </section>
 
-        <ConnectionForm
-          document={document}
-          labels={labels}
-          onChange={onChange}
-          onSelect={setSelection}
-        />
+          <ConnectionForm
+            document={document}
+            labels={labels}
+            onChange={onChange}
+            onSelect={setSelection}
+          />
+        </div>
       </aside>
     </div>
   );

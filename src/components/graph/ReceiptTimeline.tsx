@@ -223,14 +223,25 @@ export function ReceiptTimeline({
               const planned = m.deliveryId
                 ? data.deliveries.find((d) => d.id === m.deliveryId)
                 : undefined;
+              // A "planned" ghost label next to another receipt would overprint
+              // it; keep the tick and move the words to a tooltip instead.
+              const crowded =
+                m.kind === "planned" &&
+                marks.some(
+                  (o) =>
+                    o !== m &&
+                    o.kind !== "planned" &&
+                    Math.abs(days(o.date, m.date)) <= 2,
+                );
               if (!planned || !onMoveReceipt)
                 return (
                   <span
                     key={m.key}
                     className={`mark mark-${m.kind} ${edge(m.date) ? "flip" : ""}`}
                     style={{ left: x(m.date) }}
+                    title={crowded ? m.label : undefined}
                   >
-                    <em>
+                    <em className={crowded ? "sr-only" : undefined}>
                       {m.label}
                       {m.kind !== "planned" && m.kind !== "stock"
                         ? ` · ${when(m.date)}`

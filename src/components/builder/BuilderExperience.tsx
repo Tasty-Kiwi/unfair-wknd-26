@@ -47,7 +47,9 @@ import { ScenarioPanel } from "@/components/scenarios/ScenarioPanel";
 import { ImpactPanel } from "@/components/scenarios/ImpactPanel";
 import type { Scenario } from "@/lib/types";
 import { ThemeToggle } from "@/components/theme/ThemeToggle";
+import { ToolbarPopover } from "./ToolbarPopover";
 import "./experience.css";
+import "./workspace.css";
 
 const BASELINE: Scenario = {
   id: "builder-baseline",
@@ -105,6 +107,7 @@ export function BuilderExperience({
   const [compare, setCompare] = useState(false);
   const [canvasSession, setCanvasSession] = useState(0);
   const [importing, setImporting] = useState(false);
+  const importInput = useRef<HTMLInputElement>(null);
   const [compile] = useState(() => createRevisionCompiler());
   // Mirrors allowSave for the cloud host, which runs between renders.
   const allowSaveRef = useRef(allowSave);
@@ -485,6 +488,14 @@ export function BuilderExperience({
     return true;
   }
 
+  function loadCoreExample() {
+    return replace({
+      ...blank(),
+      document: createCoreExample(),
+      source: { origin: "fictional", openedFromFile: false },
+    });
+  }
+
   function exportJson() {
     try {
       const text = serializeWorkspace(latest.current);
@@ -526,6 +537,32 @@ export function BuilderExperience({
       ? "Fictional example"
       : "Authored in builder";
   const issues = compiled.ok ? [] : compiled.issues;
+  const namedScenarios = (
+    <NamedScenarios
+      records={workspace.scenarios}
+      selectedId={record?.scenario.id ?? null}
+      name={record?.scenario.name ?? ""}
+      dirty={scenarioDirty}
+      networkKey={compiled.ok ? compiled.networkKey : null}
+      onName={(name) => {
+        if (record)
+          change((previous) => ({
+            ...previous,
+            workingScenario: {
+              ...record,
+              scenario: { ...record.scenario, name },
+            },
+          }));
+      }}
+      onNew={newScenario}
+      onSave={saveScenario}
+      onSelect={selectScenario}
+      onCompare={() => {
+        setCompare(true);
+        run();
+      }}
+    />
+  );
   const untouchedBlank =
     !workspace.document.name.trim() &&
     !workspace.document.asOf &&
@@ -533,88 +570,157 @@ export function BuilderExperience({
     workspace.document.edges.length === 0;
   return (
     <main className="builder-experience" aria-label="Supply chain builder">
-      <header className="builder-experience__header">
-        <div>
+      <header className="builder-bar">
+        <img
+          className="builder-bar__mark"
+          src="/favicon.svg"
+          width="26"
+          height="26"
+          alt=""
+        />
+        <div className="builder-bar__title">
+          <h1>{workspace.document.name || "Build a network"}</h1>
           <p className="builder-experience__source">
             Needtrace · {source}
             {workspace.source.openedFromFile ? " · Imported workspace" : ""}
           </p>
-          <h1>{workspace.document.name || "Build a network"}</h1>
-          <p>Build your material plan, then test a named disruption.</p>
-          <p className="builder-save-hint">
-            Save workspace saves on this device. Export JSON for a portable
-            copy; cloud saving is a separate action when available.
-          </p>
         </div>
-        <div className="builder-experience__header-actions">
-          <ThemeToggle />
-          <Button variant="outline" onClick={close}>
-            <ArrowLeft data-icon="inline-start" /> Back to Simulate
+        <div
+          className="builder-bar__modes"
+          role="group"
+          aria-label="Builder mode"
+        >
+          <Button
+            variant="ghost"
+            size="sm"
+            aria-pressed={view === "build"}
+            onClick={() => setView("build")}
+          >
+            Build
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            aria-pressed={view === "simulate"}
+            onClick={run}
+          >
+            Simulate
           </Button>
         </div>
-      </header>
-
-      <nav
-        className="builder-experience__actions"
-        aria-label="Workspace actions"
-      >
-        <Button variant="outline" onClick={() => replace(blank())}>
-          New blank
-        </Button>
-        <Button
-          variant="outline"
-          onClick={() =>
-            replace({
-              ...blank(),
-              document: createCoreExample(),
-              source: { origin: "fictional", openedFromFile: false },
-            })
-          }
+        {view === "build" && (
+          <ToolbarPopover
+            className="builder-bar__scenario"
+            align="start"
+            title="Named scenarios"
+            label={
+              <>
+                <span className="builder-bar__k">Scenario</span>
+                <span className="builder-bar__v">
+                  {record
+                    ? record.scenario.name || "Unnamed scenario"
+                    : "Baseline"}
+                  {scenarioDirty ? " ·  unsaved" : ""}
+                </span>
+              </>
+            }
+          >
+            {() => namedScenarios}
+          </ToolbarPopover>
+        )}
+        <span
+          role="status"
+          className="builder-experience__save"
+          title="Saved in this browser. Export JSON for a portable copy."
         >
-          Core example
-        </Button>
-        <Button
-          variant={view === "build" ? "default" : "outline"}
-          aria-pressed={view === "build"}
-          onClick={() => setView("build")}
-        >
-          Build
-        </Button>
-        <Button
-          variant={view === "simulate" ? "default" : "outline"}
-          aria-pressed={view === "simulate"}
-          onClick={run}
-        >
-          Simulate
-        </Button>
-        <Button
-          variant="outline"
-          onClick={saveLocal}
-          title="Save on this device; does not upload to cloud"
-        >
-          <Save data-icon="inline-start" /> Save workspace
-        </Button>
-        <Button variant="outline" onClick={exportJson}>
-          <Download data-icon="inline-start" /> Export workspace JSON
-        </Button>
-        <label className="builder-experience__import">
-          <Upload aria-hidden size={14} /> Import workspace JSON
-          <input
-            type="file"
-            aria-label="Import workspace JSON"
-            accept="application/json,.json"
-            disabled={importing}
-            onChange={(event) => {
-              const file = event.target.files?.[0];
-              if (file) void importJson(file);
-              event.target.value = "";
-            }}
-          />
-        </label>
-        <span role="status" className="builder-experience__save">
           {importing ? "Reading workspace…" : saveStatus}
         </span>
-      </nav>
+        <ToolbarPopover
+          className="builder-bar__file"
+          label="File"
+          title="Workspace file actions"
+        >
+          {(closeMenu) => (
+            <div className="builder-file-menu" aria-label="Workspace actions">
+              <button
+                type="button"
+                onClick={() => {
+                  closeMenu();
+                  replace(blank());
+                }}
+              >
+                New blank
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  closeMenu();
+                  loadCoreExample();
+                }}
+              >
+                Core example
+              </button>
+              <hr />
+              <button
+                type="button"
+                title="Save on this device; does not upload to cloud"
+                onClick={() => {
+                  closeMenu();
+                  saveLocal();
+                }}
+              >
+                <Save aria-hidden size={15} /> Save workspace
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  closeMenu();
+                  exportJson();
+                }}
+              >
+                <Download aria-hidden size={15} /> Export workspace JSON
+              </button>
+              <button
+                type="button"
+                disabled={importing}
+                onClick={() => {
+                  closeMenu();
+                  importInput.current?.click();
+                }}
+              >
+                <Upload aria-hidden size={15} /> Import workspace JSON…
+              </button>
+              <p>
+                Saved in this browser. Export JSON for a portable copy. Cloud
+                saving is not enabled.
+              </p>
+            </div>
+          )}
+        </ToolbarPopover>
+        <input
+          ref={importInput}
+          className="sr-only"
+          tabIndex={-1}
+          type="file"
+          aria-label="Import workspace JSON"
+          accept="application/json,.json"
+          disabled={importing}
+          onChange={(event) => {
+            const file = event.target.files?.[0];
+            if (file) void importJson(file);
+            event.target.value = "";
+          }}
+        />
+        <ThemeToggle />
+        <Button
+          className="builder-bar__backbtn"
+          variant="outline"
+          size="sm"
+          onClick={close}
+        >
+          <ArrowLeft data-icon="inline-start" />
+          <span className="builder-bar__back">Back to demo</span>
+        </Button>
+      </header>
 
       {cloud.availability === "failed" && (
         <div className="flex flex-wrap items-center gap-2 pb-3">
@@ -681,31 +787,6 @@ export function BuilderExperience({
           {notice}
         </p>
       )}
-
-      <NamedScenarios
-        records={workspace.scenarios}
-        selectedId={record?.scenario.id ?? null}
-        name={record?.scenario.name ?? ""}
-        dirty={scenarioDirty}
-        networkKey={compiled.ok ? compiled.networkKey : null}
-        onName={(name) => {
-          if (record)
-            change((previous) => ({
-              ...previous,
-              workingScenario: {
-                ...record,
-                scenario: { ...record.scenario, name },
-              },
-            }));
-        }}
-        onNew={newScenario}
-        onSave={saveScenario}
-        onSelect={selectScenario}
-        onCompare={() => {
-          setCompare(true);
-          run();
-        }}
-      />
 
       {record && !current && (
         <section
@@ -832,12 +913,14 @@ export function BuilderExperience({
             }
           }}
           onRun={run}
+          onCoreExample={() => void loadCoreExample()}
         />
       ) : assessment?.result &&
         assessment.baseline &&
         assessment.scenario &&
         compiled.ok ? (
         <div className="builder-experience__simulation">
+          <div className="builder-sim-scenarios">{namedScenarios}</div>
           <section aria-label="Simulation summary" className="outcome-banner">
             <div>
               <h2>
@@ -866,7 +949,7 @@ export function BuilderExperience({
                       <th>Scenario</th>
                       <th>Orders at risk</th>
                       <th>Units missing</th>
-                      <th>Value at risk</th>
+                      <th>Order value exposed</th>
                     </tr>
                   </thead>
                   <tbody>

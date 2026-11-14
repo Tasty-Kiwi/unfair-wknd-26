@@ -1,4 +1,5 @@
 import { test, expect, type Locator, type Page } from "@playwright/test";
+import { fileAction, openScenarios } from "./ui-helpers";
 import { readFile } from "node:fs/promises";
 
 const builderFor = (page: Page) =>
@@ -228,15 +229,14 @@ test("blank graph -> named motor disruption -> baseline comparison -> reload and
     builder.getByRole("region", { name: "Simulation summary" }),
   ).toContainText("2 component units missing");
 
-  await builder
-    .getByRole("button", { name: "Save workspace", exact: true })
-    .click();
+  await fileAction(builder, "Save workspace");
   await expect(
     builder.getByText("Saved locally", { exact: true }),
   ).toBeVisible();
   await page.reload();
   await expect(builder).toBeVisible();
   await expect(page).toHaveURL(/builder=1/);
+  await openScenarios(builder);
   await expect(
     builder.getByLabel("Scenario name", { exact: true }),
   ).toHaveValue("Motor shortage");
@@ -246,9 +246,7 @@ test("blank graph -> named motor disruption -> baseline comparison -> reload and
   ).toContainText("2 component units missing");
 
   const downloadPromise = page.waitForEvent("download");
-  await builder
-    .getByRole("button", { name: "Export workspace JSON", exact: true })
-    .click();
+  await fileAction(builder, "Export workspace JSON");
   const download = await downloadPromise;
   const path = (await download.path())!;
   const exported = JSON.parse(await readFile(path, "utf8"));
@@ -292,6 +290,7 @@ test("material edits block saved scenarios and Save cannot bypass explicit reval
   await expect(
     builder.getByRole("region", { name: "Scenario requires review" }),
   ).toBeVisible();
+  await openScenarios(builder);
   await builder
     .getByRole("button", { name: "Save scenario", exact: true })
     .click();
@@ -360,9 +359,7 @@ test("incomplete draft survives refresh; duplicate BOM, incompatible handles and
   await expect(
     builder.getByRole("region", { name: "Simulation summary" }),
   ).toHaveCount(0);
-  await builder
-    .getByRole("button", { name: "Save workspace", exact: true })
-    .click();
+  await fileAction(builder, "Save workspace");
   await page.reload();
   await expect(builder).toBeVisible();
   await expect(page).toHaveURL(/builder=1/);
@@ -415,7 +412,7 @@ test("legacy imported plan and disruption survive entering and returning from Bu
     .getByRole("button", { name: "Build a network", exact: true })
     .click();
   await builderFor(page)
-    .getByRole("button", { name: "Back to Simulate", exact: true })
+    .getByRole("button", { name: "Back to demo", exact: true })
     .click();
   await expect(summary).toHaveText(before);
   await expect(
@@ -447,6 +444,8 @@ test("narrow editing has a keyboard form connection path without page overflow",
   await stock.press("ControlOrMeta+A");
   await stock.press("7");
   await expect(stock).toHaveValue("7");
+  // Phones open on the structured list; the map is one tap away.
+  await builder.getByRole("button", { name: "Map", exact: true }).click();
   await expect(
     builder.getByTestId("builder-canvas").locator(".react-flow__edge"),
   ).toHaveCount(1);
@@ -525,9 +524,7 @@ async function expectViewport(
 
 async function exportWorkspace(page: Page, builder: Locator) {
   const downloading = page.waitForEvent("download");
-  await builder
-    .getByRole("button", { name: "Export workspace JSON", exact: true })
-    .click();
+  await fileAction(builder, "Export workspace JSON");
   const path = (await (await downloading).path())!;
   return { path, workspace: JSON.parse(await readFile(path, "utf8")) };
 }
@@ -611,9 +608,7 @@ test("pan and zoom restore after reload and same-ID import without invalidating 
     before.document.viewport,
   );
   await expectViewport(builder, saved.workspace.document.viewport);
-  await builder
-    .getByRole("button", { name: "Save workspace", exact: true })
-    .click();
+  await fileAction(builder, "Save workspace");
   await page.reload();
   await expect(builder).toBeVisible();
   await expect(page).toHaveURL(/builder=1/);
@@ -738,9 +733,7 @@ test("same-ID retarget review shows current receipt, supplier and component befo
   await expect(
     builder.getByRole("region", { name: "Simulation summary" }),
   ).toHaveCount(0);
-  await builder
-    .getByRole("button", { name: "Save workspace", exact: true })
-    .click();
+  await fileAction(builder, "Save workspace");
   await page.reload();
   await expect(builder).toBeVisible();
   await expect(page).toHaveURL(/builder=1/);

@@ -1,0 +1,805 @@
+/*
+ * Simulator command centre. One screen on desktop: a compact toolbar, the
+ * causal banner, the supply chain map on the left, explanation and recovery on
+ * the right, and the order book in a drawer. Everything is scoped under .sim
+ * so the builder and landing page are untouched.
+ */
+
+/* ---------- Shell ---------- */
+.sim {
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ---------- Toolbar ---------- */
+.sim .topbar {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-height: 52px;
+  padding: 0 16px;
+  background: var(--sheet);
+  border-bottom: 1px solid var(--hair);
+}
+.sim .wordmark {
+  font-size: 19px;
+  gap: 8px;
+  flex-shrink: 0;
+}
+.sim .scenario-switch {
+  gap: 0;
+  padding: 2px;
+  background: var(--wash);
+  border-radius: 8px;
+  flex-shrink: 0;
+}
+.sim .scenario-switch [data-slot="toggle-group-item"] {
+  height: 32px;
+  padding: 0 12px;
+  font-size: 13.5px;
+  font-weight: 500;
+  color: var(--ink-2);
+  background: transparent;
+  border: 0;
+  border-radius: 6px !important;
+}
+.sim .scenario-switch [data-slot="toggle-group-item"]:hover {
+  color: var(--ink);
+}
+.sim .scenario-switch [data-slot="toggle-group-item"][data-state="on"] {
+  color: var(--ink);
+  background: var(--sheet);
+  box-shadow: 0 0 0 1px var(--hair);
+}
+.sim .dataset-line {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  font-size: 12.5px;
+  color: var(--ink-2);
+  flex-wrap: nowrap;
+}
+.sim .dataset-name {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--ink-2);
+  font-weight: 400;
+}
+.sim .dataset-asof {
+  white-space: nowrap;
+}
+.sim .dataset-kind {
+  flex-shrink: 0;
+  border: 1px solid var(--rule);
+  border-radius: 999px;
+  padding: 1px 9px;
+  color: var(--ink);
+  white-space: nowrap;
+}
+.sim .top-actions {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  flex-wrap: nowrap;
+  gap: 2px;
+  flex-shrink: 0;
+}
+.sim .top-actions [data-slot="button"] {
+  font-size: 13.5px;
+}
+.sim .top-actions .theme-toggle {
+  margin-left: 4px;
+}
+@media (max-width: 1500px) {
+  .sim .label-wide {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+}
+@media (max-width: 1440px) {
+  .sim .dataset-name {
+    display: none;
+  }
+}
+
+/* ---------- Notices ---------- */
+.sim .notices {
+  padding: 6px 16px;
+  background: var(--paper);
+  border-bottom: 1px solid var(--hair);
+}
+.sim .notices .notice {
+  margin: 0;
+  padding: 4px 4px 4px 10px;
+  font-size: 13px;
+  border: 0;
+  border-left: 3px solid var(--alt);
+  border-radius: 0;
+  background: transparent;
+}
+.sim .notices .notice + .notice {
+  margin-top: 4px;
+}
+
+/* ---------- Outcome banner ---------- */
+.sim .outcome-banner {
+  display: flex;
+  align-items: center;
+  gap: 16px 32px;
+  margin: 0;
+  padding: 10px 20px 12px;
+  border-bottom: 1px solid var(--hair);
+  background: var(--paper);
+}
+.sim .outcome-main {
+  min-width: 0;
+  flex: 1;
+}
+.sim .outcome-banner h1 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  max-width: none;
+  font-size: 22px;
+  line-height: 1.15;
+}
+.sim .outcome-banner.is-risk {
+  background: var(--short-tint);
+  box-shadow: inset 4px 0 0 var(--short);
+}
+.sim .outcome-banner.is-risk h1 {
+  color: var(--short-ink);
+  font-size: 15px;
+  font-family: var(--font-sans);
+  font-weight: 600;
+}
+.sim .outcome-banner.is-covered h1 svg {
+  color: var(--ok);
+}
+.sim .outcome-banner.is-covered p {
+  margin-top: 2px;
+  font-size: 13.5px;
+  color: var(--ink-2);
+}
+.cause-chain {
+  list-style: none;
+  margin: 4px 0 0;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px 18px;
+}
+.cause-chain > li {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.cause-chain__k {
+  font-size: 12px;
+  color: var(--ink-2);
+}
+.cause-chain strong {
+  font-family: var(--font-display);
+  font-size: 23px;
+  font-weight: 600;
+  line-height: 1.15;
+  letter-spacing: -0.01em;
+}
+.cause-chain .is-impact strong {
+  color: var(--short);
+}
+.cause-chain__sub {
+  font-size: 12.5px;
+  color: var(--ink-2);
+}
+.cause-chain .cause-chain__arrow {
+  color: var(--short);
+}
+.outcome-exposure {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  text-align: right;
+  padding-left: 24px;
+  border-left: 1px solid var(--rule);
+  flex-shrink: 0;
+}
+.outcome-exposure span {
+  font-size: 12.5px;
+  color: var(--ink-2);
+}
+.outcome-exposure strong {
+  font-family: var(--font-display);
+  font-size: 26px;
+  font-weight: 600;
+  line-height: 1.15;
+}
+.outcome-changes {
+  flex: 0 1 auto;
+  max-width: 62%;
+}
+.outcome-changes > span {
+  font-size: 12px;
+  color: var(--ink-2);
+}
+.outcome-changes ul {
+  list-style: none;
+  margin: 4px 0 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.outcome-changes li {
+  font-size: 13px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--alt);
+  color: var(--alt);
+  background: var(--alt-tint);
+}
+.outcome-changes li.is-late {
+  border-color: var(--short);
+  color: var(--short-ink);
+  background: var(--short-tint);
+}
+
+/* ---------- Work area ---------- */
+.sim main.sim-work {
+  flex: 1;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 400px;
+  max-width: none;
+  margin: 0;
+  padding: 0;
+  min-height: 0;
+}
+.sim-stage {
+  min-width: 0;
+  min-height: 0;
+  border-right: 1px solid var(--hair);
+}
+.sim .sim-stage .graph-section {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  border: 0;
+  border-radius: 0;
+  background: var(--paper);
+}
+.sim .graph-toolbar {
+  padding: 10px 16px 8px;
+}
+.sim .graph-toolbar h2 {
+  font-size: 15px;
+  font-family: var(--font-sans);
+  font-weight: 600;
+}
+.sim .graph-actions select,
+.sim .graph-actions button {
+  height: 32px;
+  font-size: 13px;
+}
+.sim .graph-columns {
+  padding: 4px 16px;
+  font-size: 11.5px;
+  border: 0;
+}
+.sim .graph-canvas {
+  flex: 1;
+  min-height: 210px;
+  height: auto;
+  background: var(--paper);
+  background-image: radial-gradient(var(--hair) 1px, transparent 1px);
+  background-size: 20px 20px;
+}
+.sim .react-flow {
+  --xy-background-color: transparent;
+}
+.sim .supply-node {
+  background: var(--sheet);
+  border-color: var(--hair);
+  border-radius: 8px;
+  transition: opacity 160ms ease;
+}
+.sim .supply-node.is-risk {
+  border-color: var(--short);
+  background: var(--short-tint);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--short) 14%, transparent);
+}
+.sim .supply-node.is-risk::before {
+  border-radius: 8px 0 0 8px;
+}
+.sim .supply-node.is-dim {
+  opacity: 0.45;
+}
+.sim .supply-node.is-dim:hover,
+.sim .supply-node.is-dim.is-selected {
+  opacity: 1;
+}
+.sim .graph-legend {
+  padding: 6px 16px;
+  font-size: 12px;
+  border-top: 1px solid var(--hair);
+  background: var(--paper);
+}
+.sim .timeline {
+  padding: 10px 16px 12px;
+  border-top: 1px solid var(--hair);
+  background: var(--sheet);
+}
+.sim .timeline-head {
+  margin-bottom: 6px;
+}
+.sim .timeline-head h3 {
+  font-size: 13.5px;
+}
+.sim .timeline-head p {
+  font-size: 12px;
+}
+.sim .timeline-row {
+  min-height: 32px;
+}
+.sim .timeline-track {
+  height: 32px;
+}
+
+/* ---------- Right rail ---------- */
+.sim-rail {
+  min-height: 0;
+  overflow-y: auto;
+  background: var(--sheet);
+  overscroll-behavior: contain;
+}
+.rail-impact,
+.rail-inputs {
+  padding: 12px 16px 16px;
+}
+.rail-impact {
+  scroll-margin-top: 60px;
+}
+.rail-inputs {
+  border-top: 1px solid var(--hair);
+}
+.rail-heading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 4px 12px;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+}
+.rail-heading h2 {
+  font-size: 18px;
+}
+.rail-heading > span {
+  font-size: 12.5px;
+  color: var(--ink-2);
+}
+.rail-explain-pick {
+  margin-bottom: 12px;
+}
+.sim .rail-inputs .policy-note {
+  margin: 16px 0 0;
+}
+.sim .rail-impact .evidence-default,
+.sim .rail-impact .node-detail {
+  border: 0;
+  padding: 0;
+  background: transparent;
+}
+.sim .rail-impact .impact-lines {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+/* Shortage explanation with unit tiles */
+.shortage__lede {
+  font-size: 13.5px;
+  color: var(--ink-2);
+}
+.unit-tiles {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 10px 14px;
+  margin: 8px 0 4px;
+}
+.unit-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.unit-group > span {
+  font-size: 12px;
+  color: var(--ink-2);
+}
+.unit-group.is-focus > span {
+  color: var(--short-ink);
+  font-weight: 600;
+}
+.unit-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  max-width: 232px;
+}
+.unit {
+  display: grid;
+  place-items: center;
+  width: 19px;
+  height: 24px;
+  border-radius: 4px;
+  border: 1px solid var(--ink-2);
+  background: var(--wash);
+  font-style: normal;
+  font-size: 12px;
+  font-weight: 600;
+}
+.unit.is-mine {
+  background: var(--alt-tint);
+  border-color: var(--alt);
+}
+.unit.is-missing {
+  border: 1.5px dashed var(--short);
+  background: var(--short-tint);
+  color: var(--short-ink);
+}
+.unit-bar {
+  display: flex;
+  height: 12px;
+  gap: 2px;
+  margin: 12px 0 6px;
+}
+.unit-bar i {
+  border-radius: 3px;
+  background: var(--wash);
+  border: 1px solid var(--rule);
+}
+.unit-bar i.is-mine {
+  background: var(--alt-tint);
+  border-color: var(--alt);
+}
+.unit-bar i.is-missing {
+  background: var(--hatch);
+  border-color: var(--short);
+}
+.shortage__sum {
+  margin: 6px 0 0;
+  font-size: 13px;
+}
+.shortage__sum > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 1px 0;
+}
+.shortage__sum dt {
+  color: var(--ink-2);
+}
+.shortage__sum dd {
+  margin: 0;
+  font-weight: 500;
+  white-space: nowrap;
+}
+.shortage__sum .is-total {
+  border-top: 1px solid var(--hair);
+  padding-top: 4px;
+}
+.shortage__sum .is-total dt,
+.shortage__sum .is-total dd {
+  color: var(--ink);
+  font-weight: 600;
+}
+.shortage__sum .is-short dt,
+.shortage__sum .is-short dd {
+  color: var(--short-ink);
+}
+.shortage__late {
+  margin-top: 8px;
+  padding: 6px 10px;
+  border-radius: 6px;
+  background: var(--short-tint);
+  color: var(--short-ink);
+  font-size: 13px;
+}
+.text-action {
+  margin-top: 8px;
+  padding: 4px 0;
+  font-size: 13px;
+  color: var(--alt);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  background: none;
+  border: 0;
+}
+
+/* Recovery */
+.sim .recovery-comparison {
+  border-top: 1px solid var(--hair);
+  margin-top: 10px;
+  padding-top: 10px;
+}
+.sim .recovery-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.sim .recovery-option {
+  padding: 10px 12px;
+  border: 1px solid var(--hair);
+  border-radius: 10px;
+  background: var(--paper);
+}
+.sim .recovery-option.is-first {
+  border-color: var(--ink);
+  background: var(--sheet);
+}
+.recovery-option__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  width: 100%;
+}
+.sim .recovery-option h3 {
+  font-size: 14.5px;
+  font-family: var(--font-sans);
+  font-weight: 600;
+}
+.sim .recovery-option p {
+  margin: 6px 0 8px;
+  font-size: 12.5px;
+  flex: none;
+}
+.sim .recovery-option button {
+  height: 32px;
+  font-size: 13px;
+  flex-shrink: 0;
+}
+.recovery-outcome {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px 8px;
+  font-size: 12.5px;
+}
+.delta {
+  padding: 1px 7px;
+  border-radius: 5px;
+  font-weight: 600;
+}
+.delta.is-before {
+  background: var(--short-tint);
+  color: var(--short-ink);
+}
+.delta.is-after {
+  background: var(--ok-tint);
+  color: var(--ok);
+}
+.recovery-outcome__note {
+  color: var(--ink-2);
+}
+.sim .recovery-caption {
+  margin: 10px 0 0;
+  font-size: 12px;
+}
+
+/* ---------- Order book drawer ---------- */
+.order-drawer {
+  position: sticky;
+  bottom: 0;
+  z-index: 25;
+  background: var(--sheet);
+  border-top: 1px solid var(--rule);
+}
+.order-drawer__toggle {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  min-height: 44px;
+  padding: 0 16px;
+  font-size: 13px;
+  color: var(--ink);
+  background: transparent;
+  border: 0;
+  text-align: left;
+}
+.order-drawer__toggle:hover {
+  background: var(--wash);
+}
+.order-drawer__toggle:focus-visible {
+  outline: 2px solid var(--alt);
+  outline-offset: -2px;
+}
+.order-drawer__count,
+.order-drawer__more {
+  color: var(--ink-2);
+}
+.order-drawer__more {
+  margin-left: auto;
+}
+.order-strip {
+  display: flex;
+  gap: 3px;
+}
+.order-strip i {
+  width: 16px;
+  height: 8px;
+  border-radius: 2px;
+  background: var(--ok-tint);
+  border: 1px solid color-mix(in srgb, var(--ok) 45%, transparent);
+}
+.order-strip i.is-short {
+  background: var(--short);
+  border-color: var(--short);
+}
+.order-drawer__chev {
+  transition: transform 160ms ease;
+}
+.order-drawer.is-open .order-drawer__chev {
+  transform: rotate(180deg);
+}
+.order-drawer__panel {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 100%;
+  max-height: min(70vh, 640px);
+  overflow-y: auto;
+  padding: 16px 20px 0;
+  background: var(--sheet);
+  border-top: 1px solid var(--rule);
+  box-shadow: 0 -12px 28px rgb(0 0 0 / 0.12);
+}
+.order-drawer__panel[hidden] {
+  display: none;
+}
+.order-drawer__panel .orders-section {
+  margin-top: 20px;
+}
+.order-drawer__panel footer {
+  margin-top: 20px;
+}
+
+/* ---------- Desktop: one screen ---------- */
+@media (min-width: 1100px) and (min-height: 640px) {
+  .sim {
+    height: 100dvh;
+    overflow: hidden;
+  }
+  .sim-stage {
+    overflow: hidden;
+  }
+  .sim .sim-stage .graph-section {
+    overflow-y: auto;
+  }
+}
+@media (max-width: 1280px) and (min-width: 1100px) {
+  .sim main.sim-work {
+    grid-template-columns: minmax(0, 1fr) 360px;
+  }
+  .cause-chain strong {
+    font-size: 21px;
+  }
+}
+
+/* ---------- Tablet and phone: one column ---------- */
+@media (max-width: 1099px) {
+  .sim .topbar {
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 8px 12px;
+  }
+  .sim .scenario-switch {
+    order: 3;
+    flex-basis: 100%;
+    display: flex;
+  }
+  .sim .scenario-switch [data-slot="toggle-group-item"] {
+    flex: 1;
+    min-width: 0;
+    height: 38px;
+    padding: 0 6px;
+    white-space: normal;
+    line-height: 1.15;
+    font-size: 13px;
+  }
+  .sim .dataset-line {
+    order: 4;
+    flex-basis: 100%;
+  }
+  .sim .label-narrow {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+  .sim .top-actions [data-slot="button"] {
+    min-width: 40px;
+    min-height: 40px;
+    padding: 0 10px;
+  }
+  .sim .outcome-banner {
+    flex-direction: column;
+    align-items: stretch;
+    padding: 14px 16px;
+  }
+  .sim .outcome-exposure {
+    align-items: flex-start;
+    text-align: left;
+    padding: 10px 0 0;
+    border-left: 0;
+    border-top: 1px solid var(--rule);
+  }
+  .outcome-changes {
+    max-width: none;
+  }
+  .cause-chain {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 2px;
+  }
+  .cause-chain .cause-chain__arrow svg {
+    transform: rotate(90deg);
+  }
+  .cause-chain strong {
+    font-size: 20px;
+  }
+  .sim main.sim-work {
+    display: flex;
+    flex-direction: column;
+  }
+  .sim-rail {
+    display: contents;
+  }
+  .rail-impact {
+    order: 1;
+    background: var(--sheet);
+    border-bottom: 1px solid var(--hair);
+  }
+  .sim-stage {
+    order: 2;
+    border-right: 0;
+  }
+  .rail-inputs {
+    order: 3;
+    background: var(--sheet);
+  }
+  .sim .graph-canvas {
+    height: 420px;
+    flex: none;
+  }
+  .order-drawer__more,
+  .order-strip {
+    display: none;
+  }
+  .order-drawer__count {
+    margin-left: auto;
+  }
+  .order-drawer__panel {
+    position: fixed;
+    bottom: 44px;
+    max-height: 75dvh;
+    padding: 14px 14px 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sim .supply-node,
+  .order-drawer__chev {
+    transition: none;
+  }
+}

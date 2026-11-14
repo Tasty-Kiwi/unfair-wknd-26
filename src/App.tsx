@@ -5,11 +5,13 @@ import {
   Check,
   CheckCircle2,
   ChevronRight,
+  ChevronUp,
   CircleHelp,
   RotateCcw,
   ShieldCheck,
   TriangleAlert,
   Upload,
+  Workflow,
   X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -51,6 +53,9 @@ import { SupplyGraph, type Selection } from "@/components/graph/SupplyGraph";
 import { RecoveryComparison } from "@/components/scenarios/RecoveryComparison";
 import { ScenarioPanel } from "@/components/scenarios/ScenarioPanel";
 import { ImpactPanel } from "@/components/scenarios/ImpactPanel";
+import { OutcomeBanner } from "@/components/scenarios/OutcomeBanner";
+import { ShortageExplanation } from "@/components/scenarios/ShortageExplanation";
+import "./simulator.css";
 import "@/components/scenarios/panels.css";
 import { BuilderExperience } from "@/components/builder/BuilderExperience";
 import { ThemeToggle } from "@/components/theme/ThemeToggle";
@@ -348,6 +353,11 @@ export default function App() {
   const [controlError, setControlError] = useState("");
   const orderTable = useRef<HTMLElement>(null);
   const evidence = useRef<HTMLDivElement>(null);
+  const rail = useRef<HTMLElement>(null);
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [explainId, setExplainId] = useState<string | null>(null);
+  // After a recovery, the evidence panel opens on the order that recovered.
+  const [recoveredId, setRecoveredId] = useState<string | undefined>();
   const reports = useMemo(
     () => presets.map((s) => simulate(data, s)),
     [data, presets],
@@ -370,6 +380,7 @@ export default function App() {
     }
   };
   const choose = (i: number) => {
+    setRecoveredId(undefined);
     setScenario(presets[i]);
     setControlError("");
     setNotice("");
@@ -431,7 +442,10 @@ export default function App() {
     );
     setPendingImport(null);
   }
-  const firstRisk = result.orders.find((o) => o.status === "at-risk");
+  const riskOrders = result.orders.filter((o) => o.status === "at-risk");
+  const firstRisk = riskOrders[0];
+  const explained =
+    riskOrders.find((o) => o.orderId === explainId) ?? firstRisk;
   const firstShort = firstRisk?.lines.find((l) => l.shortage > 0);
   const cause = (() => {
     if (!firstRisk || !firstShort) return null;
@@ -461,62 +475,20 @@ export default function App() {
       />
     );
   return (
-    <div className="app-shell">
+    <div className={`app-shell sim ${drawerOpen ? "drawer-is-open" : ""}`}>
       <header className="topbar">
         <a href="#" className="wordmark" aria-label="Needtrace home">
-          <img src="/favicon.svg" width="28" height="28" alt="" />
-          Needtrace
+          <img src="/favicon.svg" width="26" height="26" alt="" />
+          <span className="wordmark__text">Needtrace</span>
         </a>
-        <p className="dataset-line">
-          <span>{data.name}</span>
-          <span>
-            Inventory as of {day(data.asOf)} {data.asOf.slice(0, 4)}
-          </span>
-          <span className="dataset-kind">
-            {provenanceLabel(provenance.kind)}
-          </span>
-        </p>
-        <div className="top-actions">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => navigateBuilder(true)}
-          >
-            Build a network
-          </Button>
-          <Button variant="ghost" size="sm" onClick={() => setHelpOpen(true)}>
-            <CircleHelp data-icon="inline-start" />
-            <span className="label-wide">Assumptions</span>
-          </Button>
-          <Button variant="ghost" size="sm" onClick={() => setImportOpen(true)}>
-            <Upload data-icon="inline-start" />
-            Import data
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => {
-              if (provenance.kind !== "fictional") setResetOpen(true);
-              else reset();
-            }}
-          >
-            <RotateCcw data-icon="inline-start" />
-            Reset demo
-          </Button>
-          <ThemeToggle />
-        </div>
-      </header>
-      <div className="scenario-strip">
-        <span className="strip-label" id="scenario-label">
-          Scenario
-        </span>
         <ToggleGroup
+          className="scenario-switch"
           type="single"
           value={activePreset >= 0 ? String(activePreset) : "custom"}
           onValueChange={(v) => {
             if (v && v !== "custom") choose(Number(v));
           }}
-          aria-labelledby="scenario-label"
+          aria-label="Scenario"
         >
           {scenarioNames.map((name, i) => (
             <ToggleGroupItem key={name} value={String(i)}>
@@ -528,148 +500,195 @@ export default function App() {
           )}
         </ToggleGroup>
         <p
-          className={`strip-status ${s.atRiskOrders ? "is-short" : ""}`}
-          aria-hidden="true"
+          className="dataset-line"
+          title={`${data.name} · inventory as of ${data.asOf}`}
         >
-          {s.atRiskOrders ? (
-            <>
-              <i className="hatch-chip" />
-              {s.atRiskOrders} short · {s.missingUnits} units ·{" "}
-              {money(s.atRiskValue)}
-            </>
-          ) : (
-            <>
-              <Check size={14} /> All {s.totalOrders} covered
-            </>
-          )}
+          <span className="dataset-name">{data.name}</span>
+          <span className="dataset-asof">Inventory {day(data.asOf)}</span>
+          <span className="dataset-kind">
+            {provenanceLabel(provenance.kind)}
+          </span>
         </p>
-      </div>
-      <main>
-        {retainedProductBoms && (
-          <p className="notice" role="status">
-            Product names and SKUs are imported; existing BOMs were retained and
-            may include fictional demo values. Import products and BOM together
-            to replace both.
-          </p>
-        )}
-        {notice && (
-          <div className="notice" role="status">
-            <CheckCircle2 size={16} />
-            {notice}
-            <button
-              onClick={() => setNotice("")}
-              aria-label="Dismiss notification"
-            >
-              <X size={14} />
-            </button>
-          </div>
-        )}
-        <section
-          className={`outcome-banner ${s.atRiskOrders ? "outcome-risk" : ""}`}
-          aria-label="Simulation summary"
-          aria-live="polite"
-        >
-          <div className="outcome-copy">
-            <h1>
-              {s.atRiskOrders
-                ? `${s.atRiskOrders} order${s.atRiskOrders === 1 ? "" : "s"} at risk due to material shortage`
-                : "Every order has its required materials"}
-            </h1>
-            <p>
-              {s.atRiskOrders
-                ? `${money(s.atRiskValue)} in order value at material risk. ${s.missingUnits} component units remain uncovered. ${cause ?? ""}`
-                : `All material requirements covered by the required dates for ${s.totalOrders} orders across ${data.products.length} products.`}
+        <div className="top-actions">
+          <Button
+            variant="ghost"
+            size="sm"
+            title="Model assumptions"
+            onClick={() => setHelpOpen(true)}
+          >
+            <CircleHelp data-icon="inline-start" />
+            <span className="label-wide">Assumptions</span>
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            title="Import data"
+            onClick={() => setImportOpen(true)}
+          >
+            <Upload data-icon="inline-start" />
+            <span className="label-narrow">Import data</span>
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            title="Reset demo"
+            onClick={() => {
+              if (provenance.kind !== "fictional") setResetOpen(true);
+              else reset();
+            }}
+          >
+            <RotateCcw data-icon="inline-start" />
+            <span className="label-narrow">Reset demo</span>
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            title="Build a network"
+            onClick={() => navigateBuilder(true)}
+          >
+            <Workflow data-icon="inline-start" />
+            <span className="label-narrow">Build a network</span>
+          </Button>
+          <ThemeToggle />
+        </div>
+      </header>
+      {(retainedProductBoms || notice) && (
+        <div className="notices">
+          {retainedProductBoms && (
+            <p className="notice" role="status">
+              Product names and SKUs are imported; existing BOMs were retained
+              and may include fictional demo values. Import products and BOM
+              together to replace both.
             </p>
-          </div>
-          <dl className="figures">
-            <div className={s.atRiskOrders ? "is-short" : ""}>
-              <dt>Orders at risk</dt>
-              <dd>{s.atRiskOrders}</dd>
-              <dd className="figure-note">
-                {s.atRiskOrders
-                  ? "Due to material shortage"
-                  : "All material requirements covered"}
-              </dd>
+          )}
+          {notice && (
+            <div className="notice" role="status">
+              <CheckCircle2 size={16} />
+              {notice}
+              <button
+                onClick={() => setNotice("")}
+                aria-label="Dismiss notification"
+              >
+                <X size={14} />
+              </button>
             </div>
-            <div className={s.missingUnits ? "is-short" : ""}>
-              <dt>Units missing</dt>
-              <dd>{s.missingUnits}</dd>
-              <dd className="figure-note">By required dates</dd>
-            </div>
-            <div>
-              <dt>Products affected</dt>
-              <dd>{s.affectedProducts}</dd>
-              <dd className="figure-note">Of {data.products.length}</dd>
-            </div>
-          </dl>
-        </section>
-        <div className="workbench">
-          <div className="main-column">
-            <SupplyGraph
-              data={data}
-              result={result}
-              scenario={scenario}
-              onSelect={setSelection}
-              selected={selection}
-              onMoveReceipt={(id, date) =>
-                update(withReceiptDate(data, scenario, id, date))
-              }
-            />
-            {s.atRiskOrders > 0 && (
-              <RecoveryComparison
+          )}
+        </div>
+      )}
+      <OutcomeBanner
+        data={data}
+        result={result}
+        scenario={scenario}
+        cause={cause}
+      />
+      <main className="sim-work">
+        <div className="sim-stage">
+          <SupplyGraph
+            data={data}
+            result={result}
+            scenario={scenario}
+            onSelect={(next) => {
+              setSelection(next);
+              requestAnimationFrame(() => rail.current?.scrollTo({ top: 0 }));
+            }}
+            selected={selection}
+            onMoveReceipt={(id, date) =>
+              update(withReceiptDate(data, scenario, id, date))
+            }
+          />
+        </div>
+        <aside
+          className="sim-rail"
+          ref={rail}
+          aria-label="Explanation and inputs"
+        >
+          <div className="rail-impact" ref={evidence}>
+            {selection ? (
+              <NodeDetail
+                selection={selection}
                 data={data}
-                scenario={scenario}
-                onApply={(next) => {
-                  const recovered = simulate(data, next);
-                  const restored = result.orders.filter(
-                    (order) =>
-                      order.status === "at-risk" &&
-                      recovered.orders.some(
-                        (after) =>
-                          after.orderId === order.orderId &&
-                          after.status === "covered",
-                      ),
-                  );
-                  const late = recovered.deliveries.filter(
-                    (delivery) =>
-                      delivery.availableDate >
-                      (data.deliveries.find(
-                        (original) => original.id === delivery.id,
-                      )?.availableDate ?? delivery.availableDate),
-                  );
-                  update(next);
-                  setNotice(
-                    `${restored.length ? `${restored.map((order) => order.orderId).join(", ")} regained material coverage in this simulation.` : "Recovery applied to this simulation."} ${recovered.summary.missingUnits > 0 ? `${recovered.summary.missingUnits} material unit(s) still missing across ${recovered.summary.atRiskOrders} order(s) at risk.` : "All orders have material coverage."} ${late.map((delivery) => `${delivery.id} remains late (${day(delivery.availableDate)})`).join("; ") || "Receipt dates reflect this scenario"}. No purchase or supplier confirmation was made.`,
-                  );
-                }}
+                result={result}
+                onClose={() => setSelection(null)}
               />
-            )}
-            <div ref={evidence} className="evidence-anchor">
-              {selection ? (
-                <NodeDetail
-                  selection={selection}
+            ) : firstRisk ? (
+              <>
+                {riskOrders.length > 1 && (
+                  <div className="scenario-field rail-explain-pick">
+                    <label htmlFor="explain-order">Explain order</label>
+                    <select
+                      id="explain-order"
+                      className="scenario-control"
+                      value={explained?.orderId}
+                      onChange={(e) => setExplainId(e.target.value)}
+                    >
+                      {riskOrders.map((o) => (
+                        <option key={o.orderId} value={o.orderId}>
+                          {o.orderId} ·{" "}
+                          {o.lines.reduce((n, l) => n + l.shortage, 0)} short
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+                {explained && (
+                  <ShortageExplanation
+                    data={data}
+                    result={result}
+                    order={explained}
+                    onInspect={() =>
+                      setSelection({ kind: "order", id: explained.orderId })
+                    }
+                  />
+                )}
+                <RecoveryComparison
+                  data={data}
+                  scenario={scenario}
+                  current={result}
+                  onApply={(next) => {
+                    const recovered = simulate(data, next);
+                    const restored = result.orders.filter(
+                      (order) =>
+                        order.status === "at-risk" &&
+                        recovered.orders.some(
+                          (after) =>
+                            after.orderId === order.orderId &&
+                            after.status === "covered",
+                        ),
+                    );
+                    const late = recovered.deliveries.filter(
+                      (delivery) =>
+                        delivery.availableDate >
+                        (data.deliveries.find(
+                          (original) => original.id === delivery.id,
+                        )?.availableDate ?? delivery.availableDate),
+                    );
+                    update(next);
+                    setRecoveredId(restored[0]?.orderId);
+                    setNotice(
+                      `${restored.length ? `${restored.map((order) => order.orderId).join(", ")} regained material coverage in this simulation.` : "Recovery applied to this simulation."} ${recovered.summary.missingUnits > 0 ? `${recovered.summary.missingUnits} material unit(s) still missing across ${recovered.summary.atRiskOrders} order(s) at risk.` : "All orders have material coverage."} ${late.map((delivery) => `${delivery.id} remains late (${day(delivery.availableDate)})`).join("; ") || "Receipt dates reflect this scenario"}. No purchase or supplier confirmation was made.`,
+                    );
+                  }}
+                />
+              </>
+            ) : (
+              <div className="evidence-default">
+                <header className="rail-heading">
+                  <h2>Allocation evidence</h2>
+                  <span>By required date, then order ID</span>
+                </header>
+                <ImpactPanel
                   data={data}
                   result={result}
-                  onClose={() => setSelection(null)}
+                  selectedOrderId={recoveredId}
                 />
-              ) : (
-                <div className="evidence-default">
-                  <div className="section-heading">
-                    <h2>Allocation evidence</h2>
-                    <p className="section-note">
-                      Stock is reserved by required date, then order ID.
-                    </p>
-                  </div>
-                  <ImpactPanel data={data} result={result} />
-                </div>
-              )}
-            </div>
+              </div>
+            )}
           </div>
-          <aside className="scenario-sidebar">
-            <div className="sidebar-heading">
-              <h2>Change the inputs</h2>
-              <p>Every change recalculates the whole order book.</p>
-            </div>
+          <section className="rail-inputs" aria-labelledby="inputs-title">
+            <header className="rail-heading">
+              <h2 id="inputs-title">Change the inputs</h2>
+              <span>Recalculates every order</span>
+            </header>
             {controlError && (
               <Alert variant="destructive">
                 <AlertTitle>Scenario not applied</AlertTitle>
@@ -690,190 +709,236 @@ export default function App() {
                 shipment timing are outside this model.
               </p>
             </div>
-          </aside>
-        </div>
-        <section className="comparison-section" aria-labelledby="compare-title">
-          <div className="section-heading">
-            <h2 id="compare-title">Scenarios side by side</h2>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() =>
-                download(
-                  "needtrace-scenario-report.json",
-                  JSON.stringify(
-                    {
-                      dataset: data.name,
-                      dataProvenance: provenance,
-                      inputs: data,
-                      retainedProductBoms,
-                      policy:
-                        "Partial component reservations, earliest required date then order ID; material availability only.",
-                      scenario,
-                      application: "Needtrace",
-                      result,
-                      comparison: reports,
-                    },
-                    null,
-                    2,
-                  ),
-                )
-              }
-            >
-              <ArrowDownToLine data-icon="inline-start" />
-              Export report JSON
-            </Button>
-          </div>
-          <div className="table-scroll">
-            <table className="comparison-table">
-              <thead>
-                <tr>
-                  <th scope="col">Scenario</th>
-                  <th scope="col" className="num">
-                    Orders at risk
-                  </th>
-                  <th scope="col" className="num">
-                    Units missing
-                  </th>
-                  <th scope="col" className="num">
-                    Value at risk
-                  </th>
-                  <th scope="col">
-                    <span className="sr-only">Load scenario</span>
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {reports.map((r, i) => (
-                  <tr
-                    key={i}
-                    className={activePreset === i ? "is-current" : ""}
-                    aria-current={activePreset === i ? "true" : undefined}
-                  >
-                    <th scope="row">
-                      {scenarioNames[i]}
-                      {activePreset === i && (
-                        <span className="current-tag">Showing</span>
-                      )}
+          </section>
+        </aside>
+      </main>
+      <section
+        className={`order-drawer ${drawerOpen ? "is-open" : ""}`}
+        aria-label="Order book and scenario comparison"
+      >
+        <button
+          type="button"
+          className="order-drawer__toggle"
+          aria-expanded={drawerOpen}
+          aria-controls="order-drawer-panel"
+          onClick={() => setDrawerOpen(!drawerOpen)}
+        >
+          <strong>Order book</strong>
+          <span className="order-drawer__count">
+            {s.totalOrders} orders
+            {s.atRiskOrders ? ` · ${s.atRiskOrders} short` : " · all covered"}
+          </span>
+          <span className="order-strip" aria-hidden="true">
+            {result.orders.map((o) => (
+              <i
+                key={o.orderId}
+                className={o.status === "at-risk" ? "is-short" : ""}
+              />
+            ))}
+          </span>
+          <span className="order-drawer__more">Compare scenarios · export</span>
+          <ChevronUp
+            className="order-drawer__chev"
+            size={16}
+            aria-hidden="true"
+          />
+        </button>
+        <div
+          id="order-drawer-panel"
+          className="order-drawer__panel"
+          hidden={!drawerOpen}
+        >
+          <section
+            className="comparison-section"
+            aria-labelledby="compare-title"
+          >
+            <div className="section-heading">
+              <h2 id="compare-title">Scenarios side by side</h2>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() =>
+                  download(
+                    "needtrace-scenario-report.json",
+                    JSON.stringify(
+                      {
+                        dataset: data.name,
+                        dataProvenance: provenance,
+                        inputs: data,
+                        retainedProductBoms,
+                        policy:
+                          "Partial component reservations, earliest required date then order ID; material availability only.",
+                        scenario,
+                        application: "Needtrace",
+                        result,
+                        comparison: reports,
+                      },
+                      null,
+                      2,
+                    ),
+                  )
+                }
+              >
+                <ArrowDownToLine data-icon="inline-start" />
+                Export report JSON
+              </Button>
+            </div>
+            <div className="table-scroll">
+              <table className="comparison-table">
+                <thead>
+                  <tr>
+                    <th scope="col">Scenario</th>
+                    <th scope="col" className="num">
+                      Orders at risk
                     </th>
-                    <td
-                      className={`num ${r.summary.atRiskOrders ? "short-text" : ""}`}
-                    >
-                      {r.summary.atRiskOrders}
-                    </td>
-                    <td className="num">{r.summary.missingUnits}</td>
-                    <td className="num">{money(r.summary.atRiskValue)}</td>
-                    <td className="row-action">
-                      {activePreset !== i && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => choose(i)}
-                        >
-                          Show <ArrowRight size={14} />
-                        </Button>
-                      )}
-                    </td>
+                    <th scope="col" className="num">
+                      Units missing
+                    </th>
+                    <th scope="col" className="num">
+                      Order value exposed
+                    </th>
+                    <th scope="col">
+                      <span className="sr-only">Load scenario</span>
+                    </th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </section>
-        <section className="orders-section" ref={orderTable}>
-          <div className="section-heading">
-            <h2>Order book</h2>
-            <p className="section-note">
-              Allocated by required date, then order ID
-            </p>
-          </div>
-          <div className="table-scroll">
-            <table className="orders-table">
-              <thead>
-                <tr>
-                  <th scope="col">Order</th>
-                  <th scope="col">Required by</th>
-                  <th scope="col">Material</th>
-                  <th scope="col">Product</th>
-                  <th scope="col" className="num">
-                    Qty
-                  </th>
-                  <th scope="col" className="num">
-                    Value
-                  </th>
-                  <th scope="col">
-                    <span className="sr-only">Inspect order</span>
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {result.orders.map((r) => {
-                  const o = data.orders.find((x) => x.id === r.orderId)!;
-                  const short = r.lines.reduce((n, l) => n + l.shortage, 0);
-                  return (
+                </thead>
+                <tbody>
+                  {reports.map((r, i) => (
                     <tr
-                      key={o.id}
-                      className={r.status === "at-risk" ? "at-risk-row" : ""}
+                      key={i}
+                      className={activePreset === i ? "is-current" : ""}
+                      aria-current={activePreset === i ? "true" : undefined}
                     >
-                      <td>
-                        <strong>{o.id}</strong>
-                        <span>{o.customer}</span>
+                      <th scope="row">
+                        {scenarioNames[i]}
+                        {activePreset === i && (
+                          <span className="current-tag">Showing</span>
+                        )}
+                      </th>
+                      <td
+                        className={`num ${r.summary.atRiskOrders ? "short-text" : ""}`}
+                      >
+                        {r.summary.atRiskOrders}
                       </td>
-                      <td>{day(o.requiredDate)}</td>
-                      <td>
-                        <span
-                          className={`order-status ${r.status === "at-risk" ? "is-short" : "is-covered"}`}
-                        >
-                          {r.status === "at-risk" ? (
-                            <>
-                              <i className="hatch-chip" aria-hidden="true" />
-                              Short {short}
-                            </>
-                          ) : (
-                            <>
-                              <Check size={14} aria-hidden="true" />
-                              Covered
-                            </>
-                          )}
-                        </span>
-                      </td>
-                      <td>
-                        {data.products.find((p) => p.id === o.productId)?.name}
-                      </td>
-                      <td className="num">{o.quantity}</td>
-                      <td className="num">{money(o.value)}</td>
+                      <td className="num">{r.summary.missingUnits}</td>
+                      <td className="num">{money(r.summary.atRiskValue)}</td>
                       <td className="row-action">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          aria-label={`Inspect ${o.id}`}
-                          onClick={() => {
-                            setSelection({ kind: "order", id: o.id });
-                            requestAnimationFrame(() =>
-                              evidence.current?.scrollIntoView({
-                                behavior: reducedMotion() ? "auto" : "smooth",
-                                block: "start",
-                              }),
-                            );
-                          }}
-                        >
-                          <ChevronRight />
-                        </Button>
+                        {activePreset !== i && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => choose(i)}
+                          >
+                            Show <ArrowRight size={14} />
+                          </Button>
+                        )}
                       </td>
                     </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        </section>
-        <footer>
-          <span>Needtrace · Unfair Weekend 2026</span>
-          <button onClick={() => setHelpOpen(true)}>
-            Model assumptions <ArrowRight size={14} />
-          </button>
-        </footer>
-      </main>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </section>
+          <section className="orders-section" ref={orderTable}>
+            <div className="section-heading">
+              <h2>Order book</h2>
+              <p className="section-note">
+                Allocated by required date, then order ID
+              </p>
+            </div>
+            <div className="table-scroll">
+              <table className="orders-table">
+                <thead>
+                  <tr>
+                    <th scope="col">Order</th>
+                    <th scope="col">Required by</th>
+                    <th scope="col">Material</th>
+                    <th scope="col">Product</th>
+                    <th scope="col" className="num">
+                      Qty
+                    </th>
+                    <th scope="col" className="num">
+                      Value
+                    </th>
+                    <th scope="col">
+                      <span className="sr-only">Inspect order</span>
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {result.orders.map((r) => {
+                    const o = data.orders.find((x) => x.id === r.orderId)!;
+                    const short = r.lines.reduce((n, l) => n + l.shortage, 0);
+                    return (
+                      <tr
+                        key={o.id}
+                        className={r.status === "at-risk" ? "at-risk-row" : ""}
+                      >
+                        <td>
+                          <strong>{o.id}</strong>
+                          <span>{o.customer}</span>
+                        </td>
+                        <td>{day(o.requiredDate)}</td>
+                        <td>
+                          <span
+                            className={`order-status ${r.status === "at-risk" ? "is-short" : "is-covered"}`}
+                          >
+                            {r.status === "at-risk" ? (
+                              <>
+                                <i className="hatch-chip" aria-hidden="true" />
+                                Short {short}
+                              </>
+                            ) : (
+                              <>
+                                <Check size={14} aria-hidden="true" />
+                                Covered
+                              </>
+                            )}
+                          </span>
+                        </td>
+                        <td>
+                          {
+                            data.products.find((p) => p.id === o.productId)
+                              ?.name
+                          }
+                        </td>
+                        <td className="num">{o.quantity}</td>
+                        <td className="num">{money(o.value)}</td>
+                        <td className="row-action">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            aria-label={`Inspect ${o.id}`}
+                            onClick={() => {
+                              setSelection({ kind: "order", id: o.id });
+                              setDrawerOpen(false);
+                              requestAnimationFrame(() => {
+                                rail.current?.scrollTo({ top: 0 });
+                                evidence.current?.scrollIntoView({
+                                  behavior: reducedMotion() ? "auto" : "smooth",
+                                  block: "nearest",
+                                });
+                              });
+                            }}
+                          >
+                            <ChevronRight />
+                          </Button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </section>
+          <footer>
+            <span>Needtrace · Unfair Weekend 2026</span>
+            <button onClick={() => setHelpOpen(true)}>
+              Model assumptions <ArrowRight size={14} />
+            </button>
+          </footer>
+        </div>
+      </section>
       <Dialog
         open={importOpen}
         onOpenChange={(open) => {

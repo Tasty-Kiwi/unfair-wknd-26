@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import { openOrderBook } from "./ui-helpers";
 
 test("blank builder offers a starting point before requested validation", async ({
   page,
@@ -47,6 +48,7 @@ test("recovery announces modeled coverage and keeps the original receipt late", 
     page.getByText(/ORD-102 regained material coverage in this simulation/),
   ).toBeVisible();
   await expect(page.getByText(/PO-101 remains late/)).toBeVisible();
+  await openOrderBook(page);
   const download = page.waitForEvent("download");
   await page
     .getByRole("button", { name: "Export report JSON", exact: true })

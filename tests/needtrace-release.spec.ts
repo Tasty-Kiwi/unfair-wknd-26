@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import { fileAction } from "./ui-helpers";
 for (const theme of ["light", "dark"] as const)
   for (const width of [1440, 1366, 1024, 390]) {
     test(`${theme} ${width}: shared theme, branded guest routes and import safeguards`, async ({
@@ -83,9 +84,7 @@ test("Needtrace export name retains backward-compatible workspace envelope", asy
   await page.goto("/?builder=1");
   await page.getByRole("button", { name: "Core example", exact: true }).click();
   const dl = page.waitForEvent("download");
-  await page
-    .getByRole("button", { name: "Export workspace JSON", exact: true })
-    .click();
+  await fileAction(page, "Export workspace JSON");
   const download = await dl;
   expect(download.suggestedFilename()).toBe("needtrace-workspace.json");
   const stream = await download.createReadStream();
