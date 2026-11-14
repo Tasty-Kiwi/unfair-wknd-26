@@ -1,3 +1,4 @@
+import { CoverageOverview } from "./components/scenarios/CoverageOverview";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   ArrowDownToLine,
@@ -374,6 +375,7 @@ export default function App() {
     setNotice("");
     try {
       setScenario(parseScenario(data, next));
+      setRecoveredId(undefined);
       setControlError("");
     } catch (e) {
       setControlError(e instanceof Error ? e.message : "Invalid scenario");
@@ -386,6 +388,7 @@ export default function App() {
     setNotice("");
   };
   const reset = () => {
+    setRecoveredId(undefined);
     setResetOpen(false);
     setRetainedProductBoms(false);
     setData(demoData);
@@ -430,6 +433,7 @@ export default function App() {
   function confirmImport() {
     if (!pendingImport) return;
     const nextPresets = presetsFor(pendingImport.data);
+    setRecoveredId(undefined);
     setData(pendingImport.data);
     setProvenance(pendingImport.provenance);
     if (pendingImport.replacedTables.includes("products"))
@@ -671,17 +675,16 @@ export default function App() {
                 />
               </>
             ) : (
-              <div className="evidence-default">
-                <header className="rail-heading">
-                  <h2>Allocation evidence</h2>
-                  <span>By required date, then order ID</span>
-                </header>
-                <ImpactPanel
-                  data={data}
-                  result={result}
-                  selectedOrderId={recoveredId}
-                />
-              </div>
+              <CoverageOverview
+                data={data}
+                result={result}
+                recoveredId={recoveredId}
+                recovery={
+                  Boolean(recoveredId) ||
+                  (activePreset === 2 && reports[1].summary.atRiskOrders > 0)
+                }
+                onTestDelay={() => choose(1)}
+              />
             )}
           </div>
           <section className="rail-inputs" aria-labelledby="inputs-title">

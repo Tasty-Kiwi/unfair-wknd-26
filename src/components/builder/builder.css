@@ -473,3 +473,64 @@
     min-height: 360px;
   }
 }
+
+/* Repair guidance uses the existing inspector, without a blocking wizard. */
+.builder-next-step {
+  padding: 12px 14px;
+  background: var(--sheet);
+  border-bottom: 1px solid var(--rule);
+}
+.builder-next-step span {
+  display: block;
+  font-size: 12px;
+  color: var(--ink-2);
+  margin-bottom: 4px;
+}
+.builder-next-step button {
+  background: none;
+  border: 0;
+  text-align: left;
+  color: var(--ink);
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+  padding: 6px 0;
+}
+.builder-checks__intro {
+  color: var(--ink-2);
+  font-size: 13px;
+  line-height: 1.5;
+  margin-bottom: 12px;
+}
+.builder-check-group {
+  border-top: 1px solid var(--rule);
+  padding: 8px 0;
+}
+.builder-check-group summary {
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink);
+  padding: 4px 0;
+  overflow-wrap: anywhere;
+}
+.builder-check-group summary span {
+  display: inline-block;
+  background: var(--paper);
+  border: 1px solid var(--rule);
+  padding: 0 6px;
+  margin-left: 4px;
+  font-size: 12px;
+}
+.builder-check-group summary:focus-visible {
+  outline: 2px solid var(--alt);
+  outline-offset: 3px;
+}
+.builder-check-group .builder-checks__jump {
+  color: var(--ink);
+  font-size: 13px;
+  line-height: 1.5;
+}
+.builder-check-group .builder-issues li::before {
+  background: var(--short);
+}

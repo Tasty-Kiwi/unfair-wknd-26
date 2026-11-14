@@ -1392,3 +1392,74 @@ footer button {
   color: var(--sheet);
   background: var(--ink);
 }
+
+/* Contextual normal/recovered state; detailed allocations stay mounted on demand. */
+.coverage-overview {
+  padding: 20px 16px;
+}
+.coverage-overview__status {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  color: var(--ink-2);
+  font-size: 13px;
+  margin-bottom: 12px;
+}
+.coverage-overview h2 {
+  font-size: 26px;
+  margin-bottom: 8px;
+}
+.coverage-overview > p,
+.coverage-overview__prompt p,
+.coverage-overview__recovery p {
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--ink-2);
+}
+.coverage-overview__prompt {
+  margin-top: 24px;
+  padding: 18px 0;
+  border-block: 1px solid var(--rule);
+}
+.coverage-overview__prompt h3 {
+  margin-bottom: 8px;
+}
+.coverage-overview__prompt button {
+  margin-top: 16px;
+}
+.coverage-overview__prompt small {
+  display: block;
+  color: var(--ink-2);
+  font-size: 12px;
+  line-height: 1.5;
+  margin-top: 12px;
+}
+.coverage-overview__evidence {
+  margin-top: 20px;
+}
+.coverage-overview__evidence summary {
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
+  padding: 8px 0;
+}
+.coverage-overview__evidence summary:focus-visible {
+  outline: 2px solid var(--alt);
+  outline-offset: 4px;
+}
+.coverage-overview__policy {
+  font-size: 12px;
+  color: var(--ink-2);
+  line-height: 1.5;
+  margin: 8px 0 16px;
+}
+.coverage-overview__recovery {
+  border-left: 3px solid var(--alt);
+  padding: 4px 0 4px 14px;
+  margin-top: 24px;
+}
+.coverage-overview__recovery strong {
+  display: block;
+  margin-bottom: 8px;
+  font-size: 14px;
+}

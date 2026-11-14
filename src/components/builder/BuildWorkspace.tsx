@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Play,
   PackageCheck,
@@ -107,6 +107,55 @@ export function BuildWorkspace({
   const selection = liveSelection(document, rawSelection);
 
   const labels = useMemo(() => buildLabels(document), [document]);
+  const side = useRef<HTMLElement>(null);
+  const [focusRequest, setFocusRequest] = useState<{
+    issue: BuilderIssue;
+  } | null>(null);
+  const issueGroups = useMemo(() => {
+    const groups = new Map<string, { label: string; issues: BuilderIssue[] }>();
+    for (const issue of issues) {
+      const key =
+        issue.nodeKey ?? (issue.edgeId ? `edge:${issue.edgeId}` : "network");
+      const edge = document.edges.find((item) => item.id === issue.edgeId);
+      const label = issue.nodeKey
+        ? (labels.get(issue.nodeKey) ?? issue.nodeKey)
+        : edge
+          ? `${labels.get(edge.source) ?? edge.source} → ${labels.get(edge.target) ?? edge.target}`
+          : "Network settings";
+      const group = groups.get(key) ?? { label, issues: [] };
+      group.issues.push(issue);
+      groups.set(key, group);
+    }
+    // Item work before metadata, rather than implying compiler order is a workflow.
+    return [...groups.entries()].sort(
+      ([a], [b]) => Number(a === "network") - Number(b === "network"),
+    );
+  }, [issues, document.edges, labels]);
+  function inspectIssue(issue: BuilderIssue) {
+    setPanelOpen(true);
+    const target = issueTarget(document, issue);
+    setSelection(target);
+    if (target?.type === "node") setRevealNodeKey(target.key);
+    setFocusRequest({ issue });
+  }
+  useEffect(() => {
+    if (!focusRequest) return;
+    const frame = requestAnimationFrame(() => {
+      const root = side.current;
+      if (!root) return;
+      const field = [
+        ...root.querySelectorAll<HTMLElement>(
+          ".builder-inspector [data-field]",
+        ),
+      ].find((item) => item.dataset.field === focusRequest.issue.field);
+      const control =
+        field?.querySelector<HTMLElement>("input, select, button") ??
+        root.querySelector<HTMLElement>(".builder-connect select");
+      control?.focus({ preventScroll: true });
+      control?.scrollIntoView({ block: "nearest", behavior: "instant" });
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [focusRequest]);
 
   const summaries = useMemo(() => {
     const map = new Map<NodeKey, { title: string; details: string[] }>();
@@ -324,7 +373,7 @@ export function BuildWorkspace({
           {document.nodes.length === 0
             ? "Empty network"
             : issues.length
-              ? `${issues.length} issue${issues.length === 1 ? "" : "s"} to fix`
+              ? `${issues.length} check${issues.length === 1 ? "" : "s"} to complete`
               : "No problems listed"}
         </span>
         <Button type="button" variant="outline" size="sm" onClick={onValidate}>
@@ -335,7 +384,18 @@ export function BuildWorkspace({
         </Button>
       </div>
 
-      <aside className="builder__side" aria-label="Network details">
+      <aside className="builder__side" ref={side} aria-label="Network details">
+        {issueGroups.length > 0 && (
+          <div className="builder-next-step">
+            <span>Next repair · keep building in any order</span>
+            <button
+              type="button"
+              onClick={() => inspectIssue(issueGroups[0][1].issues[0])}
+            >
+              Go to {issueGroups[0][1].label} →
+            </button>
+          </div>
+        )}
         <div className="builder__side-head">
           <section className="builder-field">
             <label htmlFor="builder-edit-item">Edit item</label>
@@ -414,26 +474,36 @@ export function BuildWorkspace({
                   : "No problems listed. Check the network to refresh."}
               </p>
             ) : (
-              <ul className="builder-issues builder-checks__list">
-                {issues.map((issue, index) => {
-                  const target = issueTarget(document, issue);
-                  return (
-                    <li key={`${index}-${issue.message}`}>
-                      {target ? (
-                        <button
-                          type="button"
-                          className="builder-checks__jump"
-                          onClick={() => setSelection(target)}
-                        >
-                          {issue.message}
-                        </button>
-                      ) : (
-                        issue.message
-                      )}
-                    </li>
-                  );
-                })}
-              </ul>
+              <div className="builder-check-groups">
+                <p className="builder-checks__intro">
+                  {issues.length} checks to complete before simulation. Choose
+                  an item to repair; all fields remain editable.
+                </p>
+                {issueGroups.map(([key, group], index) => (
+                  <details
+                    key={key}
+                    open={index === 0}
+                    className="builder-check-group"
+                  >
+                    <summary>
+                      {group.label} <span>{group.issues.length}</span>
+                    </summary>
+                    <ul className="builder-issues builder-checks__list">
+                      {group.issues.map((issue, i) => (
+                        <li key={`${i}-${issue.message}`}>
+                          <button
+                            type="button"
+                            className="builder-checks__jump"
+                            onClick={() => inspectIssue(issue)}
+                          >
+                            {issue.message}
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  </details>
+                ))}
+              </div>
             )}
           </section>
 

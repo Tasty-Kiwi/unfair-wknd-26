@@ -111,7 +111,7 @@ function NetworkInspector({ document, onChange }: PropertiesInspectorProps) {
       <p className="builder-inspector__hint">
         Select a node or connection to edit it, or add items from the palette.
       </p>
-      <div className="builder-field">
+      <div className="builder-field" data-field="name">
         <label htmlFor={nameId}>Network name</label>
         <input
           id={nameId}
@@ -121,7 +121,7 @@ function NetworkInspector({ document, onChange }: PropertiesInspectorProps) {
           }
         />
       </div>
-      <div className="builder-field">
+      <div className="builder-field" data-field="asOf">
         <label htmlFor={asOfId}>Inventory as of</label>
         <input
           id={asOfId}
@@ -247,7 +247,7 @@ function EdgeInspector({
       </p>
 
       {isBom && (
-        <div className="builder-field">
+        <div className="builder-field" data-field="quantity">
           <label htmlFor={quantityId}>Quantity per product unit</label>
           <input
             id={quantityId}
