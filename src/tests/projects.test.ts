@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { demoData } from "@/data/demo";
+import { fictionalProvenance } from "@/lib/provenance";
 import { createCoreExample } from "@/lib/builder/factories";
 import {
   loadWorkspace,
@@ -191,6 +192,19 @@ describe("local projects", () => {
     expect(() =>
       prepareProjectImport([{ name: "big.json", text: "x".repeat(2_000_001) }]),
     ).toThrow(/2 MB/);
+  });
+  it("retains the active network when CSV replaces one table", () => {
+    const data = structuredClone(demoData);
+    data.name = "Custom factory";
+    data.suppliers[0].name = "Custom supplier";
+    const imported = prepareProjectImport([
+      { name: "inventory.csv", text: "componentId,quantity\nMTR-01,12" },
+    ], { data, provenance: fictionalProvenance() });
+    if (imported.kind !== "dataset") throw new Error("Expected dataset");
+    expect(imported.state.data.suppliers).toEqual(data.suppliers);
+    expect(imported.state.data.name).toBe(data.name);
+    expect(imported.state.data.inventory).toEqual([{ componentId: "MTR-01", quantity: 12 }]);
+    expect(data.inventory).toEqual(demoData.inventory);
   });
   it("leaves unreadable drafts untouched and rolls back a failed new workspace write", () => {
     const storage = memoryStorage();

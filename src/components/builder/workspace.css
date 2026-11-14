@@ -390,11 +390,20 @@
 /* Canvas */
 .builder-experience .builder__canvas-wrap {
   grid-area: canvas;
+  margin-right: 374px;
   min-height: 0;
   border: 0;
   background-color: var(--paper);
   background-image: radial-gradient(var(--hair) 1px, transparent 1px);
   background-size: 20px 20px;
+}
+.builder-experience .panel-closed .builder__canvas-wrap {
+  margin-right: 188px;
+}
+.builder-alternatives .toolbar-popover__panel {
+  width: min(560px, calc(100vw - 24px));
+  max-height: calc(100dvh - 160px);
+  overflow-y: auto;
 }
 .builder-experience .builder-node {
   border-radius: 8px;
@@ -577,10 +586,17 @@
   .builder-experience .builder__side {
     width: 320px;
   }
+  .builder-experience .builder__canvas-wrap {
+    margin-right: 344px;
+  }
 }
 
 /* ---------- Phone: structured editing first ---------- */
 @media (max-width: 720px) {
+  .builder-experience .builder__canvas-wrap,
+  .builder-experience .panel-closed .builder__canvas-wrap {
+    margin-right: 0;
+  }
   .builder-experience {
     height: auto;
     min-height: 100dvh;

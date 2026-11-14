@@ -49,6 +49,8 @@ export interface AlternativeSupply {
   approved: boolean;
   approvedProductIds: string[];
 }
+/** Approved alternative supply; the builder contract refers to it as `Alternative`. */
+export type Alternative = AlternativeSupply;
 export interface Dataset {
   name: string;
   asOf: string;

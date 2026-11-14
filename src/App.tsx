@@ -29,8 +29,6 @@ import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import {
   demoData,
   NORMAL_SCENARIO,
-  DISRUPTION_SCENARIO,
-  RECOVERY_SCENARIO,
 } from "@/data/demo";
 import { simulate } from "@/lib/simulation";
 import {
@@ -61,7 +59,9 @@ import "./simulator.css";
 import "@/components/scenarios/panels.css";
 import { BuilderExperience } from "@/components/builder/BuilderExperience";
 import { ThemeToggle } from "@/components/theme/ThemeToggle";
-import type { DatasetProjectState } from "@/lib/projects";
+import { createProject, projectUrl, type DatasetProjectState } from "@/lib/projects";
+import { presetsFor } from "@/lib/scenarioPresets";
+import { datasetToWorkspace } from "@/lib/builder/workspaceFromDataset";
 
 const money = (n: number) =>
   new Intl.NumberFormat("en-IE", {
@@ -78,61 +78,6 @@ const day = (s: string) =>
     month: "short",
     timeZone: "UTC",
   }).format(new Date(`${s}T00:00:00Z`));
-function presetsFor(data: Dataset): Scenario[] {
-  if (data === demoData)
-    return [NORMAL_SCENARIO, DISRUPTION_SCENARIO, RECOVERY_SCENARIO];
-  const normal: Scenario = {
-    id: "baseline",
-    name: "Normal operations",
-    deliveryOverrides: [],
-    alternatives: [],
-  };
-  const receipt = data.deliveries[0];
-  if (!receipt)
-    return [
-      normal,
-      { ...normal, id: "disruption", name: "Disruption" },
-      { ...normal, id: "recovery", name: "Recovery" },
-    ];
-  const date = new Date(`${receipt.availableDate}T00:00:00Z`);
-  date.setUTCDate(date.getUTCDate() + 6);
-  const disruption: Scenario = {
-    id: "disruption",
-    name: "Critical supplier disruption",
-    deliveryOverrides: [
-      {
-        deliveryId: receipt.id,
-        quantity: receipt.quantity,
-        availableDate:
-          date.getUTCFullYear() > 9999
-            ? "9999-12-31"
-            : date.toISOString().slice(0, 10),
-      },
-    ],
-    alternatives: [],
-  };
-  const alt = data.alternatives.find(
-    (a) => a.approved && a.componentId === receipt.componentId,
-  );
-  return [
-    normal,
-    disruption,
-    {
-      ...disruption,
-      id: "recovery",
-      name: "Approved recovery",
-      alternatives: alt
-        ? [
-            {
-              alternativeId: alt.id,
-              quantity: alt.quantity,
-              availableDate: alt.availableDate,
-            },
-          ]
-        : [],
-    },
-  ];
-}
 function download(name: string, content: string, type = "application/json") {
   const url = URL.createObjectURL(new Blob([content], { type }));
   const a = document.createElement("a");
@@ -615,6 +560,27 @@ export default function App({
           >
             <RotateCcw data-icon="inline-start" />
             <span className="label-narrow">Reset demo</span>
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              try {
+                const workspace = datasetToWorkspace(data, {
+                  scenario: { ...scenario, id: `editable-${crypto.randomUUID()}` },
+                  scenarios: presets,
+                  origin: provenance.kind,
+                });
+                workspace.source.provenance = provenance;
+                workspace.source.retainedProductBoms = retainedProductBoms;
+                const project = createProject(data.name, { kind: "workspace", workspace });
+                window.location.assign(projectUrl(project.id));
+              } catch (caught) {
+                setSaveError(caught instanceof Error ? caught.message : "Could not create an editable project.");
+              }
+            }}
+          >
+            Edit this network
           </Button>
           {!initialProject && (
             <Button

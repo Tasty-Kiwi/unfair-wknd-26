@@ -24,6 +24,13 @@ import {
   type CloudHost,
 } from "@/lib/cloud/useBuilderCloud";
 import { BuildWorkspace } from "./BuildWorkspace";
+import { AlternativeCatalogEditor } from "./AlternativeCatalogEditor";
+import { datasetToWorkspace } from "@/lib/builder/workspaceFromDataset";
+import { demoData, NORMAL_SCENARIO, DISRUPTION_SCENARIO, RECOVERY_SCENARIO } from "@/data/demo";
+import { prepareProjectImport } from "@/lib/projects";
+import { presetsFor } from "@/lib/scenarioPresets";
+import { fictionalProvenance, provenanceAfterImport } from "@/lib/provenance";
+import { RecoveryComparison } from "@/components/scenarios/RecoveryComparison";
 import { NamedScenarios } from "@/components/scenarios/NamedScenarios";
 import {
   createBlankDocument,
@@ -34,13 +41,13 @@ import {
   loadWorkspace,
   saveWorkspace,
   serializeWorkspace,
-  parseWorkspaceJson,
   MAX_WORKSPACE_BYTES,
   WORKSPACE_STORAGE_KEY,
 } from "@/lib/builder/storage";
 import {
   isScenarioCurrent,
   receiptReviewContext,
+  alternativeReviewContext,
   revalidateScenario,
 } from "@/lib/builder/scenarios";
 import type {
@@ -54,7 +61,7 @@ import { withReceiptDate } from "@/lib/receipts";
 import { SupplyGraph, type Selection } from "@/components/graph/SupplyGraph";
 import { ScenarioPanel } from "@/components/scenarios/ScenarioPanel";
 import { ImpactPanel } from "@/components/scenarios/ImpactPanel";
-import type { Scenario } from "@/lib/types";
+import { DATASET_TABLES, type Scenario } from "@/lib/types";
 import { ThemeToggle } from "@/components/theme/ThemeToggle";
 import { ToolbarPopover } from "./ToolbarPopover";
 import "./experience.css";
@@ -513,6 +520,51 @@ export function BuilderExperience({
     });
   }
 
+  function loadDemoExample() {
+    return replace(datasetToWorkspace(demoData, {
+      scenarios: [NORMAL_SCENARIO, DISRUPTION_SCENARIO, RECOVERY_SCENARIO],
+      scenario: NORMAL_SCENARIO,
+      origin: "fictional",
+    }));
+  }
+
+  function exportSimulation(kind: "dataset" | "report") {
+    if (!compiled.ok) return;
+    try {
+      if (kind === "report" && !assessment?.result)
+        throw new Error("Run and revalidate the scenario before exporting a report.");
+      const value = kind === "dataset" ? compiled.dataset : {
+        inputs: compiled.dataset,
+        scenario: assessment!.scenario,
+        result: assessment!.result,
+        application: "Needtrace",
+        dataset: compiled.dataset.name,
+        policy: "Partial component reservations, earliest required date then order ID; material availability only.",
+        comparison: workspace.scenarios
+          .filter((item) => isScenarioCurrent(item, compiled.networkKey))
+          .map((item) => simulate(compiled.dataset, item.scenario)),
+        dataProvenance: sourceProvenance(),
+        retainedProductBoms: workspace.source.retainedProductBoms ?? false,
+      };
+      const url = URL.createObjectURL(new Blob([JSON.stringify(value, null, 2)], { type: "application/json" }));
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = kind === "report" ? "needtrace-scenario-report.json" : "needtrace-dataset.json";
+      link.click();
+      window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+      setError("");
+    } catch (caught) {
+      setError(message(caught));
+    }
+  }
+
+  function sourceProvenance() {
+    return workspace.source.provenance ??
+      (workspace.source.origin === "fictional"
+        ? fictionalProvenance()
+        : provenanceAfterImport(fictionalProvenance(), DATASET_TABLES));
+  }
+
   function exportJson() {
     try {
       const text = serializeWorkspace(latest.current);
@@ -530,13 +582,29 @@ export function BuilderExperience({
     }
   }
 
-  async function importJson(file: File) {
+  async function importJson(files: File[]) {
     const captured = latest.current;
     setImporting(true);
     try {
-      if (file.size > MAX_WORKSPACE_BYTES)
-        throw new Error("Workspace file exceeds the 2 MB limit.");
-      const next = parseWorkspaceJson(await file.text());
+      if (files.length > 5 || files.some(file => file.size > MAX_WORKSPACE_BYTES))
+        throw new Error("Choose one JSON file or up to five CSV files, each smaller than 2 MB.");
+      const inputs = await Promise.all(files.map(async file => ({
+        name: /\.(json|csv)$/i.test(file.name) ? file.name : `${file.name}.json`,
+        text: await file.text(),
+      })));
+      const imported = prepareProjectImport(inputs, compiled.ok ? {
+        data: compiled.dataset,
+        provenance: sourceProvenance(),
+      } : undefined);
+      const next = imported.kind === "workspace" ? imported.workspace : datasetToWorkspace(imported.state.data, {
+        scenario: { ...imported.state.scenario, id: `editable-${crypto.randomUUID()}` },
+        scenarios: presetsFor(imported.state.data),
+        origin: imported.state.provenance.kind,
+      });
+      if (imported.kind === "dataset") {
+        next.source.provenance = imported.state.provenance;
+        next.source.retainedProductBoms = imported.state.retainedProductBoms;
+      }
       if (latest.current !== captured)
         throw new Error(
           "Your workspace changed while reading the file. Import it again to replace the current version.",
@@ -552,6 +620,10 @@ export function BuilderExperience({
   const source =
     workspace.source.origin === "fictional"
       ? "Fictional example"
+      : workspace.source.origin === "imported"
+        ? "Imported data"
+        : workspace.source.origin === "mixed"
+          ? "Mixed demo + imported data"
       : "Authored in builder";
   const issues = compiled.ok ? [] : compiled.issues;
   const namedScenarios = (
@@ -671,6 +743,9 @@ export function BuilderExperience({
             </span>
           )}
         </span>
+        <ToolbarPopover label="Alternatives" className="builder-alternatives">
+          {() => <AlternativeCatalogEditor document={workspace.document} onDocumentChange={updateDocument} />}
+        </ToolbarPopover>
         <ToolbarPopover
           className="builder-bar__file"
           label="File"
@@ -696,6 +771,9 @@ export function BuilderExperience({
               >
                 Core example
               </button>
+              <button type="button" onClick={() => { closeMenu(); loadDemoExample(); }}>
+                Northstar demo
+              </button>
               <hr />
               <button
                 type="button"
@@ -716,6 +794,13 @@ export function BuilderExperience({
               >
                 <Download aria-hidden size={15} /> Export workspace JSON
               </button>
+                <p>Import workspace or dataset JSON, scenario reports, or CSV tables. CSV imports retain the current valid network’s other tables, or use the Northstar demo when this draft is incomplete.</p>
+              <button type="button" disabled={!compiled.ok} onClick={() => { closeMenu(); exportSimulation("dataset"); }}>
+                Export dataset JSON
+              </button>
+              <button type="button" disabled={!assessment?.result} onClick={() => { closeMenu(); exportSimulation("report"); }}>
+                Export scenario report
+              </button>
               <button
                 type="button"
                 disabled={importing}
@@ -726,7 +811,6 @@ export function BuilderExperience({
               >
                 <Upload aria-hidden size={15} /> Import workspace JSON…
               </button>
-              <p>Saved in this browser. Export JSON for a portable copy.</p>
             </div>
           )}
         </ToolbarPopover>
@@ -736,11 +820,12 @@ export function BuilderExperience({
           tabIndex={-1}
           type="file"
           aria-label="Import workspace JSON"
-          accept="application/json,.json"
+          accept="application/json,text/csv,.json,.csv"
+          multiple
           disabled={importing}
           onChange={(event) => {
-            const file = event.target.files?.[0];
-            if (file) void importJson(file);
+            const files = Array.from(event.target.files ?? []);
+            if (files.length) void importJson(files);
             event.target.value = "";
           }}
         />
@@ -932,6 +1017,23 @@ export function BuilderExperience({
                     </li>
                   );
                 })}
+                {record.scenario.alternatives.map((use) => {
+                  const context = compiled.ok ? alternativeReviewContext(compiled.dataset, use.alternativeId) : null;
+                  const previous = record.alternativeSnapshots?.find(item => item.alternativeId === use.alternativeId);
+                  return <li key={`alternative:${use.alternativeId}`}>
+                    <p><strong>Alternative {use.alternativeId}</strong></p>
+                    {previous && <p>Previously validated: {previous.supplier.name} ({previous.supplier.id}) → {previous.component.name} ({previous.component.id})</p>}
+                    {context ? <>
+                      <p>Current catalog: {context.supplier.name} ({context.supplier.id}) → {context.component.name} ({context.component.id})</p>
+                      <p>{context.alternative.approved ? "Approved" : "Not approved"}; up to {context.alternative.quantity} units from {context.alternative.availableDate}. Product scope: {context.alternative.approvedProductIds.join(", ")}.</p>
+                    </> : <p>This alternative is missing or the network needs repair. Remove its use or repair the catalog before revalidating.</p>}
+                    <p>Scenario use: {use.quantity} units on {use.availableDate}</p>
+                    <Button variant="ghost" size="sm" onClick={() => change(previousWorkspace => ({
+                      ...previousWorkspace,
+                      workingScenario: { ...record, scenario: { ...record.scenario, alternatives: record.scenario.alternatives.filter(item => item.alternativeId !== use.alternativeId) } },
+                    }))}>Remove alternative {use.alternativeId}</Button>
+                  </li>;
+                })}
               </ul>
               <Button
                 variant="outline"
@@ -1016,6 +1118,13 @@ export function BuilderExperience({
                           (scenarioDirty ? " (unsaved changes)" : ""),
                         summary: assessment.result.summary,
                       },
+                      ...workspace.scenarios
+                        .filter((item) => item.scenario.id !== record?.scenario.id &&
+                          isScenarioCurrent(item, compiled.networkKey))
+                        .map((item) => ({
+                          name: item.scenario.name,
+                          summary: simulate(compiled.dataset, item.scenario).summary,
+                        })),
                     ].map((row, index) => (
                       <tr key={index}>
                         <th scope="row">{row.name}</th>
@@ -1077,10 +1186,16 @@ export function BuilderExperience({
               </section>
             )}
           </div>
+          <RecoveryComparison
+            data={compiled.dataset}
+            scenario={assessment.scenario}
+            current={assessment.result}
+            onApply={updateScenario}
+          />
         </div>
       ) : (
         <section
-          className="builder-experience__review"
+          className="builder-experience__unavailable"
           aria-label="Simulation unavailable"
         >
           <h2>Simulation unavailable</h2>

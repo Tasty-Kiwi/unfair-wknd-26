@@ -1,4 +1,5 @@
 import type {
+  AlternativeSupply,
   Component,
   CustomerOrder,
   Dataset,
@@ -116,6 +117,125 @@ export function computeNetworkKey(
   };
 
   return `nk1:${JSON.stringify(canonicalMaterial)}`;
+}
+
+/** Validate the approved-alternative catalog against the graph's nodes. Returns
+ * the domain alternatives that are individually valid; problems are appended
+ * to `issues` so a bad catalog blocks compilation explicitly. */
+function compileAlternatives(
+  catalog: readonly AlternativeSupply[],
+  nodeByKey: ReadonlyMap<NodeKey, BuilderNode>,
+  asOf: string | null,
+  issues: BuilderIssue[],
+): AlternativeSupply[] {
+  const out: AlternativeSupply[] = [];
+  const seen = new Set<string>();
+  const reportedDuplicates = new Set<string>();
+
+  for (const alt of catalog) {
+    const label = hasNonWhitespace(alt.id) ? `"${alt.id}"` : "(no id)";
+    const problems: { field: string; message: string }[] = [];
+    const problem = (field: string, message: string) =>
+      problems.push({ field, message: `Alternative ${label}: ${message}` });
+
+    if (!hasNonWhitespace(alt.id)) {
+      problem("id", "id must not be blank.");
+    } else if (seen.has(alt.id)) {
+      if (!reportedDuplicates.has(alt.id)) {
+        problem("id", "duplicate alternative id. IDs must be unique.");
+        reportedDuplicates.add(alt.id);
+      }
+    }
+    seen.add(alt.id);
+
+    if (!hasNonWhitespace(alt.name)) {
+      problem("name", "name must not be blank.");
+    }
+
+    const supplier = nodeByKey.get(`supplier:${alt.supplierId}`);
+    if (!supplier) {
+      problem(
+        "supplierId",
+        hasNonWhitespace(alt.supplierId)
+          ? `supplier "${alt.supplierId}" does not exist in this network.`
+          : "choose a supplier.",
+      );
+    }
+    const component = nodeByKey.get(`component:${alt.componentId}`);
+    if (!component) {
+      problem(
+        "componentId",
+        hasNonWhitespace(alt.componentId)
+          ? `component "${alt.componentId}" does not exist in this network.`
+          : "choose a component.",
+      );
+    }
+
+    if (!Number.isSafeInteger(alt.quantity) || alt.quantity < 0) {
+      problem("quantity", "quantity must be a whole number (0 or more).");
+    }
+
+    const date = alt.availableDate.trim();
+    if (!isIsoDate(date)) {
+      problem(
+        "availableDate",
+        "available date must be a real calendar date in YYYY-MM-DD format.",
+      );
+    } else if (asOf !== null && date < asOf) {
+      problem(
+        "availableDate",
+        `available date ${date} cannot be before inventory date ${asOf}.`,
+      );
+    }
+
+    if (typeof alt.approved !== "boolean") {
+      problem("approved", "approval must be explicitly yes or no.");
+    }
+
+    if (alt.approvedProductIds.length === 0) {
+      problem(
+        "approvedProductIds",
+        "list at least one product (alternatives are product-scoped).",
+      );
+    }
+    const scoped = new Set<string>();
+    for (const productId of alt.approvedProductIds) {
+      if (!nodeByKey.has(`product:${productId}`)) {
+        problem(
+          "approvedProductIds",
+          `approved product "${productId}" does not exist in this network.`,
+        );
+      }
+      if (scoped.has(productId)) {
+        problem(
+          "approvedProductIds",
+          `product "${productId}" is listed more than once.`,
+        );
+      }
+      scoped.add(productId);
+    }
+
+    for (const item of problems) {
+      issues.push({
+        alternativeId: alt.id,
+        field: item.field,
+        message: item.message,
+      });
+    }
+    if (problems.length === 0) {
+      out.push({
+        id: alt.id,
+        name: alt.name.trim(),
+        supplierId: alt.supplierId,
+        componentId: alt.componentId,
+        quantity: alt.quantity,
+        availableDate: date,
+        approved: alt.approved,
+        approvedProductIds: [...alt.approvedProductIds],
+      });
+    }
+  }
+  return out;
 }
 
 export function compileGraph(doc: BuilderDocument): CompileGraphResult {
@@ -254,6 +374,13 @@ export function compileGraph(doc: BuilderDocument): CompileGraphResult {
       }
     }
   }
+
+  const alternatives = compileAlternatives(
+    doc.alternatives ?? [],
+    nodeByKey,
+    validAsOf ? trimmedAsOf : null,
+    issues,
+  );
 
   const suppliers: Supplier[] = [];
   const components: Component[] = [];
@@ -610,6 +737,7 @@ export function compileGraph(doc: BuilderDocument): CompileGraphResult {
   deliveries.sort((a, b) => compareCodePoint(a.id, b.id));
   products.sort((a, b) => compareCodePoint(a.id, b.id));
   orders.sort((a, b) => compareCodePoint(a.id, b.id));
+  alternatives.sort((a, b) => compareCodePoint(a.id, b.id));
 
   const candidateDataset: Dataset = {
     name: doc.name.trim(),
@@ -620,7 +748,7 @@ export function compileGraph(doc: BuilderDocument): CompileGraphResult {
     inventory,
     deliveries,
     orders,
-    alternatives: [],
+    alternatives,
   };
 
   try {

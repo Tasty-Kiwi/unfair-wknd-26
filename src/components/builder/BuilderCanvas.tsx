@@ -265,7 +265,7 @@ export function BuilderCanvas({
           hasNodes={document.nodes.length > 0}
         />
         <Background gap={24} size={1} />
-        <Controls showInteractive={false} position="bottom-right" />
+        <Controls showInteractive={false} position="top-left" />
       </ReactFlow>
     </div>
   );

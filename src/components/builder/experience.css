@@ -77,6 +77,7 @@
   color: var(--ink-2);
 }
 .builder-experience__review,
+.builder-experience__unavailable,
 .builder-experience__baseline,
 .builder-experience__comparison {
   padding: 18px;

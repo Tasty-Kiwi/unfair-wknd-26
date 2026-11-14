@@ -115,7 +115,7 @@ for (const width of [320, 390]) {
   });
 }
 
-test("inspector floats over the full canvas without resizing it", async ({
+test("inspector leaves map controls and connection handles accessible", async ({
   page,
 }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
@@ -132,7 +132,8 @@ test("inspector floats over the full canvas without resizing it", async ({
     wrapBox!.x + wrapBox!.width,
     0,
   );
-  expect(canvasBox!.x + canvasBox!.width).toBeGreaterThan(panelBox!.x);
+  expect(canvasBox!.x + canvasBox!.width).toBeLessThanOrEqual(panelBox!.x);
+  await expect(canvas.getByRole("button", { name: "Fit View" })).toBeVisible();
   await canvas.locator(".react-flow__node").first().click();
   await canvas
     .locator(".react-flow__pane")
@@ -143,7 +144,7 @@ test("inspector floats over the full canvas without resizing it", async ({
   await canvas.locator(".react-flow__node").first().click();
   await page.getByRole("button", { name: "Hide details panel" }).click();
   const closedBox = await canvas.boundingBox();
-  expect(closedBox!.width).toBeCloseTo(canvasBox!.width, 0);
+  expect(closedBox!.width).toBeGreaterThan(canvasBox!.width);
 });
 
 test("delete removes selected connections and nodes without intercepting text editing", async ({

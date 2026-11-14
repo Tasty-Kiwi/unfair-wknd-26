@@ -1,4 +1,6 @@
-import type { Scenario } from "@/lib/types";
+import type { Alternative, DatasetProvenance, Scenario } from "@/lib/types";
+
+export type { Alternative };
 
 export const NODE_KINDS = [
   "supplier",
@@ -99,10 +101,14 @@ export type BuilderDocument = {
   revision: number;
   nodes: BuilderNode[];
   edges: BuilderEdge[];
+  /** Approved alternative-supply catalog. Absent in older v1 files = empty. */
+  alternatives?: Alternative[];
   viewport?: BuilderViewport;
 };
 
 export type BuilderIssue = {
+  /** Set for problems in the alternative catalog (matches `Alternative.id`). */
+  alternativeId?: string;
   nodeKey?: NodeKey;
   edgeId?: string;
   field?: string;
@@ -115,18 +121,32 @@ export type ReceiptRelationshipSnapshot = {
   component: { id: string; name: string };
 };
 
+export type AlternativeRelationshipSnapshot = {
+  alternativeId: string;
+  name: string;
+  supplier: { id: string; name: string };
+  component: { id: string; name: string };
+};
+
 export type ScenarioRecord = {
   scenario: Scenario;
   validatedNetworkKey: string | null;
   /** Relationships acknowledged at the last validation. Absent in older v1 files. */
   receiptSnapshots?: ReceiptRelationshipSnapshot[];
+  /** Catalog relationships acknowledged at the last validation; only written when the scenario uses alternatives. */
+  alternativeSnapshots?: AlternativeRelationshipSnapshot[];
 };
 
-export type BuilderWorkspaceOrigin = "authored" | "fictional";
+export type BuilderWorkspaceOrigin =
+  "authored" | "fictional" | "imported" | "mixed";
 
 export type BuilderWorkspaceSource = {
   origin: BuilderWorkspaceOrigin;
   openedFromFile: boolean;
+  /** Per-table provenance of imported or mixed data. Absent in older v1 files. */
+  provenance?: DatasetProvenance;
+  /** True when a products import kept the existing bills of materials. Absent in older v1 files. */
+  retainedProductBoms?: boolean;
 };
 
 export const BUILDER_WORKSPACE_FORMAT = "dominoos-builder-workspace" as const;

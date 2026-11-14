@@ -212,6 +212,7 @@ export function saveDatasetProject(
 
 export function prepareProjectImport(
   files: { name: string; text: string }[],
+  base?: Pick<DatasetProjectState, "data" | "provenance">,
 ): ProjectImport {
   if (
     !files.length ||
@@ -266,8 +267,9 @@ export function prepareProjectImport(
       };
     }
   }
-  // Keep the existing CSV table semantics and explicitly disclose the demo base in the UI.
-  const parsed = parseImportBundle(files, demoData);
+  // CSV replaces only the supplied tables. New projects start from the demo;
+  // an open editor retains its active network, like the simulator importer.
+  const parsed = parseImportBundle(files, base?.data ?? demoData);
   return {
     kind: "dataset",
     replacedTables: parsed.replacedTables,
@@ -275,7 +277,7 @@ export function prepareProjectImport(
       data: parsed.data,
       scenario: baseline,
       provenance: provenanceAfterImport(
-        fictionalProvenance(),
+        base?.provenance ?? fictionalProvenance(),
         parsed.replacedTables,
       ),
       retainedProductBoms: parsed.retainedProductBoms,

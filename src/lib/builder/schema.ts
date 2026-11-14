@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { DATASET_TABLES } from "../types";
 import { nodeKey } from "./factories";
 import {
   BUILDER_WORKSPACE_FORMAT,
@@ -111,6 +112,17 @@ const builderEdgeSchema = z.discriminatedUnion("kind", [
   bomEdgeSchema,
 ]);
 
+const alternativeSchema = z.object({
+  id: nonBlankString("Alternative id"),
+  name: z.string(),
+  supplierId: z.string(),
+  componentId: z.string(),
+  quantity: finiteNumber,
+  availableDate: z.string(),
+  approved: z.boolean(),
+  approvedProductIds: z.array(z.string()),
+});
+
 const builderDocumentSchema = z.object({
   id: nonBlankString("Document id"),
   name: z.string(),
@@ -118,6 +130,7 @@ const builderDocumentSchema = z.object({
   revision: z.number().int("revision must be an integer").min(0),
   nodes: z.array(builderNodeSchema),
   edges: z.array(builderEdgeSchema),
+  alternatives: z.array(alternativeSchema).optional(),
   viewport: viewportSchema.optional(),
 });
 
@@ -158,6 +171,27 @@ const scenarioRecordSchema = z.object({
       }),
     )
     .optional(),
+  alternativeSnapshots: z
+    .array(
+      z.object({
+        alternativeId: nonBlankString("Snapshot alternative id"),
+        name: z.string(),
+        supplier: z.object({
+          id: nonBlankString("Snapshot supplier id"),
+          name: z.string(),
+        }),
+        component: z.object({
+          id: nonBlankString("Snapshot component id"),
+          name: z.string(),
+        }),
+      }),
+    )
+    .optional(),
+});
+
+const datasetProvenanceSchema = z.object({
+  kind: z.enum(["fictional", "mixed", "imported"]),
+  tables: z.record(z.enum(DATASET_TABLES), z.enum(["fictional", "imported"])),
 });
 
 const builderWorkspaceV1Schema = z.object({
@@ -168,8 +202,10 @@ const builderWorkspaceV1Schema = z.object({
   selectedScenarioId: z.string().nullable(),
   workingScenario: scenarioRecordSchema.nullable(),
   source: z.object({
-    origin: z.enum(["authored", "fictional"]),
+    origin: z.enum(["authored", "fictional", "imported", "mixed"]),
     openedFromFile: z.boolean(),
+    provenance: datasetProvenanceSchema.optional(),
+    retainedProductBoms: z.boolean().optional(),
   }),
 });
 
@@ -210,6 +246,16 @@ export function parseWorkspace(input: unknown): BuilderWorkspaceV1 {
       );
     }
     seenEdgeIds.add(edge.id);
+  }
+
+  const seenAlternativeIds = new Set<string>();
+  for (const alternative of workspace.document.alternatives ?? []) {
+    if (seenAlternativeIds.has(alternative.id)) {
+      throw new Error(
+        `Invalid builder workspace: duplicate alternative id "${alternative.id}".`,
+      );
+    }
+    seenAlternativeIds.add(alternative.id);
   }
 
   const seenScenarioIds = new Set<string>();
