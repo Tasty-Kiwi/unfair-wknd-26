@@ -428,7 +428,8 @@ export default function ProjectsPage() {
             <h2 id="demo-project-title">Northstar Precision Assembly</h2>
             <p>
               One delayed motor receipt. Ten customer orders. Trace the
-              shortage, then test an approved alternative.
+              shortage, then test an approved alternative. The demo is
+              session-only; Edit this network creates a saved local copy.
             </p>
             <a className="project-demo__link" href="/demo">
               Open demo project

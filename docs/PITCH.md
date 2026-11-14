@@ -1,65 +1,36 @@
 # Needtrace — pitch and commercial hypotheses
 
-## Project title and tagline
-
-**Title:** Needtrace — trace supply changes to customer orders
-
-**Tagline:** See what breaks before it breaks.
+**Needtrace — See what breaks before it breaks.**
 
 ## 30-second pitch
 
-When a supplier delivery slips, which customer orders run short? Needtrace connects stock, bills of material, receipts and orders in one explainable simulation. Change a delivery, trace the shortage to an order, and compare recovery options with allocation evidence. Our fictional demo shows two missing motors and how approved alternative supply restores coverage. It models material availability; supplier confirmation and factory capacity remain outside the calculation.
+A motor delivery slips. Which customer orders need attention? Needtrace helps manufacturing planners trace a supplier change through stock, material requirements and customer orders. In our fictional demo, a six-day delay leaves one order two motors short. You can inspect the allocation, compare possible responses and test approved alternative supply. The result is a clearer material decision before anyone places a purchase.
 
-About 70 spoken words; rehearse to 30 seconds. The intended user is a manufacturing planner combining spreadsheets; this is a customer hypothesis, not validated demand.
+Rehearse the timing. This identifies an intended user and problem; it is not evidence of validated demand.
 
 ## What the demonstration proves
 
-Using the fictional demo dataset:
+The baseline covers ten orders. Moving PO-101 from 17 to 23 November leaves ORD-102 short by two motors on 22 November and exposes €36,000 of fictional order value. That is exposure, not measured loss or savings. Compare restoring receipt timing with two approved Vector motors available 18 November. Applying Vector restores coverage while the original receipt stays late. The suppliers and approval assumptions are fictional.
 
-1. The original plan covers all ten orders with no material shortages.
-2. Delaying motor receipt PO-101 from 17 November to 23 November exposes ORD-102.
-3. ORD-102 needs four motors on 22 November but has only two available after the earlier-priority order, leaving two missing.
-4. Needtrace compares restoring the receipt date with using approved Vector Components supply.
-5. Applying two approved Vector motors dated 18 November restores material coverage while the original Aster receipt remains delayed.
+Orders allocate by required date, then order ID; incomplete kits retain reservations. Each order shows requirements, allocations, shortage and late supply. The same deterministic engine runs demo, imported and edited plans. Recovery does not place purchases or contact suppliers. Factory capacity, freight, costs and shipment forecasts are outside the model.
 
-These outcomes are calculated by the same simulation used for editable scenarios and imports. The €36,000 figure is **order value at material risk**. It is not an actual financial loss, revenue saved or measured business benefit.
+## Buyer and differentiation hypotheses
 
-## Buyer, wedge and honest differentiation
+The intended initial user is a planner or operations manager at a small manufacturer maintaining material plans in spreadsheets. Buyer, willingness to pay, adoption and savings remain unvalidated.
 
-Initial customer hypothesis: a small discrete manufacturer whose planner, operations manager or owner maintains material plans in spreadsheets. The likely buyer, switching cost and willingness to pay still require interviews. This is not a validated customer segment.
-
-Planning systems such as SAP IBP, Kinaxis and o9 already address supply-chain scenarios. Our hypothesis is a narrower entry point: validated spreadsheet imports, explicit dataset provenance, a transparent due-date policy, and an immediately inspectable supplier-to-order chain without a full ERP implementation. A visual graph alone is a feature; a durable product requires evidence of repeated pain, trustworthy data preparation, adoption and a viable buyer.
-
-## Why the result is trustworthy
-
-- **Deterministic allocation:** earliest required date, then order ID; repeat runs produce the same result.
-- **Inspectability:** each order shows required quantities, allocations, shortages and late supply.
-- **Atomic imports:** invalid files do not alter the application; valid imports show which tables will be replaced or retained before confirmation.
-- **Explicit provenance:** the header distinguishes fictional demo data, mixed demo and imported data, and fully imported data. Reset restores the original fictional dataset and provenance.
-- **Honest boundary:** material availability is modeled; production capacity, freight, purchasing cost, lead-time uncertainty and shipment timing are not.
+Existing planning tools support supply scenarios. Needtrace's proposed entry point is a focused, inspectable workflow: a dated supplier change, shared material allocation, the affected customer order, and a modeled response. A visual graph alone is not a defensible market advantage. Validate the full task, including data preparation and the planner's actual reservation policy, before claiming superiority or time savings.
 
 ## Likely judge questions
 
-**Why is this a company rather than an ERP feature?** That is the hypothesis to validate. We would begin with teams whose current spreadsheet workflow makes a rapid cross-order what-if difficult, measure the full task including data preparation, and test repeat usage before claiming a market wedge.
-
-**Where is the AI?** The material decisions are deterministic and auditable. AI is not necessary to calculate a shortage. Any future explanation layer must preserve the underlying evidence.
-
-**What business value have you proven?** In the fictional demo, a six-day receipt delay exposes one €36,000 order to a two-motor shortage, and two modeled recovery actions remove that shortage. This is exposure in a simulation, not a proven loss, saving or customer outcome. No customer benefit has been measured.
-
-**Does it optimize allocation or predict shipment dates?** No. It uses required date then order ID and retains reservations on partial kits. Factory capacity, lead-time uncertainty, production and shipment timing are outside the model.
-
-**Which recovery is best?** The comparison ranks by net shortage units recovered and shows remaining exposed orders plus explicit supply assumptions. Costs, freight and confirmation status are unknown; it is not a purchase recommendation or profit optimizer.
-
-**Does Apply recovery place an order or contact a supplier?** No. It changes the local simulation only. Confirm supply and act through the normal purchasing process.
-
-**Can I use my own data, and is it saved?** CSV supports stock, products, BOMs, receipts and orders; full JSON can replace the catalog as well. Related files are validated together before applying. Omitted tables and matching-product BOMs can be retained, with explicit warnings. Simulator imports stay in browser memory and are lost on refresh/close. Export the report and keep source files; that report is an audit record, not a one-click project backup. Builder workspaces and named scenarios save in this browser and support a portable workspace JSON export. Production cloud saving is disabled.
-
-**What have you actually tested?** The integrated release passed 102 unit tests, 44 Worker tests and 63 Chromium browser journeys, both typechecks, production build and a deployment dry run. GitHub Actions passed on the merged release commit 91bf9b4, and 46 guest browser tests passed against the live production URL. Desktop and mobile were inspected. These are engineering checks, not evidence that real planners find the product intuitive or valuable.
-
-**What would you validate next?** Observe an unaided user and compare a small anonymized plan with a planner's actual reservation policy. Include data preparation time. Interview a potential budget owner before claiming a viable paid product.
+- **Why this approach?** It makes the causal chain and quantities visible in one small workflow, without requiring a full planning-system rollout. That is a product hypothesis to test.
+- **What financial benefit is proven?** None. The demo reports exposed fictional order value; it does not measure prevented loss or customer savings.
+- **Does it predict delivery or choose the cheapest response?** No. It checks material coverage using supplied dates and quantities. Recovery options are modeled comparisons with explicit assumptions.
+- **Can I keep my work?** `/demo` is session-only. **Edit this network** creates a saved local editable project. `/projects` opens the library; JSON/CSV imports can also create projects. Autosave stays in this browser; export workspace JSON for a portable backup.
+- **What was built during the weekend?** The team must confirm the actual build period and identify pre-existing work. Show verified functionality; do not invent an attestation.
+- **What has been tested?** Use [current acceptance evidence](FINAL_PRODUCT_ACCEPTANCE.md), which separates local checks, deployed behavior and unverified human usability.
 
 ## Next evidence
 
-Run the unassisted journey and planner interview in [VALIDATION_PLAYBOOK.md](VALIDATION_PLAYBOOK.md). Before expanding scope, test a small anonymized real plan against the planner's current allocation and material-availability reasoning.
+Observe an unfamiliar user completing the journey and compare an anonymized plan with a planner's existing reasoning. Include data preparation, help given and policy mismatches. A single session is a data point, not market validation. Use the [validation playbook](VALIDATION_PLAYBOOK.md).
 
-Use [DEVPOST_READY.md](DEVPOST_READY.md) for official submission requirements and the final copy. Use [VIDEO_PRODUCTION.md](VIDEO_PRODUCTION.md) for the recording plan. These pitch notes are supporting presenter material.
+[Devpost copy](DEVPOST_READY.md) and the [2:40 video shot list](VIDEO_PRODUCTION.md) contain the submission-ready story and remaining human fields.

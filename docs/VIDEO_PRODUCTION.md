@@ -1,80 +1,44 @@
-# Needtrace — demo video production
+# Needtrace — video production
 
-Record a product-first video around **2:30** and keep the exported duration at or below the verified **3:00** maximum. Upload to YouTube or Vimeo as **Public** or **Unlisted**. See [DEVPOST_READY.md](DEVPOST_READY.md) for the official submission requirements and final Devpost copy.
+Target **2:30–2:45**, approximately **2:40**, with a hard limit of **3:00**. This is a prepared script and shot list, not a timed recording. Rehearse actual clicks and pauses. Keep the product visible from the first frame at 1366×768 or a readable laptop resolution. Hide personal tabs and notifications. The release is browser-only.
 
-The narration below is a script, not a recording or verified runtime. Rehearse with the actual clicks and trim pauses to stay within the limit. The currently deployed product is guest-only; production cloud saving is disabled. Do not show sign-in or imply cloud saving works in production.
+## Shot list and narration
 
-## Recording setup
+| Time | Shot and action | Narration |
+| --- | --- | --- |
+| 0:00–0:20 | Open `/demo`, **Normal operations**. Show ten covered orders and the supplier-to-order network. | “A manufacturing planner gets a call: a motor delivery will be late. Which customer orders need attention? Needtrace traces a supplier change through the material plan. Here, all ten customer orders are covered.” |
+| 0:20–0:42 | Choose **Supplier disruption**. Point to PO-101 and ORD-102. | “Aster's motor receipt moves from November 17 to November 23. ORD-102 needs four motors on the 22nd. Now it is two short, with €36,000 of fictional order value exposed.” |
+| 0:42–1:02 | Show **Why ORD-102 is short**, then its allocation evidence. Keep four required, two allocated and the late receipt readable. | “Eight motors are in stock. The earlier order reserves six, leaving two for this order. The evidence shows exactly why the next receipt is too late. The alert comes from shared stock reservations, not a hardcoded demo result.” |
+| 1:02–1:25 | Scroll the explanation rail to **Ways to recover**. Show both cards before applying anything. | “Compare restoring the original receipt date with using two approved Vector motors available November 18. Each option is calculated independently against the current scenario, with its assumptions visible.” |
+| 1:25–1:42 | Apply **Use Vector Components**. Show ten covered orders and original PO-101 still at November 23. | “Apply Vector. All ten orders have material coverage again while Aster's original receipt stays late. This changes the model; no purchase is placed or supplier contacted.” |
+| 1:42–2:08 | Choose **Edit this network**. Show the new `/projects/:id`, editable node and local-save indicator. Export workspace JSON from File. | “The demo is session-only. Edit this network creates a saved local copy of the current plan and scenario. Edit it, reopen it from Projects, or export workspace JSON for a portable backup.” |
+| 2:08–2:25 | Show editable network and scenario evidence. | “We built an editable supply network and deterministic material simulation with traceable allocations and scenario comparison. The same engine checks imported and edited plans. The distinction is the complete path from a supplier change to an order-level explanation and a modeled response.” |
+| 2:25–2:40 | Return to a clear covered-result view; show public landing and `/demo` links. | “A late delivery ripples through a plan. Needtrace helps you see which order needs attention and test a response before you act. Try the demo. Trace the next change yourself.” |
 
-- Open the approved guest demo in a clean browser. Confirm the baseline shows all ten orders covered and reset to fictional demo data.
-- Use a readable desktop resolution and zoom. Hide personal tabs, bookmarks, notifications, and unrelated apps.
-- Check the microphone and narration levels. Keep the product visible from the opening frame; skip intro slides.
-- If the public site is unavailable, use the tested local guest build described in [NEEDTRACE_RELEASE.md](NEEDTRACE_RELEASE.md). Do not present a local URL as the public product link.
+**Build-period disclosure:** Before recording, the team must confirm which capabilities in the 2:08–2:25 line were built during the weekend and explicitly attribute any pre-existing work. Adapt that line to the verified facts; this script does not attest to a build period.
 
-## Shot list and narration — target about 2:30
+Keep concise disclosures visible during the example: **Fictional data · exposed order value, not measured loss · material availability only**. Approval and availability are input assumptions. The model does not forecast shipments or factory capacity. Put necessary disclosures in captions and Devpost; keep the closing focused on the next step.
 
-### 0:00–0:15 — Open on the working demo
+## Recording and acceptance
 
-**Action:** Show Needtrace guest simulator at baseline with ten covered orders and supplier-to-order network.
+- Start directly at `/demo`; show working behavior within 30 seconds. Avoid slides, technology lists and feature tours.
+- The first screen should answer who has the problem: a manufacturing planner checking customer-order exposure after a supplier change.
+- Rehearse scrolling in the explanation rail so the evidence and both recovery cards are legible. Wait for the graph to settle after changes.
+- After exporting, verify the file if it is shown in the video. Local project URLs are not shared cloud links.
+- Watch the exported video from beginning to end. Confirm duration ≤3:00, clear audio, accurate quantities, readable text, no private notifications, and the actual recovery action.
+- Upload to YouTube/Vimeo as Public or Unlisted and test the final link signed out. Enter it in [Devpost readiness](DEVPOST_READY.md).
 
-**Narration:** “When a supplier delivery slips, which customer orders run short? Needtrace lets a manufacturing planner model that change and trace its material impact. This is a fictional dataset, and the demo works locally without sign-in.”
+## Final card
 
-### 0:15–0:40 — Create the disruption
-
-**Action:** Show baseline coverage. Choose the named supplier-disruption scenario, or move PO-101's motor receipt from November 17 to November 23, then run the simulation.
-
-**Narration:** “The original plan covers all ten fictional orders. I delay the motor receipt by six days and recalculate. Needtrace flags ORD-102: it needs four motors on November 22, but only two remain after the earlier-priority order.”
-
-### 0:40–1:05 — Inspect the evidence
-
-**Action:** Select ORD-102 and its motor shortage. Keep required quantity, allocations, two missing units, and exposed order value readable.
-
-**Narration:** “Here are the requirement, allocation, and two-unit shortage behind the alert. The 36-thousand-euro order value is exposure in this scenario, not a measured loss or saving.”
-
-### 1:05–1:35 — Compare and apply a modeled recovery
-
-**Action:** Open recovery comparison. Show restoring the receipt date and approved alternative supply. Choose two approved Vector motors dated November 18, inspect the assumptions, apply the option, and show restored coverage.
-
-**Narration:** “Needtrace compares two modeled ways to recover coverage. I choose two approved Vector motors dated November 18. Applying this changes the simulation only; it does not place a purchase or contact a supplier. Recalculation restores material coverage while the original Aster receipt remains delayed.”
-
-### 1:35–1:55 — Show the calculation boundary
-
-**Action:** Show allocation detail and the resulting order status.
-
-**Narration:** “Allocation follows required date, then order ID, so the same inputs produce the same result. Needtrace models material availability. It does not model factory capacity, supplier confirmation, freight, or shipment timing.”
-
-### 1:55–2:15 — Show the local builder
-
-**Action:** Open the builder. Show a selected node or typed connection and the local-save indicator. Avoid opening a system file dialog.
-
-**Narration:** “The local builder lets a team edit a network and save named scenarios in this browser. CSV and JSON imports support plan testing with validation before changes are applied. Export a workspace JSON to keep a portable copy.”
-
-### 2:15–2:30 — Close honestly
-
-**Action:** End on Needtrace with the public guest demo link visible.
-
-**Narration:** “Needtrace is a prototype for making supply-change consequences easier to inspect. We have not validated customer demand or business savings. Production is guest-only, with cloud saving disabled.”
-
-## Editing and quality check
-
-- Keep clicks and resulting feedback visible. Captions are recommended; check names and quantities against the narration.
-- Show fictional-data context. Never call €36,000 a loss prevented, revenue saved, or measured benefit.
-- Watch the exported video from beginning to end. Confirm final duration is no more than 3:00, audio is clear, text is readable, the recovery action is visible, and no private tabs or unrelated notifications appear.
-- Test the uploaded YouTube/Vimeo link signed out and verify it is Public or Unlisted. Put the final URL in the Devpost video field in [DEVPOST_READY.md](DEVPOST_READY.md).
-
-## Final card copy
-
-```
-Needtrace — See what breaks before it breaks
-Try it: https://domino-os.tasty-kiwi.workers.dev/landing
-Interactive demo: https://domino-os.tasty-kiwi.workers.dev/
-Fictional data · material availability only
+```text
+Needtrace — See what breaks before it breaks.
+Try it: https://domino-os.tasty-kiwi.workers.dev/
+Demo: https://domino-os.tasty-kiwi.workers.dev/demo
+Trace the next change yourself.
 ```
 
-Use these links only after checking that they open in a clean browser. The legacy hostname is intentional in this release; do not imply a Needtrace domain exists.
+Verify these against the selected production build before recording. `/projects` is the local library, `/projects/:id` a saved local project, `/landing` a landing alias and `/?builder=1` the legacy device draft. A local fallback URL must not be presented as the public link.
 
-## Produced browser draft
+## Existing recording
 
-A real production guest-browser capture with synthesized macOS Samantha narration has been generated: [production demo MP4](release/final/production/needtrace-demo.mp4), 147 seconds, 1366×768, H.264/AAC, approximately 5.2 MB. [video capture metadata](release/final/production/video-capture.json) records the public source and capture time. [SubRip captions](release/final/production/demo-captions.srt) are included. The filmed builder scenario was saved and exported as workspace JSON.
-
-This is an automated recording draft, not human usability evidence or an approved/uploaded submission. Watch the entire video and audio, verify names/numbers/legibility, approve or replace synthesized narration, then upload to YouTube/Vimeo. Test the final URL while signed out. Personal/team and pre-existing-work facts must still be supplied.
+The [147-second MP4](release/final/production/needtrace-demo.mp4), with [captions](release/final/production/demo-captions.srt), was produced from `8fca52a` and predates the current UI. It is a fallback/reference pending full human review of footage, audio, labels, results and closing URL. No replacement was recorded, watched, approved or uploaded in this review. Decide whether to retain, edit or rerecord it only after that review.

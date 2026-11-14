@@ -1,10 +1,10 @@
-# DominoOS — human validation playbook
+# Needtrace — human validation playbook
 
-Status: **not conducted**. This is a protocol and blank evidence template, not customer validation. Automated tests and agent reviews do not count as human sessions. Get consent before recording; do not collect confidential customer plans in a hackathon demo.
+Status: **not conducted**. This is a protocol and blank evidence template, not customer validation. Automated tests and agent reviews do not count as human sessions. No unaided human session was observed during the final product review. Get consent before recording; do not collect confidential customer plans for the hackathon demo.
 
 ## Unassisted usability test (10 minutes)
 
-Recruit someone outside the coding team. Use the public demo, or `npm run dev` as the fallback. Start with Reset demo. Give only this task:
+Recruit someone outside the coding team. Use the public demo, or `npm run dev` as the fallback. Start on the landing page `/`; the task includes reaching the session-only `/demo`. Reset the fictional demo before the timed attempt. Give only this task:
 
 > A supplier warns you that a delivery may be six days late. Find which customer commitment is exposed, explain why, and test a way to cover the shortage.
 
@@ -42,4 +42,4 @@ Evidence template: interview date; role/company size (with consent); current wor
 - Today: tested fictional material-availability scenarios and a public prototype.
 - After usability: report actual participants, unassisted completion rate and observed times, including failures.
 - After a planner interview: report their context and objections; one interview does not validate market demand.
-- After a comparative pilot: measure time on the same task with the current workflow and DominoOS; record data preparation time and allocation-policy differences. Only then discuss measured time savings.
+- After a comparative pilot: measure time on the same task with the current workflow and Needtrace; record data preparation time and allocation-policy differences. Only then discuss measured time savings.

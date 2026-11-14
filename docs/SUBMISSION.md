@@ -1,19 +1,15 @@
-# Needtrace — submission handoff
+# Needtrace submission handoff
 
-The official requirements, final copy, links, and required human fields live in [DEVPOST_READY.md](DEVPOST_READY.md). Use that file as the single submission authority. This page records only the handoff state and execution order.
+[DEVPOST_READY.md](DEVPOST_READY.md) is the authority for submission copy, requirements, links and human fields. [Release status](NEEDTRACE_RELEASE.md) distinguishes production from this undeployed review branch.
 
-## Status
+The repository is public and was readable in a signed-out browser on 14 November. The former private-repository invitation blocker is superseded. No permissions or visibility were changed by this review. If the owner later makes it private, required Nedomas access must be verified again.
 
-The project copy is drafted; no Devpost fields have been entered or submitted. The video still needs recording, export, upload, and signed-out playback verification. The team must supply actual team/member details and confirm the pre-existing-work disclosure. Production cloud saving is disabled.
+No Devpost submission or replacement video upload is claimed. The existing MP4 predates recent UI changes and remains a fallback/reference pending complete human review.
 
-Repository access is unresolved. Administration attempts returned 404 for repository edit and invite, and 403 for invitation listing. The private repository has not been verified accessible to Nedomas. The repository administrator must invite Nedomas with Read access and verify access before submission.
+1. Assign a submission owner; collect actual team name, each member's full name/email and truthful pre-existing-work/build-period disclosures.
+2. Use the revised [2:40 video plan](VIDEO_PRODUCTION.md). Review the recording, upload a video of at most 3:00 to YouTube/Vimeo as Public or Unlisted, and verify signed-out playback.
+3. Check landing `/`, simulator `/demo`, local library `/projects` and source URL. Keep production cloud disabled. Local project URLs are not cloud sharing links.
+4. Confirm About is at most 150 words and all actual portal requirements are met.
+5. Review Devpost preview, submit before **14 November 2026, 20:00 Europe/Vilnius**, and save confirmation.
 
-## Execution order
-
-1. Assign the submission owner and collect real team name, each member's full name/email, and truthful disclosures.
-2. Follow [VIDEO_PRODUCTION.md](VIDEO_PRODUCTION.md) to record a video within the verified 3-minute maximum and upload to YouTube or Vimeo as Public or Unlisted.
-3. Confirm the repository is public or Nedomas can open it after a Read invitation.
-4. Verify the guest demo and source links in a clean signed-out browser. Keep production cloud disabled.
-5. Review the Devpost preview with the team, submit by **14 November 2026, 20:00 Europe/Vilnius**, and save the confirmation.
-
-Optional slides are not a blocker. Do not invent missing human details or imply that video, repository access, or submission is complete.
+Video approval/upload, team facts, disclosures and submission remain human-owned. An unfamiliar-user test and presentation-machine rehearsal remain unverified. Optional slides and repository-description polish do not replace these submission requirements.
