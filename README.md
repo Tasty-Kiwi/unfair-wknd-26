@@ -128,7 +128,7 @@ This prototype models **material availability only**. It excludes factory capaci
 
 - `src/lib/`: domain types, pure simulation, Zod/reference validation and CSV parser.
 - `src/lib/builder/`: raw graph types, typed connections, whole-graph compiler, versioned local workspace format and scenario bindings.
-- `src/components/builder/`: controlled React Flow editor, inspector, connection form and Build/Simulate integration.
+- `src/components/builder/`: controlled React Flow editor, inspector and Build/Simulate integration.
 - `src/data/demo.ts`: four suppliers, ten components, five products, ten orders, eleven receipts and an approved alternative; three scenario overlays.
 - `src/components/graph/`: typed React Flow nodes, causal shortage paths, focused/full network views.
 - `src/components/scenarios/`: live scenario controls and structured allocation explanations.

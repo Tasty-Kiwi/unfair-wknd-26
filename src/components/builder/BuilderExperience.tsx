@@ -807,103 +807,113 @@ export function BuilderExperience({
           className="builder-experience__review"
           aria-label="Scenario requires review"
         >
-          <h2>Scenario requires review</h2>
-          <p>
-            The material network changed. Your scenario inputs are unchanged.
-            The same receipt may now supply different materials. Review these
-            inputs before using them with this network.
-          </p>
-          <ul>
-            {record.scenario.deliveryOverrides.map((override) => {
-              const context = compiled.ok
-                ? receiptReviewContext(compiled.dataset, override.deliveryId)
-                : null;
-              const previous = record.receiptSnapshots?.find(
-                (item) => item.deliveryId === override.deliveryId,
-              );
-              return (
-                <li key={override.deliveryId}>
-                  <p>
-                    <strong>Receipt {override.deliveryId}</strong>
-                  </p>
-                  {previous ? (
-                    <div
-                      aria-label={`Previously validated relationship for ${override.deliveryId}`}
-                    >
+          <details>
+            <summary>
+              Scenario requires review <span>Show / hide details</span>
+            </summary>
+            <div className="builder-experience__review-details">
+              <p>
+                The material network changed. Your scenario inputs are
+                unchanged. The same receipt may now supply different materials.
+                Review these inputs before using them with this network.
+              </p>
+              <ul>
+                {record.scenario.deliveryOverrides.map((override) => {
+                  const context = compiled.ok
+                    ? receiptReviewContext(
+                        compiled.dataset,
+                        override.deliveryId,
+                      )
+                    : null;
+                  const previous = record.receiptSnapshots?.find(
+                    (item) => item.deliveryId === override.deliveryId,
+                  );
+                  return (
+                    <li key={override.deliveryId}>
                       <p>
-                        Previously validated supplier: {previous.supplier.name}{" "}
-                        ({previous.supplier.id})
+                        <strong>Receipt {override.deliveryId}</strong>
                       </p>
+                      {previous ? (
+                        <div
+                          aria-label={`Previously validated relationship for ${override.deliveryId}`}
+                        >
+                          <p>
+                            Previously validated supplier:{" "}
+                            {previous.supplier.name} ({previous.supplier.id})
+                          </p>
+                          <p>
+                            Previously validated component:{" "}
+                            {previous.component.name} ({previous.component.id})
+                          </p>
+                        </div>
+                      ) : (
+                        <p>
+                          Previous relationship was not recorded for this
+                          scenario.
+                        </p>
+                      )}
+                      {context ? (
+                        <>
+                          <p>
+                            Current supplier: {context.supplier.name} (
+                            {context.supplier.id})
+                          </p>
+                          <p>
+                            Current component: {context.component.name} (
+                            {context.component.id})
+                          </p>
+                          <p>
+                            Current plan: {context.receipt.quantity}{" "}
+                            {context.component.unit} on{" "}
+                            {context.receipt.availableDate}
+                          </p>
+                        </>
+                      ) : (
+                        <p>
+                          {compiled.ok
+                            ? "This receipt no longer exists in the network. Remove its override before revalidating."
+                            : "Repair the network to review the receipt’s current supplier and component."}
+                        </p>
+                      )}
                       <p>
-                        Previously validated component:{" "}
-                        {previous.component.name} ({previous.component.id})
+                        Scenario override: {override.quantity} units on{" "}
+                        {override.availableDate}
                       </p>
-                    </div>
-                  ) : (
-                    <p>
-                      Previous relationship was not recorded for this scenario.
-                    </p>
-                  )}
-                  {context ? (
-                    <>
-                      <p>
-                        Current supplier: {context.supplier.name} (
-                        {context.supplier.id})
-                      </p>
-                      <p>
-                        Current component: {context.component.name} (
-                        {context.component.id})
-                      </p>
-                      <p>
-                        Current plan: {context.receipt.quantity}{" "}
-                        {context.component.unit} on{" "}
-                        {context.receipt.availableDate}
-                      </p>
-                    </>
-                  ) : (
-                    <p>
-                      {compiled.ok
-                        ? "This receipt no longer exists in the network. Remove its override before revalidating."
-                        : "Repair the network to review the receipt’s current supplier and component."}
-                    </p>
-                  )}
-                  <p>
-                    Scenario override: {override.quantity} units on{" "}
-                    {override.availableDate}
-                  </p>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() =>
-                      change((previous) => ({
-                        ...previous,
-                        workingScenario: {
-                          ...record,
-                          scenario: {
-                            ...record.scenario,
-                            deliveryOverrides:
-                              record.scenario.deliveryOverrides.filter(
-                                (item) =>
-                                  item.deliveryId !== override.deliveryId,
-                              ),
-                          },
-                        },
-                      }))
-                    }
-                  >
-                    Remove override {override.deliveryId}
-                  </Button>
-                </li>
-              );
-            })}
-          </ul>
-          <Button
-            variant="outline"
-            disabled={!compiled.ok}
-            onClick={revalidate}
-          >
-            Revalidate scenario
-          </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() =>
+                          change((previous) => ({
+                            ...previous,
+                            workingScenario: {
+                              ...record,
+                              scenario: {
+                                ...record.scenario,
+                                deliveryOverrides:
+                                  record.scenario.deliveryOverrides.filter(
+                                    (item) =>
+                                      item.deliveryId !== override.deliveryId,
+                                  ),
+                              },
+                            },
+                          }))
+                        }
+                      >
+                        Remove override {override.deliveryId}
+                      </Button>
+                    </li>
+                  );
+                })}
+              </ul>
+              <Button
+                variant="outline"
+                disabled={!compiled.ok}
+                onClick={revalidate}
+              >
+                Revalidate scenario
+              </Button>
+            </div>
+          </details>
         </section>
       )}
 

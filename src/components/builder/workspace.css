@@ -36,6 +36,7 @@
 
 /* ---------- Shell ---------- */
 .builder-experience {
+  position: relative;
   display: flex;
   flex-direction: column;
   max-width: none;
@@ -45,11 +46,51 @@
   background: var(--paper);
 }
 .builder-experience
-  > :not(.builder-bar):not(.builder):not(.builder-experience__simulation) {
+  > :not(.builder-bar):not(.builder):not(.builder-experience__simulation):not(
+    .builder-experience__review
+  ) {
   margin: 8px 12px 0;
 }
 .builder-experience > [data-slot="alert"] {
   width: auto;
+}
+.builder-experience > .builder-experience__review {
+  position: absolute;
+  z-index: 35;
+  top: 64px;
+  left: 96px;
+  width: min(420px, calc(100% - 108px));
+  margin: 0;
+  padding: 0;
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgb(0 0 0 / 18%);
+}
+.builder-experience__review summary {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  cursor: pointer;
+  font-weight: 600;
+}
+.builder-experience__review summary span {
+  color: var(--ink-2);
+  font-size: 12px;
+  font-weight: 400;
+  white-space: nowrap;
+}
+.builder-experience__review summary:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+}
+.builder-experience__review-details {
+  max-height: min(60dvh, 500px);
+  overflow-y: auto;
+  padding: 0 14px 14px;
+}
+.builder-experience__review-details ul {
+  padding-left: 20px;
 }
 
 /* ---------- Toolbar ---------- */
@@ -460,6 +501,10 @@
 
 /* ---------- Tablet ---------- */
 @media (max-width: 1000px) {
+  .builder-experience > .builder-experience__review {
+    top: auto;
+    bottom: 12px;
+  }
   .builder-bar {
     flex-wrap: wrap;
     padding: 8px 12px;
@@ -486,6 +531,17 @@
   .builder-experience {
     height: auto;
     min-height: 100dvh;
+  }
+  .builder-experience > .builder-experience__review {
+    position: fixed;
+    top: auto;
+    bottom: max(12px, env(safe-area-inset-bottom));
+    left: 12px;
+    width: calc(100% - 24px);
+    z-index: 45;
+  }
+  .builder-experience__review-details {
+    max-height: 45dvh;
   }
   .builder-bar {
     position: sticky;
@@ -531,6 +587,7 @@
     display: flex;
     flex-direction: column;
     flex: none;
+    padding-bottom: 110px;
   }
   .builder__mobile-switch {
     display: flex;
@@ -606,17 +663,16 @@
     min-height: 40px;
   }
   .builder-experience .builder__side {
-    position: static;
-    width: auto;
-    max-height: none;
-    margin: 10px 12px 24px;
-    box-shadow: none;
+    position: fixed;
+    top: auto;
+    right: 12px;
+    bottom: max(12px, env(safe-area-inset-bottom));
+    width: min(350px, calc(100vw - 24px));
+    max-height: min(50dvh, 480px);
+    margin: 0;
   }
-  .builder__side-toggle {
+  .panel-closed .builder-next-step {
     display: none;
-  }
-  .panel-closed .builder__side-body {
-    display: block;
   }
 }
 

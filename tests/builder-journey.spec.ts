@@ -42,17 +42,13 @@ async function connect(
   target: string,
   quantity?: string,
 ) {
-  const form = builder.locator(".builder-connect");
-  await form.getByLabel("Connection type", { exact: true }).selectOption(kind);
-  await form.getByLabel(/^From \(/).selectOption(source);
-  await form.getByLabel(/^To \(/).selectOption(target);
+  await fit(builder);
+  await pointerConnect(builder.page(), builder, source, target, kind);
   if (quantity !== undefined)
-    await form
+    await builder
+      .locator(".builder-inspector")
       .getByLabel("Quantity per product unit", { exact: true })
       .fill(quantity);
-  await form
-    .getByRole("button", { name: "Add connection", exact: true })
-    .click();
 }
 
 async function fit(builder: Locator) {
@@ -285,11 +281,22 @@ test("material edits block saved scenarios and Save cannot bypass explicit reval
     .click();
   await motorScenario(builder);
   await builder.getByRole("button", { name: "Build", exact: true }).click();
+  await openScenarios(builder);
+  await builder
+    .getByLabel("Scenario name", { exact: true })
+    .fill("Motor shortage review");
+  await builder.getByRole("button", { name: /^Scenario\b/ }).click();
   await builder.locator('.builder-node[data-kind="component"]').click();
+  const canvasBefore = await builder
+    .getByTestId("builder-canvas")
+    .boundingBox();
   await builder.getByLabel("Initial stock on hand", { exact: true }).fill("7");
   await expect(
     builder.getByRole("region", { name: "Scenario requires review" }),
   ).toBeVisible();
+  expect(await builder.getByTestId("builder-canvas").boundingBox()).toEqual(
+    canvasBefore,
+  );
   await openScenarios(builder);
   await builder
     .getByRole("button", { name: "Save scenario", exact: true })
@@ -301,6 +308,10 @@ test("material edits block saved scenarios and Save cannot bypass explicit reval
   await expect(
     builder.getByRole("region", { name: "Simulation summary" }),
   ).toHaveCount(0);
+  await builder
+    .getByRole("region", { name: "Scenario requires review" })
+    .locator("summary")
+    .click();
   await builder
     .getByRole("button", { name: "Revalidate scenario", exact: true })
     .click();
@@ -337,10 +348,9 @@ test("incomplete draft survives refresh; duplicate BOM, incompatible handles and
     .locator('.builder-node[data-kind="order"]')
     .first()
     .getAttribute("data-node-key");
-  await connect(builder, "bom", component!, product!, "9");
-  await expect(
-    builder.locator(".builder-connect").getByRole("alert"),
-  ).toContainText("already exists");
+  const edgesBefore = await canvas.locator(".react-flow__edge").count();
+  await connect(builder, "bom", component!, product!);
+  await expect(canvas.locator(".react-flow__edge")).toHaveCount(edgesBefore);
   await pointerConnect(
     page,
     builder,
@@ -420,7 +430,7 @@ test("legacy imported plan and disruption survive entering and returning from Bu
   ).toBeVisible();
 });
 
-test("narrow editing has a keyboard form connection path without page overflow", async ({
+test("narrow editing connects on the map without page overflow", async ({
   page,
 }) => {
   await page.setViewportSize({ width: 390, height: 844 });
@@ -435,7 +445,14 @@ test("narrow editing has a keyboard form connection path without page overflow",
     unit: "motors",
     initialStock: "0",
   });
+  await builder.getByRole("button", { name: "Map", exact: true }).click();
+  const details = builder.getByRole("complementary", {
+    name: "Network details",
+  });
+  await expect(details).toHaveCSS("position", "fixed");
+  await builder.getByRole("button", { name: "Hide details panel" }).click();
   await connect(builder, "primarySupplier", supplier, component);
+  await builder.getByRole("button", { name: "Show details panel" }).click();
   await builder
     .getByLabel("Edit item", { exact: true })
     .selectOption(`node:${component}`);
@@ -444,8 +461,6 @@ test("narrow editing has a keyboard form connection path without page overflow",
   await stock.press("ControlOrMeta+A");
   await stock.press("7");
   await expect(stock).toHaveValue("7");
-  // Phones open on the structured list; the map is one tap away.
-  await builder.getByRole("button", { name: "Map", exact: true }).click();
   await expect(
     builder.getByTestId("builder-canvas").locator(".react-flow__edge"),
   ).toHaveCount(1);
@@ -803,6 +818,7 @@ test("same-ID retarget review shows current receipt, supplier and component befo
   const review = builder.getByRole("region", {
     name: "Scenario requires review",
   });
+  await review.locator("summary").click();
   await expect(review).toContainText("Receipt receipt-servo-1");
   await expect(review).toContainText(
     "Previously validated supplier: Aster Manufacturing (supplier-aster)",
@@ -820,6 +836,18 @@ test("same-ID retarget review shows current receipt, supplier and component befo
   await expect(review).toContainText(
     "Scenario override: 5 units on 2026-11-23",
   );
+  await page.setViewportSize({ width: 390, height: 700 });
+  const mobileReview = await review.boundingBox();
+  expect(
+    mobileReview &&
+      mobileReview.y >= 0 &&
+      mobileReview.y + mobileReview.height <= 700,
+  ).toBe(true);
+  await expect(review.locator(".builder-experience__review-details")).toHaveCSS(
+    "overflow-y",
+    "auto",
+  );
+  await page.setViewportSize({ width: 1280, height: 800 });
   await page.screenshot({
     path: ".tmp/builder-scenario-review.png",
     fullPage: true,
@@ -832,6 +860,7 @@ test("same-ID retarget review shows current receipt, supplier and component befo
   await page.reload();
   await expect(builder).toBeVisible();
   await expect(page).toHaveURL(/builder=1/);
+  await review.locator("summary").click();
   await expect(review).toContainText(
     "Previously validated component: Servo motor",
   );
@@ -874,6 +903,7 @@ test("same-ID and same-revision import recompiles changed material data and supp
   const review = builder.getByRole("region", {
     name: "Scenario requires review",
   });
+  await review.locator("summary").click();
   await expect(review).toContainText(
     "Previous relationship was not recorded for this scenario.",
   );

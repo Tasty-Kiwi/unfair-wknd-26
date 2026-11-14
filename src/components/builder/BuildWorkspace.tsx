@@ -26,7 +26,6 @@ import type {
   NodeKind,
 } from "@/lib/builder/types";
 import { BuilderCanvas } from "./BuilderCanvas";
-import { ConnectionForm } from "./ConnectionForm";
 import { PropertiesInspector, issueTarget } from "./PropertiesInspector";
 import {
   KIND_LABELS,
@@ -198,9 +197,9 @@ export function BuildWorkspace({
           ".builder-inspector [data-field]",
         ),
       ].find((item) => item.dataset.field === focusRequest.issue.field);
-      const control =
-        field?.querySelector<HTMLElement>("input, select, button") ??
-        root.querySelector<HTMLElement>(".builder-connect select");
+      const control = field?.querySelector<HTMLElement>(
+        "input, select, button",
+      );
       control?.focus({ preventScroll: true });
       control?.scrollIntoView({ block: "nearest", behavior: "instant" });
     });
@@ -344,7 +343,7 @@ export function BuildWorkspace({
           <div className="builder-outline__empty">
             <p>
               <strong>Start a network.</strong> Load the fictional example, or
-              add items below and connect them in the details panel.
+              add items below and connect their matching handles on the map.
             </p>
             {onCoreExample && (
               <Button type="button" size="sm" onClick={onCoreExample}>
@@ -571,13 +570,6 @@ export function BuildWorkspace({
               </div>
             )}
           </section>
-
-          <ConnectionForm
-            document={document}
-            labels={labels}
-            onChange={onChange}
-            onSelect={setSelection}
-          />
         </div>
       </aside>
     </div>

@@ -61,7 +61,7 @@ export const RELATIONSHIP_COLORS: Record<RelationshipKind, string> = {
   orderedProduct: "var(--rel-ordered-product)", // magenta
 };
 
-/** Plain-language arrow for each relationship, used in the connection form. */
+/** Plain-language arrow for each relationship. */
 export const RELATIONSHIP_ENDS: Record<
   RelationshipKind,
   { source: NodeKind; target: NodeKind }

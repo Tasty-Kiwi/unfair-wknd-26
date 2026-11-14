@@ -83,6 +83,9 @@ for (const width of [1366, 390]) {
     await page
       .getByRole("button", { name: "Add component", exact: true })
       .click();
+    if (width === 390) {
+      await page.getByRole("button", { name: "Hide details panel" }).click();
+    }
     await page
       .getByRole("button", { name: "Run simulation", exact: true })
       .click();
@@ -93,6 +96,9 @@ for (const width of [1366, 390]) {
     await page
       .getByRole("button", { name: "Check network", exact: true })
       .click();
+    if (width === 390) {
+      await page.getByRole("button", { name: "Show details panel" }).click();
+    }
     const groups = page.locator(".builder-check-group");
     await expect(groups).toHaveCount(3);
     await page.getByRole("button", { name: /Go to Supplier 1/ }).click();
@@ -107,9 +113,9 @@ for (const width of [1366, 390]) {
         exact: true,
       })
       .click();
-    await expect(
-      page.getByRole("combobox", { name: "Connection type", exact: true }),
-    ).toBeFocused();
+    await expect(page.locator(".builder-inspector")).toContainText(
+      "Component 1",
+    );
     const network = groups.filter({ hasText: "Network settings" });
     await network.locator("summary").click();
     await network
