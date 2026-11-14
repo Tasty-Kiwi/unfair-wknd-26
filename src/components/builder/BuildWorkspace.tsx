@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { Tooltip } from "radix-ui";
 import {
   Play,
   PackageCheck,
@@ -59,6 +60,19 @@ const PALETTE_ICONS: Record<NodeKind, LucideIcon> = {
   receipt: PackageCheck,
   product: Box,
   order: ClipboardList,
+};
+
+const PALETTE_DESCRIPTIONS: Record<NodeKind, string> = {
+  supplier:
+    "A company that supplies components. Connect it to the components it supplies and their receipts.",
+  component:
+    "A material or part used to make products. Set its starting stock and connect it to the products that need it.",
+  receipt:
+    "An incoming delivery of a component from a supplier. Its quantity becomes available on the date you set; change that date to test a delay.",
+  product:
+    "An item you make for customers. Connect its required components and specify how many of each it needs.",
+  order:
+    "A customer’s request for a product, with a quantity and required date. The simulation checks whether materials are available in time.",
 };
 
 /** One-line facts printed on each card so the canvas reads without opening it. */
@@ -254,24 +268,39 @@ export function BuildWorkspace({
       </div>
 
       <nav className="builder__palette" aria-label="Add to network">
-        {NODE_KIND_ORDER.map((kind) => {
-          const Icon = PALETTE_ICONS[kind];
-          return (
-            <button
-              key={kind}
-              type="button"
-              className={`builder-palette__item is-${kind}`}
-              aria-label={`Add ${KIND_LABELS[kind].toLowerCase()}`}
-              title={`Add ${KIND_LABELS[kind].toLowerCase()}`}
-              onClick={() => addItem(kind)}
-            >
-              <span className="builder-palette__swatch" aria-hidden>
-                <Icon size={15} strokeWidth={1.8} />
-              </span>
-              <span>{KIND_LABELS[kind]}</span>
-            </button>
-          );
-        })}
+        <Tooltip.Provider delayDuration={350}>
+          {NODE_KIND_ORDER.map((kind) => {
+            const Icon = PALETTE_ICONS[kind];
+            return (
+              <Tooltip.Root key={kind}>
+                <Tooltip.Trigger asChild>
+                  <button
+                    type="button"
+                    className={`builder-palette__item is-${kind}`}
+                    aria-label={`Add ${KIND_LABELS[kind].toLowerCase()}`}
+                    onClick={() => addItem(kind)}
+                  >
+                    <span className="builder-palette__swatch" aria-hidden>
+                      <Icon size={15} strokeWidth={1.8} />
+                    </span>
+                    <span>{KIND_LABELS[kind]}</span>
+                  </button>
+                </Tooltip.Trigger>
+                <Tooltip.Portal>
+                  <Tooltip.Content
+                    className="builder-palette__tooltip"
+                    side="right"
+                    sideOffset={10}
+                    collisionPadding={12}
+                  >
+                    <strong>{KIND_LABELS[kind]}</strong>
+                    <span>{PALETTE_DESCRIPTIONS[kind]}</span>
+                  </Tooltip.Content>
+                </Tooltip.Portal>
+              </Tooltip.Root>
+            );
+          })}
+        </Tooltip.Provider>
       </nav>
 
       <section className="builder__outline" aria-label="Network items">

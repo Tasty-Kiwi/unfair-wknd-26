@@ -217,6 +217,24 @@
 }
 
 /* Palette rail */
+.builder-palette__tooltip {
+  z-index: 100;
+  display: grid;
+  gap: 4px;
+  width: 240px;
+  max-width: min(240px, calc(100vw - 24px));
+  padding: 10px 12px;
+  border: 1px solid var(--hair);
+  border-radius: 8px;
+  background: var(--sheet);
+  color: var(--ink);
+  box-shadow: 0 8px 24px rgb(0 0 0 / 18%);
+  font-size: 13px;
+  line-height: 1.4;
+}
+.builder-palette__tooltip span {
+  color: var(--ink-2);
+}
 .builder-experience .builder__palette {
   grid-area: palette;
   display: flex;

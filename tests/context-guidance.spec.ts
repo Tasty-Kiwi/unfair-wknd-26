@@ -1,5 +1,23 @@
 import { test, expect } from "@playwright/test";
 
+test("builder palette explains items on hover and keyboard focus", async ({
+  page,
+}) => {
+  await page.goto("/?builder=1");
+  const palette = page.getByRole("navigation", { name: "Add to network" });
+  const receipt = palette.getByRole("button", { name: "Add receipt" });
+  await receipt.hover();
+  await expect(page.getByRole("tooltip")).toContainText("incoming delivery");
+  await page.mouse.move(500, 10);
+  await receipt.focus();
+  await expect(page.getByRole("tooltip")).toContainText("test a delay");
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("tooltip")).toBeHidden();
+  await expect(
+    palette.getByRole("button", { name: "Add supplier" }),
+  ).toBeVisible();
+});
+
 for (const theme of ["light", "dark"]) {
   test(`${theme}: covered plan offers a next step without losing allocation access`, async ({
     page,
